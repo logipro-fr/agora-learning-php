@@ -1,0 +1,40 @@
+{
+    "name": "logipro/agora-learning-php",
+    "type": "library",
+    "description": "Client PHP for Agora Learning API",
+    "license": "MIT",
+    "minimum-stability": "stable",
+    "version": "1.0.0",
+    "require": {
+        "php": "^7.4 || ^8.0",
+        "symfony/http-client": "^5.4 || ^6.4 || ^7.0",
+        "symfony/http-foundation": "^5.4 || ^6.4 || ^7.0",
+        "symfony/mime": "^5.4 || ^6.4 || ^7.0"
+    },
+    "require-dev": {
+        "symfony/phpunit-bridge": "^5.4 || ^6.4 || ^7.0",
+        "phpunit/phpunit": "^9.6",
+        "friendsofphp/php-cs-fixer": "^3",
+        "phpstan/phpstan": "^1"
+    },
+    "autoload": {
+        "psr-4": {
+            "AgoraLearningPhp\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "AgoraLearningPhp\\Tests\\": "tests/unit/"
+        }
+    },
+    "config": {
+        "allow-plugins": {}
+    },
+    "scripts": {
+        "cs-check": "php-cs-fixer fix --dry-run --diff --allow-risky=yes",
+        "cs-fix":   "php-cs-fixer fix --allow-risky=yes",
+        "phpstan":  "phpstan analyse",
+        "test":     "phpunit",
+        "qa":       ["@cs-check", "@phpstan", "@test"]
+    }
+}
