@@ -27,6 +27,7 @@ class TokenHandler
             $this->requestToken();
         }
 
+        assert(is_string(self::$token));
         return self::$token;
     }
 
@@ -60,9 +61,10 @@ class TokenHandler
         );
 
         if (200 === $response->getStatusCode()) {
+            /** @var array{token: string, expires_in: int} $data */
             $data = JsonHandler::jsonDecode($response->getContent(), true);
             self::$token = $data['token'];
-            self::$expireAt = (new \DateTimeImmutable())->getTimestamp() + intval($data['expires_in']);
+            self::$expireAt = (new \DateTimeImmutable())->getTimestamp() + $data['expires_in'];
         } else {
             self::$token = null;
             self::$expireAt = null;

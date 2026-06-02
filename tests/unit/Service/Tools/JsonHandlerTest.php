@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AgoraLearningPhp\Tests\Service\Tools;
+namespace AgoraLearningPhp\Tests\unit\Service\Tools;
 
 use AgoraLearningPhp\Service\Tools\JsonHandler;
 use PHPUnit\Framework\TestCase;
@@ -42,7 +42,7 @@ class JsonHandlerTest extends TestCase
     public function testJsonEncodeThrowsRuntimeExceptionOnInvalidValue(): void
     {
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessageMatches('/Json_encode error/');
+        $this->expectExceptionMessageMatches('/Json_encode error: .+/');
         JsonHandler::jsonEncode(NAN);
     }
 
@@ -74,7 +74,7 @@ class JsonHandlerTest extends TestCase
     public function testJsonDecodeThrowsRuntimeExceptionOnInvalidJson(): void
     {
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessageMatches('/Json_decode error/');
+        $this->expectExceptionMessageMatches('/Json_decode error: .+ \| Response\(200\):/');
         JsonHandler::jsonDecode('{invalid_json}', true);
     }
 
@@ -82,5 +82,27 @@ class JsonHandlerTest extends TestCase
     {
         $result = JsonHandler::jsonDecode('[1,2,3]', true);
         $this->assertSame([1, 2, 3], $result);
+    }
+
+    public function testJsonDecodeErrorMessageTruncatesInputAt200Chars(): void
+    {
+        // JSON invalide de 300 chars : les 200 premiers sont 'a', les 100 suivants sont 'b'
+        $longInvalidJson = str_repeat('a', 200) . str_repeat('b', 100);
+
+        try {
+            JsonHandler::jsonDecode($longInvalidJson, true);
+            $this->fail('Expected RuntimeException');
+        } catch (\RuntimeException $e) {
+            $msg = $e->getMessage();
+            $this->assertStringContainsString(' | Response(200): ', $msg);
+
+            // Extraire la partie tronquée après le séparateur
+            $parts = explode(' | Response(200): ', $msg, 2);
+            $this->assertCount(2, $parts);
+            $truncatedInput = $parts[1];
+
+            // Vérifier que exactement 200 chars sont inclus (ni 199, ni 201, ni la chaîne complète)
+            $this->assertSame(200, strlen($truncatedInput));
+        }
     }
 }

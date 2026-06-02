@@ -10,10 +10,14 @@ use AgoraLearningPhp\DTO\Output\Society\SocietyOutput;
 use AgoraLearningPhp\Enum\RequestMethod;
 use AgoraLearningPhp\Service\ClientCore\ApiService;
 use AgoraLearningPhp\Service\ClientCore\ApiUrls;
+use AgoraLearningPhp\Service\ClientCore\HttpClient;
 use AgoraLearningPhp\Service\Person\Person;
 use AgoraLearningPhp\Service\Tools\JsonHandler;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
+/**
+ * @extends ApiService<SocietyOutput>
+ */
 class Society extends ApiService
 {
     /**
@@ -62,12 +66,14 @@ class Society extends ApiService
 
     protected function convertResponseToDTO(ResponseInterface $response): SocietyOutput
     {
+        /** @var array<string, mixed> $responseData */
         $responseData = JsonHandler::jsonDecode($response->getContent(false), true);
-        if (200 === $response->getStatusCode()) {
+        if (HttpClient::isHttpSuccess($response)) {
             return self::convertDataToDTO($responseData);
         }
 
-        $message = array_key_exists('detail', $responseData) ? $responseData['detail'] : 'An unexpected error occured';
+        $detail = $responseData['detail'] ?? null;
+        $message = is_string($detail) ? $detail : 'An unexpected error occured';
         throw new \AgoraLearningPhp\Exception\AgoraLearningClientException($message);
     }
 
@@ -77,15 +83,18 @@ class Society extends ApiService
     protected function convertResponseToDTOarray(ResponseInterface $response): array
     {
         $result = [];
+        /** @var array<string, mixed> $responseData */
         $responseData = JsonHandler::jsonDecode($response->getContent(false), true);
-        if (200 === $response->getStatusCode()) {
+        if (HttpClient::isHttpSuccess($response)) {
             foreach ($responseData as $data) {
+                /** @var array<string, mixed> $data */
                 $result[] = self::convertDataToDTO($data);
             }
             return $result;
         }
 
-        $message = array_key_exists('detail', $responseData) ? $responseData['detail'] : 'An unexpected error occured';
+        $detail = $responseData['detail'] ?? null;
+        $message = is_string($detail) ? $detail : 'An unexpected error occured';
         throw new \AgoraLearningPhp\Exception\AgoraLearningClientException($message);
     }
 
@@ -94,6 +103,25 @@ class Society extends ApiService
      */
     public static function convertDataToDTO(array $data): SocietyOutput
     {
+        /** @var array{
+         *     id: string,
+         *     name: string,
+         *     siret?: string|null,
+         *     legalStatus?: string|null,
+         *     email?: string|null,
+         *     telephone?: string|null,
+         *     addressStreetHeadOffice?: string|null,
+         *     addressPostcodeHeadOffice?: string|null,
+         *     addressLocalityHeadOffice?: string|null,
+         *     addressCountryHeadOffice?: string|null,
+         *     addressStreetInvoicing?: string|null,
+         *     addressPostcodeInvoicing?: string|null,
+         *     addressLocalityInvoicing?: string|null,
+         *     addressCountryInvoicing?: string|null,
+         *     legalPerson?: array<string, mixed>,
+         *     administrativePerson?: array<string, mixed>,
+         *     rhPerson?: array<string, mixed>,
+         * } $data */
         $siret = $data['siret'] ?? null;
         $telephone = $data['telephone'] ?? null;
         $email = $data['email'] ?? null;
@@ -106,7 +134,6 @@ class Society extends ApiService
         $addressPostcodeInvoicing = $data['addressPostcodeInvoicing'] ?? null;
         $addressLocalityInvoicing = $data['addressLocalityInvoicing'] ?? null;
         $addressCountryInvoicing = $data['addressCountryInvoicing'] ?? null;
-        $image = $data['image'] ?? null;
 
         $legalPerson = array_key_exists('legalPerson', $data)
             ? Person::convertDataToDTO($data['legalPerson'])
@@ -135,13 +162,12 @@ class Society extends ApiService
             $addressCountryInvoicing,
             $legalPerson,
             $administrativePerson,
-            $rhPerson,
-            $image
+            $rhPerson
         );
     }
 
     /**
-     * @return array<string, string>
+     * @return array<string, string|null>|null
      */
     private function serializePersonInput(?PersonInput $person): ?array
     {

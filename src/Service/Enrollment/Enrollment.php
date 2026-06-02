@@ -9,10 +9,13 @@ use AgoraLearningPhp\DTO\Output\Enrollment\EnrollmentOutput;
 use AgoraLearningPhp\Enum\RequestMethod;
 use AgoraLearningPhp\Service\ClientCore\ApiService;
 use AgoraLearningPhp\Service\ClientCore\ApiUrls;
-use AgoraLearningPhp\Service\Person\Person;
+use AgoraLearningPhp\Service\Learner\Learner;
 use AgoraLearningPhp\Service\Session\Session;
 use AgoraLearningPhp\Service\Tools\JsonHandler;
 
+/**
+ * @extends ApiService<EnrollmentOutput>
+ */
 class Enrollment extends ApiService
 {
     /**
@@ -78,10 +81,17 @@ class Enrollment extends ApiService
      */
     public static function convertDataToDTO(array $data): EnrollmentOutput
     {
-        $learner = Person::convertDataToDTO($data['learner']);
+        /** @var array{
+         *     id: string,
+         *     learner: array<string, mixed>,
+         *     session: array<string, mixed>,
+         *     availabilityStartDate?: string|null,
+         *     availabilityEndDate?: string|null
+         * } $data */
+        $learner = Learner::convertDataToDTO($data['learner']);
         $session = Session::convertDataToDTO($data['session']);
-        $availabilityStartDate = new \DateTimeImmutable($data['availabilityStartDate']);
-        $availabilityEndDate = new \DateTimeImmutable($data['availabilityEndDate']);
+        $availabilityStartDate = !empty($data['availabilityStartDate']) ? new \DateTimeImmutable($data['availabilityStartDate']) : null;
+        $availabilityEndDate = !empty($data['availabilityEndDate']) ? new \DateTimeImmutable($data['availabilityEndDate']) : null;
 
         return new EnrollmentOutput(
             $data['id'],

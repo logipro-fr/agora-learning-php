@@ -26,7 +26,6 @@ final class SocietyOutput extends ApiOutput
     public ?PersonOutput $legalPerson;
     public ?PersonOutput $administrativePerson;
     public ?PersonOutput $rhPerson;
-    public ?string $image;
 
     public function __construct(
         string $uuid,
@@ -45,8 +44,7 @@ final class SocietyOutput extends ApiOutput
         ?string $addressCountryInvoicing = null,
         ?PersonOutput $legalPerson = null,
         ?PersonOutput $administrativePerson = null,
-        ?PersonOutput $rhPerson = null,
-        ?string $image = null
+        ?PersonOutput $rhPerson = null
     ) {
         $this->uuid = $uuid;
         $this->name = $name;
@@ -65,6 +63,5 @@ final class SocietyOutput extends ApiOutput
         $this->legalPerson = $legalPerson;
         $this->administrativePerson = $administrativePerson;
         $this->rhPerson = $rhPerson;
-        $this->image = $image;
     }
 }

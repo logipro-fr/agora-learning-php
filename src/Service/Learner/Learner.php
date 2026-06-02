@@ -12,6 +12,9 @@ use AgoraLearningPhp\Service\ClientCore\ApiService;
 use AgoraLearningPhp\Service\ClientCore\ApiUrls;
 use AgoraLearningPhp\Service\Tools\JsonHandler;
 
+/**
+ * @extends ApiService<LearnerOutput>
+ */
 class Learner extends ApiService
 {
     /**
@@ -39,6 +42,7 @@ class Learner extends ApiService
                 "givenName" => $learnerInput->givenName,
                 "gender" => $learnerInput->gender,
                 "recoverEmail" => $learnerInput->recoverEmail,
+                "email" => $learnerInput->email,
                 "birthDate" => $learnerInput->birthDate ? $learnerInput->birthDate->format(self::DATETIME_FORMAT) : null,
                 "jobTitle" => $learnerInput->jobTitle,
                 "addressStreet" => $learnerInput->addressStreet,
@@ -46,7 +50,6 @@ class Learner extends ApiService
                 "addressLocality" => $learnerInput->addressLocality,
                 "addressCountry" => $learnerInput->addressCountry,
                 "telephone" => $learnerInput->telephone,
-                "email" => $learnerInput->email,
                 "image" => $learnerInput->image
             ]
         );
@@ -59,13 +62,27 @@ class Learner extends ApiService
      */
     public static function convertDataToDTO(array $data): LearnerOutput
     {
-        $email = $data['email'] ?? null;
+        /** @var array{
+         *     id: string,
+         *     username: string,
+         *     familyName: string,
+         *     givenName: string,
+         *     recoverEmail: string,
+         *     email: string,
+         *     gender?: string,         
+         *     telephone?: string|null,
+         *     addressStreet?: string|null,
+         *     addressPostcode?: string|null,
+         *     addressLocality?: string|null,
+         *     addressCountry?: string|null,         
+         *     birthDate?: string|null,
+         *     jobTitle?: string|null
+         * } $data */
         $telephone = $data['telephone'] ?? null;
         $addressStreet = $data['addressStreet'] ?? null;
         $addressPostcode = $data['addressPostcode'] ?? null;
         $addressLocality = $data['addressLocality'] ?? null;
         $addressCountry = $data['addressCountry'] ?? null;
-        $image = $data['image'] ?? null;
         $gender = $data['gender'] ?? Gender::GENDER_NA;
         $birthDate = !empty($data['birthDate']) ? new \DateTimeImmutable($data['birthDate']) : null;
         $jobTitle = $data['jobTitle'] ?? null;
@@ -75,17 +92,16 @@ class Learner extends ApiService
             $data['username'],
             $data['familyName'],
             $data['givenName'],
-            $gender,
             $data['recoverEmail'],
-            $email,
+            $data['email'],
+            $gender,
             $telephone,
             $addressStreet,
             $addressPostcode,
             $addressLocality,
             $addressCountry,
-            $image,
             $birthDate,
-            $jobTitle,
+            $jobTitle
         );
     }
 }

@@ -12,7 +12,7 @@ final class LearnerInput
     public string $givenName;
     public string $gender;
     public string $recoverEmail;
-    public ?string $email;
+    public string $email;
     public ?string $telephone;
     public ?string $addressStreet;
     public ?string $addressPostcode;
@@ -26,8 +26,8 @@ final class LearnerInput
         string $familyName,
         string $givenName,
         string $recoverEmail,
+        string $email,
         string $gender = Gender::GENDER_NA,
-        ?string $email = null,
         ?string $telephone = null,
         ?string $addressStreet = null,
         ?string $addressPostcode = null,

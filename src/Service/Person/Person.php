@@ -12,6 +12,9 @@ use AgoraLearningPhp\Service\ClientCore\ApiService;
 use AgoraLearningPhp\Service\ClientCore\ApiUrls;
 use AgoraLearningPhp\Service\Tools\JsonHandler;
 
+/**
+ * @extends ApiService<PersonOutput>
+ */
 class Person extends ApiService
 {
     /**
@@ -37,6 +40,7 @@ class Person extends ApiService
             [
                 "familyName" => $personInput->familyName,
                 "givenName" => $personInput->givenName,
+                "email" => $personInput->email,
                 "gender" => $personInput->gender,
                 "birthDate" => $personInput->birthDate ? $personInput->birthDate->format(self::DATETIME_FORMAT) : null,
                 "jobTitle" => $personInput->jobTitle,
@@ -45,7 +49,6 @@ class Person extends ApiService
                 "addressLocality" => $personInput->addressLocality,
                 "addressCountry" => $personInput->addressCountry,
                 "telephone" => $personInput->telephone,
-                "email" => $personInput->email,
                 "image" => $personInput->image
             ]
         );
@@ -58,13 +61,25 @@ class Person extends ApiService
      */
     public static function convertDataToDTO(array $data): PersonOutput
     {
-        $email = $data['email'] ?? null;
+        /** @var array{
+         *     id: string,
+         *     familyName: string,
+         *     givenName: string,
+         *     email: string,
+         *     telephone?: string|null,
+         *     addressStreet?: string|null,
+         *     addressPostcode?: string|null,
+         *     addressLocality?: string|null,
+         *     addressCountry?: string|null,
+         *     gender?: string,
+         *     birthDate?: string|null,
+         *     jobTitle?: string|null
+         * } $data */
         $telephone = $data['telephone'] ?? null;
         $addressStreet = $data['addressStreet'] ?? null;
         $addressPostcode = $data['addressPostcode'] ?? null;
         $addressLocality = $data['addressLocality'] ?? null;
         $addressCountry = $data['addressCountry'] ?? null;
-        $image = $data['image'] ?? null;
         $gender = $data['gender'] ?? Gender::GENDER_NA;
         $birthDate = !empty($data['birthDate']) ? new \DateTimeImmutable($data['birthDate']) : null;
         $jobTitle = $data['jobTitle'] ?? null;
@@ -73,13 +88,12 @@ class Person extends ApiService
             $data['id'],
             $data['familyName'],
             $data['givenName'],
-            $email,
+            $data['email'],
             $telephone,
             $addressStreet,
             $addressPostcode,
             $addressLocality,
             $addressCountry,
-            $image,
             $gender,
             $birthDate,
             $jobTitle,

@@ -17,11 +17,11 @@ composer require logipro/agora-learning-php
 
 Le paquet installe les dépendances suivantes via Composer :
 
-| Dépendance                | Versions compatibles |
-| ------------------------- | -------------------- |
-| `symfony/http-client`     | ^5.4, ^6.4, ^7.0     |
-| `symfony/http-foundation` | ^5.4, ^6.4, ^7.0     |
-| `symfony/mime`            | ^5.4, ^6.4, ^7.0     |
+| Dépendance                | Versions compatibles       |
+| ------------------------- | -------------------------- |
+| `symfony/http-client`     | ^5.4, ^6.4, ^7.0, ^8.0    |
+| `symfony/http-foundation` | ^5.4, ^6.4, ^7.0, ^8.0    |
+| `symfony/mime`            | ^5.4, ^6.4, ^7.0, ^8.0    |
 
 ## Compatibilité Symfony
 
@@ -30,6 +30,7 @@ Le paquet installe les dépendances suivantes via Composer :
 | 5.4 (LTS)       | Oui       |
 | 6.4 (LTS)       | Oui       |
 | 7.x             | Oui       |
+| 8.x             | Oui       |
 
 Le client peut être intégré dans n'importe quel projet PHP, avec ou sans framework Symfony.
 
@@ -44,8 +45,8 @@ require_once __DIR__ . '/vendor/autoload.php';
 use AgoraLearningPhp\AgoraLearningClient;
 
 $client = new AgoraLearningClient(
-    'https://votre-instance.example.com', // TODO: à adapter
-    'votre_cle_api'                       // TODO: à adapter
+    'https://votre-instance.example.com', // à adapter
+    'votre_cle_api'                       // à adapter
 );
 
 $ping = $client->ping();

@@ -452,18 +452,21 @@ $legalPerson = new PersonInput(
     'Legrand',
     'Pierre',
     'pierre.legrand@acme.example.com'
+    Gender::GENDER_MALE
 );
 
-$legalPerson = new PersonInput(
+$administrativePerson = new PersonInput(
     'Legrand',
     'Paul',
     'paul.legrand@acme.example.com'
+    Gender::GENDER_MALE
 );
 
-$legalPerson = new PersonInput(
+$rhPerson = new PersonInput(
     'Legrand',
     'Jacques',
     'jacques.legrand@acme.example.com'
+    Gender::GENDER_MALE
 );
 
 $input = new SocietyInput(

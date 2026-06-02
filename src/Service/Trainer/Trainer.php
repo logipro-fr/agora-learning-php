@@ -16,6 +16,9 @@ use AgoraLearningPhp\Service\ClientCore\ApiUrls;
 use AgoraLearningPhp\Service\Society\Society;
 use AgoraLearningPhp\Service\Tools\JsonHandler;
 
+/**
+ * @extends ApiService<TrainerOutput>
+ */
 class Trainer extends ApiService
 {
     /**
@@ -114,19 +117,42 @@ class Trainer extends ApiService
      */
     public static function convertDataToDTO(array $data): TrainerOutput
     {
+        /** @var array{
+         *     id: string,
+         *     familyName: string,
+         *     givenName: string,
+         *     email: string,
+         *     visibleInformation: bool,
+         *     gender: string,
+         *     educationalManagerSessions: array<int, mixed>,
+         *     telephone?: string|null,
+         *     mobileNumber?: string|null,
+         *     addressStreet?: string|null,
+         *     addressPostcode?: string|null,
+         *     addressLocality?: string|null,
+         *     addressCountry?: string|null,
+         *     birthDate?: string|null,
+         *     jobTitle?: string|null,         
+         *     statut?: string|null,
+         *     society?: array<string, mixed>,
+         *     hourlyCost?: float|null,
+         *     daylyCost?: float|null,
+         *     siret?: string|null,
+         *     tvaNumber?: string|null,
+         *     urssafNumber?: string|null,
+         *     billingAddressStreet?: string|null,
+         *     billingAddressPostcode?: string|null,
+         *     billingAddressLocality?: string|null,
+         *     billingAddressCountry?: string|null
+         * } $data */
         $telephone = $data['telephone'] ?? null;
         $mobileNumber = $data['mobileNumber'] ?? null;
         $addressStreet = $data['addressStreet'] ?? null;
         $addressPostcode = $data['addressPostcode'] ?? null;
         $addressLocality = $data['addressLocality'] ?? null;
         $addressCountry = $data['addressCountry'] ?? null;
-        $image = $data['image'] ?? null;
         $birthDate = !empty($data['birthDate']) ? new \DateTimeImmutable($data['birthDate']) : null;
         $jobTitle = $data['jobTitle'] ?? null;
-        $cv = $data['cv'] ?? null;
-        $degree = $data['degree'] ?? null;
-        $contract = $data['contract'] ?? null;
-        $jobDescription = $data['jobDescription'] ?? null;
         $societyData = array_key_exists('society', $data) ? Society::convertDataToDTO($data['society']) : null;
 
         switch ($data['statut'] ?? null) {
@@ -136,7 +162,6 @@ class Trainer extends ApiService
                 $siret = $data['siret'] ?? null;
                 $tvaNumber = $data['tvaNumber'] ?? null;
                 $urssafNumber = $data['urssafNumber'] ?? null;
-                $urssafCertificate = $data['urssafCertificate'] ?? null;
                 $billingAddressStreet = $data['billingAddressStreet'] ?? null;
                 $billingAddressPostcode = $data['billingAddressPostcode'] ?? null;
                 $billingAddressLocality = $data['billingAddressLocality'] ?? null;
@@ -155,20 +180,14 @@ class Trainer extends ApiService
                     $addressPostcode,
                     $addressLocality,
                     $addressCountry,
-                    $image,
                     $birthDate,
                     $jobTitle,
                     $societyData,
-                    $cv,
-                    $degree,
-                    $contract,
-                    $jobDescription,
                     $hourlyCost,
                     $daylyCost,
                     $siret,
                     $tvaNumber,
                     $urssafNumber,
-                    $urssafCertificate,
                     $billingAddressStreet,
                     $billingAddressPostcode,
                     $billingAddressLocality,
@@ -190,14 +209,9 @@ class Trainer extends ApiService
                     $addressPostcode,
                     $addressLocality,
                     $addressCountry,
-                    $image,
                     $birthDate,
                     $jobTitle,
-                    $societyData,
-                    $cv,
-                    $degree,
-                    $contract,
-                    $jobDescription
+                    $societyData
                 );
         }
     }
