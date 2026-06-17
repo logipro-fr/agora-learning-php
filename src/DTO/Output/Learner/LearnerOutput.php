@@ -9,40 +9,38 @@ use AgoraLearningPhp\Enum\Gender;
 
 final class LearnerOutput extends ApiOutput
 {
-    public string $id;
+    public string $uuid;
     public string $username;
     public string $familyName;
     public string $givenName;
     public string $gender;
     public string $recoverEmail;
-    public ?string $email;
+    public string $email;
     public ?string $telephone;
     public ?string $addressStreet;
     public ?string $addressPostcode;
     public ?string $addressLocality;
     public ?string $addressCountry;
-    public ?string $image;
     public ?\DateTimeImmutable $birthDate;
     public ?string $jobTitle;
 
     public function __construct(
-        string $id,
+        string $uuid,
         string $username,
         string $familyName,
         string $givenName,
+        string $recoverEmail,
+        string $email,
         string $gender = Gender::GENDER_NA,
-        string $recoverEmail = '',
-        ?string $email = null,
         ?string $telephone = null,
         ?string $addressStreet = null,
         ?string $addressPostcode = null,
         ?string $addressLocality = null,
         ?string $addressCountry = null,
-        ?string $image = null,
         ?\DateTimeImmutable $birthDate = null,
         ?string $jobTitle = null
     ) {
-        $this->id = $id;
+        $this->uuid = $uuid;
         $this->username = $username;
         $this->familyName = $familyName;
         $this->givenName = $givenName;
@@ -54,7 +52,6 @@ final class LearnerOutput extends ApiOutput
         $this->addressPostcode = $addressPostcode;
         $this->addressLocality = $addressLocality;
         $this->addressCountry = $addressCountry;
-        $this->image = $image;
         $this->birthDate = $birthDate;
         $this->jobTitle = $jobTitle;
     }

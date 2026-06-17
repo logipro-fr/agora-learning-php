@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AgoraLearningPhp\Tests\Service;
+namespace AgoraLearningPhp\Tests\unit\Service;
 
 use AgoraLearningPhp\Service\ClientCore\ApiUrls;
 use AgoraLearningPhp\Service\ClientCore\HttpClient;
@@ -47,10 +47,36 @@ abstract class ServiceTestCase extends TestCase
 
         $mockResponse = $this->createMock(ResponseInterface::class);
         $mockResponse->method('getStatusCode')->willReturn($statusCode);
-        $mockResponse->method('getContent')->willReturn($body);
+        $mockResponse->method('getContent')->with(false)->willReturn($body);
 
         $mockInner = $this->createMock(HttpClientInterface::class);
         $mockInner->method('request')->willReturn($mockResponse);
+
+        return new HttpClient($mockInner, new TokenHandler($mockInner));
+    }
+
+    /**
+     * Crée un HttpClient qui capture le corps JSON envoyé dans la requête POST.
+     * Permet de vérifier que tous les champs sont bien présents dans le body.
+     *
+     * @param int    $statusCode    Code HTTP à retourner
+     * @param string $responseBody  Corps de la réponse simulée
+     * @param string $capturedBody  Variable de référence où sera stocké le corps envoyé
+     */
+    protected function makeHttpClientInspectingBody(int $statusCode, string $responseBody, string &$capturedBody): HttpClient
+    {
+        $this->injectCachedToken('test-token');
+
+        $mockResponse = $this->createMock(ResponseInterface::class);
+        $mockResponse->method('getStatusCode')->willReturn($statusCode);
+        $mockResponse->method('getContent')->with(false)->willReturn($responseBody);
+
+        $mockInner = $this->createMock(HttpClientInterface::class);
+        $mockInner->method('request')
+            ->willReturnCallback(function (string $method, string $url, array $options) use ($mockResponse, &$capturedBody) {
+                $capturedBody = $options['body'] ?? '';
+                return $mockResponse;
+            });
 
         return new HttpClient($mockInner, new TokenHandler($mockInner));
     }

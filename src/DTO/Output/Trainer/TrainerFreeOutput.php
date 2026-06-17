@@ -15,6 +15,7 @@ final class TrainerFreeOutput extends TrainerOutput
     public string $email;
     public bool $visibleInformation;
     public string $gender;
+    /** @var array<int, mixed> */
     public array $educationalManagerSessions;
     public ?string $telephone;
     public ?string $mobileNumber;
@@ -22,25 +23,22 @@ final class TrainerFreeOutput extends TrainerOutput
     public ?string $addressPostcode;
     public ?string $addressLocality;
     public ?string $addressCountry;
-    public ?string $image;
     public ?\DateTimeImmutable $birthDate;
     public ?string $jobTitle;
     public ?SocietyOutput $society;
-    public ?string $cv;
-    public ?string $degree;
-    public ?string $contract;
-    public ?string $jobDescription;
     public ?float $hourlyCost;
     public ?float $daylyCost;
     public ?string $siret;
     public ?string $tvaNumber;
     public ?string $urssafNumber;
-    public ?string $urssafCertificate;
     public ?string $billingAddressStreet;
     public ?string $billingAddressPostcode;
     public ?string $billingAddressLocality;
     public ?string $billingAddressCountry;
 
+    /**
+     * @param array<int, mixed> $educationalManagerSessions
+     */
     public function __construct(
         string $uuid,
         string $familyName,
@@ -55,20 +53,14 @@ final class TrainerFreeOutput extends TrainerOutput
         ?string $addressPostcode = null,
         ?string $addressLocality = null,
         ?string $addressCountry = null,
-        ?string $image = null,
         ?\DateTimeImmutable $birthDate = null,
         ?string $jobTitle = null,
         ?SocietyOutput $society = null,
-        ?string $cv = null,
-        ?string $degree = null,
-        ?string $contract = null,
-        ?string $jobDescription = null,
         ?float $hourlyCost = null,
         ?float $daylyCost = null,
         ?string $siret = null,
         ?string $tvaNumber = null,
         ?string $urssafNumber = null,
-        ?string $urssafCertificate = null,
         ?string $billingAddressStreet = null,
         ?string $billingAddressPostcode = null,
         ?string $billingAddressLocality = null,
@@ -86,20 +78,14 @@ final class TrainerFreeOutput extends TrainerOutput
         $this->addressPostcode = $addressPostcode;
         $this->addressLocality = $addressLocality;
         $this->addressCountry = $addressCountry;
-        $this->image = $image;
         $this->birthDate = $birthDate;
         $this->jobTitle = $jobTitle;
         $this->society = $society;
-        $this->cv = $cv;
-        $this->degree = $degree;
-        $this->contract = $contract;
-        $this->jobDescription = $jobDescription;
         $this->hourlyCost = $hourlyCost;
         $this->daylyCost = $daylyCost;
         $this->siret = $siret;
         $this->tvaNumber = $tvaNumber;
         $this->urssafNumber = $urssafNumber;
-        $this->urssafCertificate = $urssafCertificate;
         $this->billingAddressStreet = $billingAddressStreet;
         $this->billingAddressPostcode = $billingAddressPostcode;
         $this->billingAddressLocality = $billingAddressLocality;

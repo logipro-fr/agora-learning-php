@@ -6,6 +6,11 @@ namespace AgoraLearningPhp\Service\Tools;
 
 class JsonHandler
 {
+    /**
+     * @param mixed $value
+     * @param int $flags
+     * @param int<1, max> $depth
+     */
     public static function jsonEncode(
         $value,
         int $flags = JSON_UNESCAPED_UNICODE,
@@ -22,6 +27,10 @@ class JsonHandler
         }
     }
 
+    /**
+     * @param int<1, max> $depth
+     * @return mixed
+     */
     public static function jsonDecode(
         string $json,
         ?bool $associative = null,

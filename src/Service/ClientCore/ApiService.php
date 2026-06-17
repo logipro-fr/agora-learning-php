@@ -10,6 +10,9 @@ use AgoraLearningPhp\Service\Tools\JsonHandler;
 use Symfony\Component\HttpClient\CurlHttpClient;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
+/**
+ * @template T of ApiOutput
+ */
 abstract class ApiService
 {
     public const DATETIME_FORMAT = 'c';
@@ -26,34 +29,46 @@ abstract class ApiService
         );
     }
 
+    /**
+     * @return T
+     */
     protected function convertResponseToDTO(ResponseInterface $response): ApiOutput
     {
+        /** @var array<string, mixed> $responseData */
         $responseData = JsonHandler::jsonDecode($response->getContent(false), true);
         if (HttpClient::isHttpSuccess($response)) {
             return static::convertDataToDTO($responseData);
         }
 
-        $message = array_key_exists('detail', $responseData) ? $responseData['detail'] : 'An unexpected error occured';
+        $detail = $responseData['detail'] ?? null;
+        $message = is_string($detail) ? $detail : 'An unexpected error occured';
         throw new AgoraLearningClientException($message);
     }
 
     /**
-     * @return array<int, ApiOutput>
+     * @return array<int, T>
      */
     protected function convertResponseToDTOarray(ResponseInterface $response): array
     {
         $result = [];
+        /** @var array<string, mixed> $responseData */
         $responseData = JsonHandler::jsonDecode($response->getContent(false), true);
         if (HttpClient::isHttpSuccess($response)) {
             foreach ($responseData as $data) {
+                /** @var array<string, mixed> $data */
                 $result[] = static::convertDataToDTO($data);
             }
             return $result;
         }
 
-        $message = array_key_exists('detail', $responseData) ? $responseData['detail'] : 'An unexpected error occured';
+        $detail = $responseData['detail'] ?? null;
+        $message = is_string($detail) ? $detail : 'An unexpected error occured';
         throw new AgoraLearningClientException($message);
     }
 
+    /**
+     * @param array<string, mixed> $data
+     * @return T
+     */
     abstract public static function convertDataToDTO(array $data): ApiOutput;
 }

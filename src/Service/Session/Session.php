@@ -15,8 +15,13 @@ use AgoraLearningPhp\Enum\SessionMode;
 use AgoraLearningPhp\Enum\SessionType;
 use AgoraLearningPhp\Service\ClientCore\ApiService;
 use AgoraLearningPhp\Service\ClientCore\ApiUrls;
+use AgoraLearningPhp\Service\Person\Person;
 use AgoraLearningPhp\Service\Tools\JsonHandler;
+use AgoraLearningPhp\Service\Trainer\Trainer;
 
+/**
+ * @extends ApiService<SessionOutput>
+ */
 class Session extends ApiService
 {
     /**
@@ -48,6 +53,8 @@ class Session extends ApiService
             'image' => $sessionInput->image,
             'hasForum' => $sessionInput->hasForum,
             'notifyMailForum' => $sessionInput->notifyMailForum,
+            'pedagogicalTrainer' => $sessionInput->pedagogicalTrainer,
+            'administrativePerson' => $sessionInput->administrativePerson,
             'urlPreTrainingSurvey' => $sessionInput->urlPreTrainingSurvey,
             'urlOnTheSpotSurvey' => $sessionInput->urlOnTheSpotSurvey,
             'urlDelayedSurvey' => $sessionInput->urlDelayedSurvey,
@@ -85,13 +92,40 @@ class Session extends ApiService
      */
     public static function convertDataToDTO(array $data): SessionOutput
     {
+        /** @var array{
+         *     id: string,
+         *     title: string,
+         *     type: string,
+         *     mode: string,
+         *     manualDuration: bool,
+         *     hasForum: bool,
+         *     notifyMailForum: bool,
+         *     price: float,
+         *     duration?: int|null,
+         *     description?: string|null,
+         *     maxPlaces?: int|null,
+         *     pedagogicalTrainer?: array<string, mixed>|null,
+         *     administrativePerson?: array<string, mixed>|null,
+         *     urlPreTrainingSurvey?: string|null,
+         *     urlOnTheSpotSurvey?: string|null,
+         *     urlDelayedSurvey?: string|null,
+         *     image?: string|null,
+         *     dataSessionFixed?: array{availabilityStartDate: string, availabilityEndDate: string},
+         *     dataSessionOpened?: array{subscribeStartDate: string, subscribeEndDate: string, accessDurationDays: int}
+         * } $data */
         $duration = $data['duration'] ?? null;
         $description = $data['description'] ?? null;
         $maxPlaces = $data['maxPlaces'] ?? null;
         $urlPreTrainingSurvey = $data['urlPreTrainingSurvey'] ?? null;
         $urlOnTheSpotSurvey = $data['urlOnTheSpotSurvey'] ?? null;
         $urlDelayedSurvey = $data['urlDelayedSurvey'] ?? null;
-        $image = $data['image'] ?? null;
+
+        $pedagogicalTrainer = array_key_exists('pedagogicalTrainer', $data)
+            ? Trainer::convertDataToDTO($data['pedagogicalTrainer'])
+            : null;
+        $administrativePerson = array_key_exists('administrativePerson', $data)
+            ? Person::convertDataToDTO($data['administrativePerson'])
+            : null;
 
         if (array_key_exists('dataSessionFixed', $data)) {
             $openedData = $data['dataSessionFixed'];
@@ -123,10 +157,11 @@ class Session extends ApiService
             $duration,
             $description,
             $maxPlaces,
+            $pedagogicalTrainer,
+            $administrativePerson,
             $urlPreTrainingSurvey,
             $urlOnTheSpotSurvey,
-            $urlDelayedSurvey,
-            $image,
+            $urlDelayedSurvey
         );
     }
 }

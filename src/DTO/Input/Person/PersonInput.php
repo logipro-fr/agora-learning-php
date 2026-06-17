@@ -10,7 +10,7 @@ final class PersonInput
 {
     public string $familyName;
     public string $givenName;
-    public ?string $email;
+    public string $email;
     public ?string $telephone;
     public ?string $addressStreet;
     public ?string $addressPostcode;
@@ -24,8 +24,8 @@ final class PersonInput
     public function __construct(
         string $familyName,
         string $givenName,
+        string $email,
         string $gender = Gender::GENDER_NA,
-        ?string $email = null,
         ?string $telephone = null,
         ?string $addressStreet = null,
         ?string $addressPostcode = null,

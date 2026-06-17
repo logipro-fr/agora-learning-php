@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace AgoraLearningPhp\DTO\Output\Session;
 
 use AgoraLearningPhp\DTO\Output\ApiOutput;
+use AgoraLearningPhp\DTO\Output\Person\PersonOutput;
+use AgoraLearningPhp\DTO\Output\Trainer\TrainerOutput;
 
 class SessionOutput extends ApiOutput
 {
@@ -17,13 +19,14 @@ class SessionOutput extends ApiOutput
     public bool $hasForum = true;
     public bool $notifyMailForum = true;
     public float $price = 0;
-    public ?string $duration;
+    public ?int $duration;
     public ?string $description;
     public ?int $maxPlaces;
+    public ?TrainerOutput $pedagogicalTrainer;
+    public ?PersonOutput $administrativePerson;
     public ?string $urlPreTrainingSurvey;
     public ?string $urlOnTheSpotSurvey;
     public ?string $urlDelayedSurvey;
-    public ?string $image;
 
     public function __construct(
         string $uuid,
@@ -35,13 +38,14 @@ class SessionOutput extends ApiOutput
         bool $hasForum = true,
         bool $notifyMailForum = true,
         float $price = 0,
-        ?string $duration = null,
+        ?int $duration = null,
         ?string $description = null,
         ?int $maxPlaces = null,
+        ?TrainerOutput $pedagogicalTrainer = null,
+        ?PersonOutput $administrativePerson = null,
         ?string $urlPreTrainingSurvey = null,
         ?string $urlOnTheSpotSurvey = null,
-        ?string $urlDelayedSurvey = null,
-        ?string $image = null
+        ?string $urlDelayedSurvey = null
     ) {
         $this->uuid = $uuid;
         $this->title = $title;
@@ -55,9 +59,10 @@ class SessionOutput extends ApiOutput
         $this->duration = $duration;
         $this->description = $description;
         $this->maxPlaces = $maxPlaces;
+        $this->pedagogicalTrainer = $pedagogicalTrainer;
+        $this->administrativePerson = $administrativePerson;
         $this->urlPreTrainingSurvey = $urlPreTrainingSurvey;
         $this->urlOnTheSpotSurvey = $urlOnTheSpotSurvey;
         $this->urlDelayedSurvey = $urlDelayedSurvey;
-        $this->image = $image;
     }
 }

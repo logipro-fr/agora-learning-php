@@ -15,6 +15,8 @@ final class SessionInput
     public int $durationInSeconds;
     public ?string $description;
     public ?int $maxPlaces;
+    public ?string $pedagogicalTrainer;
+    public ?string $administrativePerson;
     public ?string $urlPreTrainingSurvey;
     public ?string $urlOnTheSpotSurvey;
     public ?string $urlDelayedSurvey;
@@ -30,6 +32,8 @@ final class SessionInput
         int $durationInSeconds = 0,
         ?string $description = null,
         ?int $maxPlaces = null,
+        ?string $pedagogicalTrainer = null,
+        ?string $administrativePerson = null,
         ?string $urlPreTrainingSurvey = null,
         ?string $urlOnTheSpotSurvey = null,
         ?string $urlDelayedSurvey = null,
@@ -44,6 +48,8 @@ final class SessionInput
         $this->durationInSeconds = $durationInSeconds;
         $this->description = $description;
         $this->maxPlaces = $maxPlaces;
+        $this->pedagogicalTrainer = $pedagogicalTrainer;
+        $this->administrativePerson = $administrativePerson;
         $this->urlPreTrainingSurvey = $urlPreTrainingSurvey;
         $this->urlOnTheSpotSurvey = $urlOnTheSpotSurvey;
         $this->urlDelayedSurvey = $urlDelayedSurvey;

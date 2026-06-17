@@ -1,0 +1,20 @@
+{
+    "$schema": "vendor/infection/infection/resources/schema.json",
+    "source": {
+        "directories": [
+            "src"
+        ]
+    },
+    "testFramework": "phpunit",
+    "testFrameworkOptions": "--testsuite=Unit",
+    "minMsi": 0,
+    "minCoveredMsi": 0,
+    "mutators": {
+        "@default": true
+    },
+    "logs": {
+        "text": "var/infection/infection.log",
+        "html": "var/infection/infection.html",
+        "summary": "var/infection/summary.log"
+    }
+}

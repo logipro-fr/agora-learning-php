@@ -1,0 +1,29 @@
+services:
+  php:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    volumes:
+      - .:/app
+      - composer-cache:/root/.composer/cache
+    working_dir: /app
+
+    # tail -f /dev/null est le moyen standard pour garder vivant un conteneur utilitaire (sans daemon comme php-fpm ou nginx). 
+    # C'est cohérent avec notre usage (un environnement PHP pour lancer des commandes : composer, bin/console, etc.)
+    command: tail -f /dev/null
+
+  php85:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.php85
+    volumes:
+      - .:/app
+      - composer-cache:/root/.composer/cache
+    working_dir: /app
+
+    # tail -f /dev/null est le moyen standard pour garder vivant un conteneur utilitaire (sans daemon comme php-fpm ou nginx). 
+    # C'est cohérent avec notre usage (un environnement PHP pour lancer des commandes : composer, bin/console, etc.)
+    command: tail -f /dev/null
+
+volumes:
+  composer-cache:

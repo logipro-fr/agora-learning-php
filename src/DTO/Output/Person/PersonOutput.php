@@ -12,13 +12,12 @@ final class PersonOutput extends ApiOutput
     public string $uuid;
     public string $familyName;
     public string $givenName;
-    public ?string $email;
+    public string $email;
     public ?string $telephone;
     public ?string $addressStreet;
     public ?string $addressPostcode;
     public ?string $addressLocality;
     public ?string $addressCountry;
-    public ?string $image;
     public string $gender;
     public ?\DateTimeImmutable $birthDate;
     public ?string $jobTitle;
@@ -27,13 +26,12 @@ final class PersonOutput extends ApiOutput
         string $uuid,
         string $familyName,
         string $givenName,
-        ?string $email = null,
+        string $email,
         ?string $telephone = null,
         ?string $addressStreet = null,
         ?string $addressPostcode = null,
         ?string $addressLocality = null,
         ?string $addressCountry = null,
-        ?string $image = null,
         string $gender = Gender::GENDER_NA,
         ?\DateTimeImmutable $birthDate = null,
         ?string $jobTitle = null
@@ -47,7 +45,6 @@ final class PersonOutput extends ApiOutput
         $this->addressPostcode = $addressPostcode;
         $this->addressLocality = $addressLocality;
         $this->addressCountry = $addressCountry;
-        $this->image = $image;
         $this->gender = $gender;
         $this->birthDate = $birthDate;
         $this->jobTitle = $jobTitle;
