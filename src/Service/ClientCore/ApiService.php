@@ -42,7 +42,7 @@ abstract class ApiService
 
         $detail = $responseData['detail'] ?? null;
         $message = is_string($detail) ? $detail : 'An unexpected error occured';
-        throw new AgoraLearningClientException($message);
+        throw new AgoraLearningClientException($message, $response->getStatusCode());
     }
 
     /**
@@ -63,7 +63,7 @@ abstract class ApiService
 
         $detail = $responseData['detail'] ?? null;
         $message = is_string($detail) ? $detail : 'An unexpected error occured';
-        throw new AgoraLearningClientException($message);
+        throw new AgoraLearningClientException($message, $response->getStatusCode());
     }
 
     /**

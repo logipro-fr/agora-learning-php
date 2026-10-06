@@ -83,7 +83,7 @@ class EnrollmentTest extends ServiceTestCase
 
     private function makeEnrollment(HttpClient $httpClient): Enrollment
     {
-        return new class($httpClient) extends Enrollment {
+        return new class ($httpClient) extends Enrollment {
             public function __construct(HttpClient $client)
             {
                 $this->httpClient = $client;

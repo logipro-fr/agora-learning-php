@@ -32,7 +32,7 @@ class LearnerTest extends ServiceTestCase
 
     private function makeLearner(HttpClient $httpClient): Learner
     {
-        return new class($httpClient) extends Learner {
+        return new class ($httpClient) extends Learner {
             public function __construct(HttpClient $client)
             {
                 $this->httpClient = $client;
@@ -80,7 +80,7 @@ class LearnerTest extends ServiceTestCase
         // Act
         $dto = Learner::convertDataToDTO($this->makeMinimalData());
 
-        // Assert        
+        // Assert
         $this->assertNull($dto->telephone);
         $this->assertNull($dto->addressStreet);
         $this->assertNull($dto->addressPostcode);

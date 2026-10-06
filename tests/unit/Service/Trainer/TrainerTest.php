@@ -52,7 +52,7 @@ class TrainerTest extends ServiceTestCase
 
     private function makeTrainer(HttpClient $httpClient): Trainer
     {
-        return new class($httpClient) extends Trainer {
+        return new class ($httpClient) extends Trainer {
             public function __construct(HttpClient $client)
             {
                 $this->httpClient = $client;

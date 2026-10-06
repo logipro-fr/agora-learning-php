@@ -19,7 +19,9 @@ class TokenHandlerTest extends ServiceTestCase
         // Assert
         $ref  = new \ReflectionClass(TokenHandler::class);
         $prop = $ref->getProperty('apiKey');
-        $prop->setAccessible(true);
+        if (\PHP_VERSION_ID < 80100) {
+            $prop->setAccessible(true);
+        }
         $this->assertSame('my-secret-key', $prop->getValue(null));
     }
 
@@ -34,7 +36,9 @@ class TokenHandlerTest extends ServiceTestCase
         // Assert
         $ref  = new \ReflectionClass(TokenHandler::class);
         $prop = $ref->getProperty('apiKey');
-        $prop->setAccessible(true);
+        if (\PHP_VERSION_ID < 80100) {
+            $prop->setAccessible(true);
+        }
         $this->assertSame('first-key', $prop->getValue(null));
     }
 
@@ -59,10 +63,14 @@ class TokenHandlerTest extends ServiceTestCase
         // Arrange
         $ref = new \ReflectionClass(TokenHandler::class);
         $tokenProp = $ref->getProperty('token');
-        $tokenProp->setAccessible(true);
+        if (\PHP_VERSION_ID < 80100) {
+            $tokenProp->setAccessible(true);
+        }
         $tokenProp->setValue(null, 'valid-cached-token');
         $expireProp = $ref->getProperty('expireAt');
-        $expireProp->setAccessible(true);
+        if (\PHP_VERSION_ID < 80100) {
+            $expireProp->setAccessible(true);
+        }
         $expireProp->setValue(null, (new \DateTimeImmutable())->getTimestamp() + 3600);
         $mockHttpClient = $this->createMock(HttpClientInterface::class);
         $mockHttpClient->expects($this->never())->method('request');
@@ -79,10 +87,14 @@ class TokenHandlerTest extends ServiceTestCase
         // Arrange
         $ref = new \ReflectionClass(TokenHandler::class);
         $tokenProp = $ref->getProperty('token');
-        $tokenProp->setAccessible(true);
+        if (\PHP_VERSION_ID < 80100) {
+            $tokenProp->setAccessible(true);
+        }
         $tokenProp->setValue(null, 'old-token');
         $expireProp = $ref->getProperty('expireAt');
-        $expireProp->setAccessible(true);
+        if (\PHP_VERSION_ID < 80100) {
+            $expireProp->setAccessible(true);
+        }
         $expireProp->setValue(null, (new \DateTimeImmutable())->getTimestamp() - 200);
         $mockResponse = $this->createMock(ResponseInterface::class);
         $mockResponse->method('getStatusCode')->willReturn(200);
@@ -119,7 +131,9 @@ class TokenHandlerTest extends ServiceTestCase
         // Arrange
         $ref = new \ReflectionClass(TokenHandler::class);
         $tokenProp = $ref->getProperty('token');
-        $tokenProp->setAccessible(true);
+        if (\PHP_VERSION_ID < 80100) {
+            $tokenProp->setAccessible(true);
+        }
         $tokenProp->setValue(null, 'stale-token');
         $mockResponse = $this->createMock(ResponseInterface::class);
         $mockResponse->method('getStatusCode')->willReturn(500);
@@ -143,10 +157,14 @@ class TokenHandlerTest extends ServiceTestCase
         // Arrange
         $ref = new \ReflectionClass(TokenHandler::class);
         $tokenProp = $ref->getProperty('token');
-        $tokenProp->setAccessible(true);
+        if (\PHP_VERSION_ID < 80100) {
+            $tokenProp->setAccessible(true);
+        }
         $tokenProp->setValue(null, 'boundary-token');
         $expireProp = $ref->getProperty('expireAt');
-        $expireProp->setAccessible(true);
+        if (\PHP_VERSION_ID < 80100) {
+            $expireProp->setAccessible(true);
+        }
         $expireProp->setValue(null, (new \DateTimeImmutable())->getTimestamp() - 60);
         $mockHttpClient = $this->createMock(HttpClientInterface::class);
         $mockHttpClient->expects($this->never())->method('request');
@@ -163,10 +181,14 @@ class TokenHandlerTest extends ServiceTestCase
         // Arrange — expireAt == now - 61 : le token est expiré (expireAt < now - 60)
         $ref = new \ReflectionClass(TokenHandler::class);
         $tokenProp = $ref->getProperty('token');
-        $tokenProp->setAccessible(true);
+        if (\PHP_VERSION_ID < 80100) {
+            $tokenProp->setAccessible(true);
+        }
         $tokenProp->setValue(null, 'expiring-token');
         $expireProp = $ref->getProperty('expireAt');
-        $expireProp->setAccessible(true);
+        if (\PHP_VERSION_ID < 80100) {
+            $expireProp->setAccessible(true);
+        }
         $expireProp->setValue(null, (new \DateTimeImmutable())->getTimestamp() - 61);
         $mockResponse = $this->createMock(ResponseInterface::class);
         $mockResponse->method('getStatusCode')->willReturn(200);
@@ -251,7 +273,9 @@ class TokenHandlerTest extends ServiceTestCase
         $after      = (new \DateTimeImmutable())->getTimestamp();
         $ref        = new \ReflectionClass(TokenHandler::class);
         $expireProp = $ref->getProperty('expireAt');
-        $expireProp->setAccessible(true);
+        if (\PHP_VERSION_ID < 80100) {
+            $expireProp->setAccessible(true);
+        }
         $expireAt   = $expireProp->getValue(null);
         $this->assertGreaterThanOrEqual($before + $expiresIn, $expireAt);
         $this->assertLessThanOrEqual($after + $expiresIn, $expireAt);

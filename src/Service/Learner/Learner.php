@@ -69,12 +69,12 @@ class Learner extends ApiService
          *     givenName: string,
          *     recoverEmail: string,
          *     email: string,
-         *     gender?: string,         
+         *     gender?: string,
          *     telephone?: string|null,
          *     addressStreet?: string|null,
          *     addressPostcode?: string|null,
          *     addressLocality?: string|null,
-         *     addressCountry?: string|null,         
+         *     addressCountry?: string|null,
          *     birthDate?: string|null,
          *     jobTitle?: string|null
          * } $data */

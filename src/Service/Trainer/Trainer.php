@@ -132,7 +132,7 @@ class Trainer extends ApiService
          *     addressLocality?: string|null,
          *     addressCountry?: string|null,
          *     birthDate?: string|null,
-         *     jobTitle?: string|null,         
+         *     jobTitle?: string|null,
          *     statut?: string|null,
          *     society?: array<string, mixed>,
          *     hourlyCost?: float|null,

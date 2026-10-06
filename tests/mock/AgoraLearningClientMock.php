@@ -27,6 +27,7 @@ use AgoraLearningPhp\DTO\Output\Trainer\TrainerOutput;
 use AgoraLearningPhp\Enum\Gender;
 use AgoraLearningPhp\Enum\SessionMode;
 use AgoraLearningPhp\Enum\SessionType;
+use AgoraLearningPhp\Identifier\ApiObjectIdentifier;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -35,7 +36,8 @@ class AgoraLearningClientMock extends AgoraLearningClient
     public function __construct(
         string $url,
         string $apiKey
-    ) {}
+    ) {
+    }
 
     // Auth
     public function ping(): ResponseInterface
@@ -530,10 +532,10 @@ class AgoraLearningClientMock extends AgoraLearningClient
         ];
     }
 
-    public function getSession(string $uuid): SessionOutput
+    public function getSession(ApiObjectIdentifier $identifier): SessionOutput
     {
         return new SessionOutput(
-            $uuid,
+            $identifier->getId(),
             'Formation PHP avancé',
             SessionType::SESSION_TYPE_INTER,
             SessionMode::SESSION_MODE_FACE_TO_FACE,

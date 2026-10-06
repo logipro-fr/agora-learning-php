@@ -82,6 +82,37 @@ abstract class ServiceTestCase extends TestCase
     }
 
     /**
+     * Crée un HttpClient qui capture la méthode HTTP et l'URL appelées.
+     *
+     * @param int    $statusCode   Code HTTP à retourner
+     * @param string $responseBody Corps de la réponse simulée
+     * @param string $capturedMethod Variable de référence où sera stockée la méthode
+     * @param string $capturedUrl    Variable de référence où sera stockée l'URL
+     */
+    protected function makeHttpClientInspectingRequest(
+        int $statusCode,
+        string $responseBody,
+        string &$capturedMethod,
+        string &$capturedUrl
+    ): HttpClient {
+        $this->injectCachedToken('test-token');
+
+        $mockResponse = $this->createMock(ResponseInterface::class);
+        $mockResponse->method('getStatusCode')->willReturn($statusCode);
+        $mockResponse->method('getContent')->with(false)->willReturn($responseBody);
+
+        $mockInner = $this->createMock(HttpClientInterface::class);
+        $mockInner->method('request')
+            ->willReturnCallback(function (string $method, string $url) use ($mockResponse, &$capturedMethod, &$capturedUrl) {
+                $capturedMethod = $method;
+                $capturedUrl = $url;
+                return $mockResponse;
+            });
+
+        return new HttpClient($mockInner, new TokenHandler($mockInner));
+    }
+
+    /**
      * Injecte un token valide et non expiré dans l'état statique de TokenHandler.
      * Cela évite que le TokenHandler tente une requête réseau pour s'authentifier.
      */
@@ -90,11 +121,15 @@ abstract class ServiceTestCase extends TestCase
         $ref = new \ReflectionClass(TokenHandler::class);
 
         $tokenProp = $ref->getProperty('token');
-        $tokenProp->setAccessible(true);
+        if (\PHP_VERSION_ID < 80100) {
+            $tokenProp->setAccessible(true);
+        }
         $tokenProp->setValue(null, $token);
 
         $expireProp = $ref->getProperty('expireAt');
-        $expireProp->setAccessible(true);
+        if (\PHP_VERSION_ID < 80100) {
+            $expireProp->setAccessible(true);
+        }
         $expireProp->setValue(null, (new \DateTimeImmutable())->getTimestamp() + 3600);
     }
 
@@ -106,13 +141,17 @@ abstract class ServiceTestCase extends TestCase
     {
         $refUrls = new \ReflectionClass(ApiUrls::class);
         $baseUrl = $refUrls->getProperty('baseUrl');
-        $baseUrl->setAccessible(true);
+        if (\PHP_VERSION_ID < 80100) {
+            $baseUrl->setAccessible(true);
+        }
         $baseUrl->setValue(null, '');
 
         $refToken = new \ReflectionClass(TokenHandler::class);
         foreach (['apiKey', 'token', 'expireAt'] as $name) {
             $prop = $refToken->getProperty($name);
-            $prop->setAccessible(true);
+            if (\PHP_VERSION_ID < 80100) {
+                $prop->setAccessible(true);
+            }
             $prop->setValue(null, $name === 'apiKey' ? '' : null);
         }
     }

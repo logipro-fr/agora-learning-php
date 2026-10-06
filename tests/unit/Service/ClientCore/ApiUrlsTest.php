@@ -25,7 +25,9 @@ class ApiUrlsTest extends TestCase
     {
         $reflection = new \ReflectionClass(ApiUrls::class);
         $prop = $reflection->getProperty('baseUrl');
-        $prop->setAccessible(true);
+        if (\PHP_VERSION_ID < 80100) {
+            $prop->setAccessible(true);
+        }
         $prop->setValue(null, '');
     }
 
@@ -51,6 +53,15 @@ class ApiUrlsTest extends TestCase
     {
         // Act
         ApiUrls::initBaseUrl('https://myserver.example.com');
+
+        // Assert
+        $this->assertSame('https://myserver.example.com/api/external/v1/ping', ApiUrls::getPing());
+    }
+
+    public function testInitBaseUrlRemovesTrailingSlash(): void
+    {
+        // Act
+        ApiUrls::initBaseUrl('https://myserver.example.com/');
 
         // Assert
         $this->assertSame('https://myserver.example.com/api/external/v1/ping', ApiUrls::getPing());
@@ -256,6 +267,59 @@ class ApiUrlsTest extends TestCase
 
         // Assert
         $this->assertSame(self::BASE . ApiUrls::GET_SESSION . $uuid, $url);
+    }
+
+    public function testGetGetSessionKeepsAgoraIdUnchanged(): void
+    {
+        // Arrange
+        ApiUrls::initBaseUrl(self::BASE);
+
+        // Act
+        $url = ApiUrls::getGetSession('ses_abc');
+
+        // Assert
+        $this->assertSame(self::BASE . '/api/external/v1/sessions/ses_abc', $url);
+    }
+
+    public function testGetGetSessionEncodesColon(): void
+    {
+        // Arrange
+        ApiUrls::initBaseUrl(self::BASE);
+
+        // Act
+        $url = ApiUrls::getGetSession('Src:S-42');
+
+        // Assert
+        $this->assertSame(self::BASE . '/api/external/v1/sessions/Src%3AS-42', $url);
+    }
+
+    /**
+     * @dataProvider reservedCharactersProvider
+     */
+    public function testGetGetSessionEncodesReservedCharacters(string $identifier, string $expectedSegment): void
+    {
+        // Arrange
+        ApiUrls::initBaseUrl(self::BASE);
+
+        // Act
+        $url = ApiUrls::getGetSession($identifier);
+
+        // Assert
+        $this->assertSame(self::BASE . ApiUrls::GET_SESSION . $expectedSegment, $url);
+    }
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public function reservedCharactersProvider(): array
+    {
+        return [
+            'slash'    => ['Src:a/b', 'Src%3Aa%2Fb'],
+            'question' => ['Src:a?b=1', 'Src%3Aa%3Fb%3D1'],
+            'dièse'    => ['Src:a#b', 'Src%3Aa%23b'],
+            'espace'   => ['Src:a b', 'Src%3Aa%20b'],
+            'unicode'  => ['Src:é', 'Src%3A%C3%A9'],
+        ];
     }
 
     public function testGetGetCollectionSession(): void

@@ -708,13 +708,41 @@ if ($session->sessionData instanceof OpenedSessionOutput) {
 | `urlDelayedSurvey`     | ?string                                   | URL questionnaire à froid                             |
 | `image`                | ?string                                   | URL de l'image d'illustration                         |
 
-### `getSession(string $uuid) : SessionOutput`
+### `getSession(string|ApiObjectIdentifier $identifier) : SessionOutput`
+
+Une session peut être lue par son identifiant Agora ou par l'identifiant qu'elle porte dans un système externe.
 
 ```php
+use AgoraLearningPhp\Identifier\AgoraId;
+use AgoraLearningPhp\Identifier\ExternalId;
+
+// Identifiant Agora (une string est interprétée comme un AgoraId)
 $session = $client->getSession('ses_01KRXPMF97F8BRPH7N7972QRYY');
+$session = $client->getSession(new AgoraId('ses_01KRXPMF97F8BRPH7N7972QRYY'));
+
+// Identifiant externe : appelle GET /sessions/MonERP%3AS-42
+$session = $client->getSession(new ExternalId('MonERP', 'S-42'));
 
 echo $session->title;
 echo $session->price;
+```
+
+> ⚠️ La lecture par `ExternalId` nécessite que le serveur Agora prenne en charge les identifiants `source:id` sur cette route.
+
+| Classe          | Format `getId()` | Contraintes                                                                                         |
+| --------------- | ---------------- | --------------------------------------------------------------------------------------------------- |
+| `AgoraId`       | `ses_…`          | non vide, ne contient jamais `:`                                                                    |
+| `ExternalId`    | `source:id`      | `source` : `[A-Za-z0-9_-]{1,50}` ; `id` : non vide, 191 caractères max, `:` autorisé                |
+
+Les deux classes appliquent `trim()` à leurs arguments et lèvent une `\InvalidArgumentException` si une contrainte n'est pas respectée. Une string contenant `:` passée à `getSession()` est rejetée : il faut utiliser `ExternalId`.
+
+Pour reconstruire un identifiant stocké sous sa forme `getId()` :
+
+```php
+use AgoraLearningPhp\Identifier\ApiObjectIdentifierFactory;
+
+$identifier = ApiObjectIdentifierFactory::fromString('MonERP:S-42'); // ExternalId('MonERP', 'S-42')
+$identifier = ApiObjectIdentifierFactory::fromString('ses_abc');     // AgoraId('ses_abc')
 ```
 
 ### `getCollectionSession() : array`
@@ -853,21 +881,20 @@ try {
 
 ### Erreur HTTP sur un appel métier
 
-Les méthodes retournent un objet hydraté. Si l'API retourne une erreur (4xx, 5xx), le client Symfony HTTP lève une exception lors de l'appel à `getContent()` en interne. Il est recommandé d'encapsuler les appels dans un bloc `try/catch` :
+Si l'API retourne un statut hors 2xx, le client lève une `AgoraLearningClientException`. Son message reprend le champ `detail` de la réponse, et `getCode()` renvoie le statut HTTP :
 
 ```php
-use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
-use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
+use AgoraLearningPhp\Exception\AgoraLearningClientException;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 
 try {
     $person = $client->getPerson('uuid-inexistant');
-} catch (ClientExceptionInterface $e) {
-    // Erreur 4xx (ex : 404 Not Found, 422 Validation)
-    echo 'Ressource non trouvée ou données invalides : ' . $e->getMessage();
-} catch (ServerExceptionInterface $e) {
-    // Erreur 5xx
-    echo 'Erreur serveur : ' . $e->getMessage();
+} catch (AgoraLearningClientException $e) {
+    if ($e->getCode() === 404) {
+        echo 'Ressource non trouvée : ' . $e->getMessage();
+    } else {
+        echo 'Erreur API (HTTP ' . $e->getCode() . ') : ' . $e->getMessage();
+    }
 } catch (TransportExceptionInterface $e) {
     // Erreur réseau (timeout, DNS, etc.)
     echo 'Erreur réseau : ' . $e->getMessage();

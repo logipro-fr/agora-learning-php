@@ -40,7 +40,7 @@ class SocietyTest extends ServiceTestCase
 
     private function makeSociety(HttpClient $httpClient): Society
     {
-        return new class($httpClient) extends Society {
+        return new class ($httpClient) extends Society {
             public function __construct(HttpClient $client)
             {
                 $this->httpClient = $client;

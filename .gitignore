@@ -1,7 +1,10 @@
 /vendor
 /vendor74
+/vendor85
+/.env.local
 /composer.lock
 /.php-cs-fixer.cache
 /.phpunit.result.cache
 /var
 /examples/config.php
+CLAUDE.md

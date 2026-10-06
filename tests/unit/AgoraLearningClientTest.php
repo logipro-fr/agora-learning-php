@@ -18,6 +18,8 @@ use AgoraLearningPhp\DTO\Output\Person\PersonOutput;
 use AgoraLearningPhp\DTO\Output\Session\SessionOutput;
 use AgoraLearningPhp\DTO\Output\Society\SocietyOutput;
 use AgoraLearningPhp\DTO\Output\Trainer\TrainerOutput;
+use AgoraLearningPhp\Identifier\AgoraId;
+use AgoraLearningPhp\Identifier\ExternalId;
 use AgoraLearningPhp\Service\Auth\Ping;
 use AgoraLearningPhp\Service\ClientCore\ApiUrls;
 use AgoraLearningPhp\Service\ClientCore\TokenHandler;
@@ -60,7 +62,7 @@ class AgoraLearningClientTest extends TestCase
         $this->sessionMock = $this->createMock(Session::class);
         $this->enrollmentMock = $this->createMock(Enrollment::class);
 
-        $this->client = new class(
+        $this->client = new class (
             $this->pingMock,
             $this->personMock,
             $this->trainerMock,
@@ -124,20 +126,28 @@ class AgoraLearningClientTest extends TestCase
     {
         $refUrls = new \ReflectionClass(ApiUrls::class);
         $urlProp = $refUrls->getProperty('baseUrl');
-        $urlProp->setAccessible(true);
+        if (\PHP_VERSION_ID < 80100) {
+            $urlProp->setAccessible(true);
+        }
         $urlProp->setValue(null, '');
 
         $refToken  = new \ReflectionClass(TokenHandler::class);
         $keyProp   = $refToken->getProperty('apiKey');
-        $keyProp->setAccessible(true);
+        if (\PHP_VERSION_ID < 80100) {
+            $keyProp->setAccessible(true);
+        }
         $keyProp->setValue(null, '');
 
         $tokenProp = $refToken->getProperty('token');
-        $tokenProp->setAccessible(true);
+        if (\PHP_VERSION_ID < 80100) {
+            $tokenProp->setAccessible(true);
+        }
         $tokenProp->setValue(null, null);
 
         $expireProp = $refToken->getProperty('expireAt');
-        $expireProp->setAccessible(true);
+        if (\PHP_VERSION_ID < 80100) {
+            $expireProp->setAccessible(true);
+        }
         $expireProp->setValue(null, null);
     }
 
@@ -149,7 +159,9 @@ class AgoraLearningClientTest extends TestCase
         // Assert
         $refUrls = new \ReflectionClass(ApiUrls::class);
         $urlProp = $refUrls->getProperty('baseUrl');
-        $urlProp->setAccessible(true);
+        if (\PHP_VERSION_ID < 80100) {
+            $urlProp->setAccessible(true);
+        }
         $this->assertSame(self::BASE_URL, $urlProp->getValue(null));
     }
 
@@ -161,7 +173,9 @@ class AgoraLearningClientTest extends TestCase
         // Assert
         $refToken = new \ReflectionClass(TokenHandler::class);
         $keyProp  = $refToken->getProperty('apiKey');
-        $keyProp->setAccessible(true);
+        if (\PHP_VERSION_ID < 80100) {
+            $keyProp->setAccessible(true);
+        }
         $this->assertSame(self::API_KEY, $keyProp->getValue(null));
     }
 
@@ -384,12 +398,26 @@ class AgoraLearningClientTest extends TestCase
     public function testGetSession(): void
     {
         // Arrange
-        $uuid   = 'session-uuid-123';
+        $identifier = new AgoraId('session-uuid-123');
         $output = $this->createFinalDtoInstance(SessionOutput::class);
-        $this->sessionMock->expects($this->once())->method('getSession')->with($uuid)->willReturn($output);
+        $this->sessionMock->expects($this->once())->method('getSession')->with($identifier)->willReturn($output);
 
         // Act
-        $result = $this->client->getSession($uuid);
+        $result = $this->client->getSession($identifier);
+
+        // Assert
+        $this->assertSame($output, $result);
+    }
+
+    public function testGetSessionWithExternalId(): void
+    {
+        // Arrange
+        $identifier = new ExternalId('Src', 'S-42');
+        $output = $this->createFinalDtoInstance(SessionOutput::class);
+        $this->sessionMock->expects($this->once())->method('getSession')->with($identifier)->willReturn($output);
+
+        // Act
+        $result = $this->client->getSession($identifier);
 
         // Assert
         $this->assertSame($output, $result);

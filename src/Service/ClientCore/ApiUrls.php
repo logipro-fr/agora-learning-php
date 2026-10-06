@@ -55,7 +55,7 @@ class ApiUrls
     public static function initBaseUrl(string $baseUrl): void
     {
         if (self::$baseUrl === '') {
-            self::$baseUrl = $baseUrl;
+            self::$baseUrl = rtrim($baseUrl, '/');
         }
     }
 
@@ -145,9 +145,12 @@ class ApiUrls
         return self::getBaseUrl() . self::CREATE_OPEN_SESSION;
     }
 
-    public static function getGetSession(string $sessionUuid): string
+    /**
+     * @param string $identifier Identifiant brut (uuid Agora ou "source:id"), encodé ici
+     */
+    public static function getGetSession(string $identifier): string
     {
-        return self::getBaseUrl() . self::GET_SESSION . $sessionUuid;
+        return self::getBaseUrl() . self::GET_SESSION . rawurlencode($identifier);
     }
 
     public static function getGetCollectionSession(): string

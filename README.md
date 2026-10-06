@@ -72,7 +72,7 @@ echo $learner->uuid;
 | **Trainer**    | `getTrainer()`, `getCollectionTrainer()`, `createTrainerEmployee()`, `createTrainerFree()`                                                                      |
 | **Learner**    | `getLearner()`, `getCollectionLearner()`, `createLearner()`                                                                                                     |
 | **Society**    | `getSociety()`, `getCollectionSociety()`, `createSociety()`                                                                                                     |
-| **Session**    | `getSession()`, `getCollectionSession()`, `createSession()`                                                                                                     |
+| **Session**    | `getSession()` (par `AgoraId` ou `ExternalId`), `getCollectionSession()`, `createSession()`                                                                     |
 | **Enrollment** | `getEnrollment()`, `getCollectionEnrollmentFromSession()`, `getCollectionEnrollmentFromLearner()`, `getEnrollmentFromSessionAndLearner()`, `createEnrollment()` |
 
 Consultez [docs/usage.md](docs/usage.md) pour un exemple complet par méthode.
@@ -127,6 +127,8 @@ examples/
 ├── session/
 │   ├── get_collection.php
 │   ├── get_one.php
+│   ├── get_one_by_agora_id.php
+│   ├── get_one_by_external_id.php
 │   ├── create_fixed.php
 │   └── create_opened.php
 └── enrollment/
@@ -158,9 +160,11 @@ PHP 7.4+ et Composer installés localement, **ou** Docker (aucun prérequis PHP 
 | `composer cs-check`  | php-cs-fixer      | Vérifie le style PSR-12 sans modifier les fichiers |
 | `composer cs-fix`    | php-cs-fixer      | Corrige automatiquement les violations de style    |
 | `composer phpstan`   | PHPStan niveau 10 | Analyse statique du répertoire `src/`              |
-| `composer test`      | PHPUnit 9         | Lance la suite de tests unitaires                  |
+| `composer test`      | PHPUnit 9         | Lance tous les tests (unitaires + intégration)     |
+| `composer test-unitaire` | PHPUnit 9     | Lance les tests unitaires (`tests/unit/`)          |
+| `composer test-integration` | PHPUnit 9  | Lance les tests d'intégration (`tests/integration/`) contre une vraie instance Agora |
 | `composer infection` | Infection 0.29    | Tests de mutation (suite `Unit`, 4 threads)        |
-| `composer qa`        | -                 | Enchaîne cs-check, phpstan et test                 |
+| `composer qa`        | -                 | Enchaîne cs-check, phpstan et test-unitaire        |
 
 ---
 
@@ -173,8 +177,14 @@ composer install
 # Tous les contrôles qualité
 composer qa
 
-# Tests unitaires seuls
+# Tous les tests (unitaires + intégration)
 composer test
+
+# Tests unitaires seuls
+composer test-unitaire
+
+# Tests d'intégration (instance Agora configurée dans .env.local)
+composer test-integration
 
 # Tests de mutation
 composer infection
@@ -184,20 +194,23 @@ composer infection
 
 ### Avec Docker
 
-Deux services sont disponibles : `php` (PHP 8.2) et `php74` (PHP 7.4).
+Trois services sont disponibles : `php` (PHP 8.2, par défaut, dépendances dans `vendor/`), `php85` (PHP 8.5, dépendances dans `vendor85/`) et `php74` (PHP 7.4, dépendances dans `vendor74/`).
 
 #### Construire les images
 
 ```bash
-# Les deux images en une commande
+# Toutes les images en une commande
 docker compose build
 
 # Une image spécifique
-# PHP 7.4
+# PHP 8.2 (par défaut)
 docker compose build php
 
 # PHP 8.5
 docker compose build php85
+
+# PHP 7.4
+docker compose build php74
 ```
 
 #### Accéder au docker
@@ -209,31 +222,59 @@ docker exec -ti agora-learning-php-php-1 /bin/bash
 #### Installer les dépendances
 
 ```bash
-# PHP 7.4
-docker compose run --rm php composer install
+# PHP 8.2 (par défaut), dans vendor/
+docker compose run --rm php composer update
 
-# PHP 8.5
-docker compose run --rm php85 composer install
+# PHP 8.5, dans vendor85/
+docker compose run --rm php85 composer update
+
+# PHP 7.4, dans vendor74/
+docker compose run --rm php74 composer update
 ```
 
 #### Contrôles qualité
 
 ```bash
-# PHP 7.4
+# PHP 8.2 (par défaut)
 docker compose run --rm php composer qa
 
 # PHP 8.5
 docker compose run --rm php85 composer qa
+
+# PHP 7.4
+docker compose run --rm php74 composer qa
 ```
 
 #### Tests unitaires
 
 ```bash
-# PHP 7.4
-docker compose run --rm php composer test
+# PHP 8.2 (par défaut)
+docker compose run --rm php composer test-unitaire
 
 # PHP 8.5
-docker compose run --rm php85 composer test
+docker compose run --rm php85 composer test-unitaire
+
+# PHP 7.4
+docker compose run --rm php74 composer test-unitaire
+```
+
+#### Tests d'intégration
+
+Ils appellent une vraie instance Agora et y créent des données : utilisez une instance de développement, jamais la production.
+
+La configuration se fait par deux variables :
+
+| Variable | Rôle | Où la définir |
+| --- | --- | --- |
+| `AGORA_BASE_URL` | URL racine de l'instance, vue depuis le conteneur (sans `/api/external/v1`) | valeur par défaut dans `.env`, à surcharger dans `.env.local` |
+| `AGORA_API_KEY` | clé API externe de l'instance | `.env.local` uniquement |
+
+`.env.local` n'est pas versionné. `composer install` et `composer update` le créent à partir de `.env.local.dist` s'il n'existe pas. Ordre de priorité : variable d'environnement, puis `.env.local`, puis `.env`.
+
+Si une variable est vide ou si l'instance n'est pas joignable, les tests sont ignorés (*skipped*) avec le motif.
+
+```bash
+docker compose run --rm php composer test-integration
 ```
 
 #### Style de code
@@ -255,11 +296,14 @@ docker compose run --rm php composer phpstan
 #### Tests de mutation (Infection)
 
 ```bash
-# PHP 7.4
+# PHP 8.2 (par défaut)
 docker compose run --rm php composer infection
 
 # PHP 8.5
 docker compose run --rm php85 composer infection
+
+# PHP 7.4
+docker compose run --rm php74 composer infection
 ```
 
 ---

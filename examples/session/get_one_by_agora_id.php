@@ -10,10 +10,10 @@ use AgoraLearningPhp\Identifier\AgoraId;
 
 $client = new AgoraLearningClient($config['url'], $config['api_key']);
 
-$sessionUuid = 'ses_01XXXXXXXXXXXXXXXXXXXXXXXXX';
+$identifier = new AgoraId('ses_01a1108ab6187f16b82c84b0af1564d9');
 
 try {
-    $session = $client->getSession(new AgoraId($sessionUuid));
+    $session = $client->getSession($identifier);
     var_dump($session);
 } catch (\Exception $e) {
     echo 'Erreur : ' . $e->getMessage() . PHP_EOL;

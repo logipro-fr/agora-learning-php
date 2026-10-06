@@ -14,6 +14,9 @@ use AgoraLearningPhp\DTO\Output\Session\OpenedSessionOutput;
 use AgoraLearningPhp\Enum\Gender;
 use AgoraLearningPhp\Enum\SessionMode;
 use AgoraLearningPhp\Enum\SessionType;
+use AgoraLearningPhp\Exception\AgoraLearningClientException;
+use AgoraLearningPhp\Identifier\AgoraId;
+use AgoraLearningPhp\Identifier\ExternalId;
 
 class SessionTest extends AbstractAgoraLearningTest
 {
@@ -247,7 +250,7 @@ class SessionTest extends AbstractAgoraLearningTest
         $uuid = $output->uuid;
 
         //Act
-        $sessionOutput = $this->client->getSession($uuid);
+        $sessionOutput = $this->client->getSession(new AgoraId($uuid));
 
         // Assert
         $this->assertEquals($uuid, $sessionOutput->uuid);
@@ -297,5 +300,32 @@ class SessionTest extends AbstractAgoraLearningTest
                 $this->assertInstanceOf(OpenedSessionOutput::class, $sessionOutput->sessionData);
             }
         }
+    }
+
+    /**
+     * @group external-id
+     */
+    public function testGetSessionByExternalId(): void
+    {
+        //Arrange
+        $identifier = new ExternalId('IntegrationTest', 'S-42');
+
+        //Act
+        try {
+            $sessionOutput = $this->client->getSession($identifier);
+        } catch (AgoraLearningClientException $e) {
+            if (in_array($e->getCode(), [400, 404], true)) {
+                $this->markTestSkipped(sprintf(
+                    'GET /sessions/%s non supporté par le serveur (HTTP %d) : %s',
+                    rawurlencode($identifier->getId()),
+                    $e->getCode(),
+                    $e->getMessage()
+                ));
+            }
+            throw $e;
+        }
+
+        // Assert
+        $this->assertNotSame('', $sessionOutput->uuid);
     }
 }

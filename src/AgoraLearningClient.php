@@ -17,6 +17,7 @@ use AgoraLearningPhp\DTO\Output\Person\PersonOutput;
 use AgoraLearningPhp\DTO\Output\Session\SessionOutput;
 use AgoraLearningPhp\DTO\Output\Society\SocietyOutput;
 use AgoraLearningPhp\DTO\Output\Trainer\TrainerOutput;
+use AgoraLearningPhp\Identifier\ApiObjectIdentifier;
 use AgoraLearningPhp\Service\Auth\Ping;
 use AgoraLearningPhp\Service\ClientCore\ApiUrls;
 use AgoraLearningPhp\Service\ClientCore\TokenHandler;
@@ -134,9 +135,9 @@ class AgoraLearningClient
         return $this->makeSession()->getCollectionSession();
     }
 
-    public function getSession(string $uuid): SessionOutput
+    public function getSession(ApiObjectIdentifier $identifier): SessionOutput
     {
-        return $this->makeSession()->getSession($uuid);
+        return $this->makeSession()->getSession($identifier);
     }
 
     public function createSession(SessionInput $sessionInput): SessionOutput

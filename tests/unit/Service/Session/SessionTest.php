@@ -14,6 +14,9 @@ use AgoraLearningPhp\Enum\Gender;
 use AgoraLearningPhp\Enum\SessionMode;
 use AgoraLearningPhp\Enum\SessionType;
 use AgoraLearningPhp\Enum\TrainerStatut;
+use AgoraLearningPhp\Exception\AgoraLearningClientException;
+use AgoraLearningPhp\Identifier\AgoraId;
+use AgoraLearningPhp\Identifier\ExternalId;
 use AgoraLearningPhp\Service\ClientCore\HttpClient;
 use AgoraLearningPhp\Service\Session\Session;
 use AgoraLearningPhp\Tests\unit\Service\ServiceTestCase;
@@ -63,7 +66,7 @@ class SessionTest extends ServiceTestCase
 
     private function makeSession(HttpClient $httpClient): Session
     {
-        return new class($httpClient) extends Session {
+        return new class ($httpClient) extends Session {
             public function __construct(HttpClient $client)
             {
                 $this->httpClient = $client;
@@ -234,11 +237,119 @@ class SessionTest extends ServiceTestCase
         );
 
         // Act
-        $result = $session->getSession('sess-uuid-001');
+        $result = $session->getSession(new AgoraId('sess-uuid-001'));
 
         // Assert
         $this->assertInstanceOf(SessionOutput::class, $result);
         $this->assertSame('sess-uuid-001', $result->uuid);
+    }
+
+    public function testGetSessionWithAgoraIdCallsAgoraUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $session = $this->makeSession($this->makeHttpClientInspectingRequest(
+            200,
+            json_encode(array_merge($this->makeBaseSessionData(), $this->makeFixedSessionData())),
+            $method,
+            $url
+        ));
+
+        // Act
+        $result = $session->getSession(new AgoraId('sess-uuid-001'));
+
+        // Assert
+        $this->assertSame('GET', $method);
+        $this->assertStringEndsWith('/sessions/sess-uuid-001', $url);
+        $this->assertSame('sess-uuid-001', $result->uuid);
+    }
+
+    public function testGetSessionWithExternalIdCallsEncodedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $session = $this->makeSession($this->makeHttpClientInspectingRequest(
+            200,
+            json_encode(array_merge($this->makeBaseSessionData(), $this->makeFixedSessionData())),
+            $method,
+            $url
+        ));
+
+        // Act
+        $result = $session->getSession(new ExternalId('Src', 'S-42'));
+
+        // Assert
+        $this->assertSame('GET', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/sessions/Src%3AS-42', $url);
+        $this->assertSame('sess-uuid-001', $result->uuid);
+    }
+
+    /**
+     * @dataProvider invalidIdentifierProvider
+     *
+     * @param mixed $identifier
+     */
+    public function testGetSessionWithInvalidTypeIsRejected($identifier): void
+    {
+        // Arrange
+        $session = $this->makeSession($this->makeHttpClientWithResponse(200, '{}'));
+
+        // Assert
+        $this->expectException(\TypeError::class);
+
+        // Act
+        $session->getSession($identifier);
+    }
+
+    /**
+     * @return array<string, array{mixed}>
+     */
+    public function invalidIdentifierProvider(): array
+    {
+        return [
+            'string' => ['sess-uuid-001'],
+            'int'    => [42],
+            'null'   => [null],
+            'array'  => [['Src', 'S-42']],
+            'objet'  => [new \stdClass()],
+        ];
+    }
+
+    public function testGetSessionThrowsWithHttpStatusCodeOnError(): void
+    {
+        // Arrange
+        $session = $this->makeSession(
+            $this->makeHttpClientWithResponse(404, json_encode(['detail' => 'Session not found']))
+        );
+
+        // Act
+        try {
+            $session->getSession(new ExternalId('Src', 'S-42'));
+            $this->fail('AgoraLearningClientException expected');
+        } catch (AgoraLearningClientException $e) {
+            // Assert
+            $this->assertSame('Session not found', $e->getMessage());
+            $this->assertSame(404, $e->getCode());
+        }
+    }
+
+    public function testGetCollectionSessionThrowsWithHttpStatusCodeOnError(): void
+    {
+        // Arrange
+        $session = $this->makeSession(
+            $this->makeHttpClientWithResponse(400, json_encode(['detail' => 'Bad request']))
+        );
+
+        // Act
+        try {
+            $session->getCollectionSession();
+            $this->fail('AgoraLearningClientException expected');
+        } catch (AgoraLearningClientException $e) {
+            // Assert
+            $this->assertSame(400, $e->getCode());
+        }
     }
 
     public function testPostSessionWithFixedSessionInput(): void

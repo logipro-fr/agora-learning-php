@@ -30,7 +30,7 @@ class PersonTest extends ServiceTestCase
 
     private function makePerson(HttpClient $httpClient): Person
     {
-        return new class($httpClient) extends Person {
+        return new class ($httpClient) extends Person {
             public function __construct(HttpClient $client)
             {
                 $this->httpClient = $client;
@@ -76,7 +76,7 @@ class PersonTest extends ServiceTestCase
         // Act
         $dto = Person::convertDataToDTO($this->makeMinimalData());
 
-        // Assert        
+        // Assert
         $this->assertNull($dto->telephone);
         $this->assertNull($dto->addressStreet);
         $this->assertNull($dto->addressPostcode);

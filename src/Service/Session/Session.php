@@ -13,6 +13,7 @@ use AgoraLearningPhp\DTO\Output\Session\SessionOutput;
 use AgoraLearningPhp\Enum\RequestMethod;
 use AgoraLearningPhp\Enum\SessionMode;
 use AgoraLearningPhp\Enum\SessionType;
+use AgoraLearningPhp\Identifier\ApiObjectIdentifier;
 use AgoraLearningPhp\Service\ClientCore\ApiService;
 use AgoraLearningPhp\Service\ClientCore\ApiUrls;
 use AgoraLearningPhp\Service\Person\Person;
@@ -34,10 +35,10 @@ class Session extends ApiService
         return $this->convertResponseToDTOarray($response);
     }
 
-    public function getSession(string $uuid): SessionOutput
+    public function getSession(ApiObjectIdentifier $identifier): SessionOutput
     {
         $body = '';
-        $response = $this->httpClient->request(RequestMethod::GET, ApiUrls::getGetSession($uuid), $body);
+        $response = $this->httpClient->request(RequestMethod::GET, ApiUrls::getGetSession($identifier->getId()), $body);
         return $this->convertResponseToDTO($response);
     }
 
@@ -120,10 +121,10 @@ class Session extends ApiService
         $urlOnTheSpotSurvey = $data['urlOnTheSpotSurvey'] ?? null;
         $urlDelayedSurvey = $data['urlDelayedSurvey'] ?? null;
 
-        $pedagogicalTrainer = array_key_exists('pedagogicalTrainer', $data)
+        $pedagogicalTrainer = isset($data['pedagogicalTrainer'])
             ? Trainer::convertDataToDTO($data['pedagogicalTrainer'])
             : null;
-        $administrativePerson = array_key_exists('administrativePerson', $data)
+        $administrativePerson = isset($data['administrativePerson'])
             ? Person::convertDataToDTO($data['administrativePerson'])
             : null;
 
