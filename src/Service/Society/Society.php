@@ -8,6 +8,7 @@ use AgoraLearningPhp\DTO\Input\Person\PersonInput;
 use AgoraLearningPhp\DTO\Input\Society\SocietyInput;
 use AgoraLearningPhp\DTO\Output\Society\SocietyOutput;
 use AgoraLearningPhp\Enum\RequestMethod;
+use AgoraLearningPhp\Identifier\ApiObjectIdentifier;
 use AgoraLearningPhp\Service\ClientCore\ApiService;
 use AgoraLearningPhp\Service\ClientCore\ApiUrls;
 use AgoraLearningPhp\Service\ClientCore\HttpClient;
@@ -30,10 +31,10 @@ class Society extends ApiService
         return $this->convertResponseToDTOarray($response);
     }
 
-    public function getSociety(string $uuid): SocietyOutput
+    public function getSociety(ApiObjectIdentifier $identifier): SocietyOutput
     {
         $body = '';
-        $response = $this->httpClient->request(RequestMethod::GET, ApiUrls::getGetSociety($uuid), $body);
+        $response = $this->httpClient->request(RequestMethod::GET, ApiUrls::getGetSociety($identifier->getId()), $body);
         return $this->convertResponseToDTO($response);
     }
 

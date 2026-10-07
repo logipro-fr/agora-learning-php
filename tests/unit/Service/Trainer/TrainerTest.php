@@ -12,6 +12,8 @@ use AgoraLearningPhp\DTO\Output\Trainer\TrainerOutput;
 use AgoraLearningPhp\Enum\Gender;
 use AgoraLearningPhp\Enum\TrainerStatut;
 use AgoraLearningPhp\Exception\AgoraLearningClientException;
+use AgoraLearningPhp\Identifier\AgoraId;
+use AgoraLearningPhp\Identifier\ExternalId;
 use AgoraLearningPhp\Service\ClientCore\HttpClient;
 use AgoraLearningPhp\Service\Trainer\Trainer;
 use AgoraLearningPhp\Tests\unit\Service\ServiceTestCase;
@@ -315,10 +317,31 @@ class TrainerTest extends ServiceTestCase
         );
 
         // Act
-        $result = $trainer->getTrainer('trainer-emp-001');
+        $result = $trainer->getTrainer(new AgoraId('trainer-emp-001'));
 
         // Assert
         $this->assertInstanceOf(TrainerOutput::class, $result);
+        $this->assertSame('trainer-emp-001', $result->uuid);
+    }
+
+    public function testGetTrainerWithExternalIdCallsEncodedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $trainer = $this->makeTrainer($this->makeHttpClientInspectingRequest(
+            200,
+            json_encode($this->makeMinimalEmployeeData()),
+            $method,
+            $url
+        ));
+
+        // Act
+        $result = $trainer->getTrainer(new ExternalId('Src', 'X-42'));
+
+        // Assert
+        $this->assertSame('GET', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/trainers/Src%3AX-42', $url);
         $this->assertSame('trainer-emp-001', $result->uuid);
     }
 
@@ -334,7 +357,7 @@ class TrainerTest extends ServiceTestCase
         $this->expectExceptionMessage('Trainer not found');
 
         // Act
-        $trainer->getTrainer('missing-uuid');
+        $trainer->getTrainer(new AgoraId('missing-uuid'));
     }
 
     public function testGetTrainerThrowsExceptionWithDefaultMessageWhenNoDetail(): void
@@ -349,7 +372,7 @@ class TrainerTest extends ServiceTestCase
         $this->expectExceptionMessage('An unexpected error occured');
 
         // Act
-        $trainer->getTrainer('some-uuid');
+        $trainer->getTrainer(new AgoraId('some-uuid'));
     }
 
     public function testPostTrainerEmployeeReturnsDTO(): void

@@ -20,6 +20,38 @@ $client = new AgoraLearningClient(
 
 ---
 
+## Identifiants
+
+Les méthodes de lecture unitaire (`getPerson()`, `getTrainer()`, `getLearner()`, `getSociety()`, `getSession()`, `getEnrollment()`) ainsi que les lectures d'inscriptions par session et/ou apprenant attendent un `ApiObjectIdentifier` :
+
+```php
+use AgoraLearningPhp\Identifier\AgoraId;
+use AgoraLearningPhp\Identifier\ExternalId;
+
+$client->getLearner(new AgoraId('per_01KRXPMF8GENX8HCB8QKECBGZC')); // GET /learners/per_01KRXPMF8GENX8HCB8QKECBGZC
+$client->getLearner(new ExternalId('MonERP', 'L-42'));               // GET /learners/MonERP%3AL-42
+```
+
+> ⚠️ La lecture par `ExternalId` nécessite que le serveur Agora prenne en charge les identifiants `source:id` sur la route appelée.
+
+| Classe          | Format `getId()` | Contraintes                                                                                         |
+| --------------- | ---------------- | --------------------------------------------------------------------------------------------------- |
+| `AgoraId`       | `per_…`, `ses_…` | non vide, ne contient jamais `:`                                                                    |
+| `ExternalId`    | `source:id`      | `source` : `[A-Za-z0-9_-]{1,50}` ; `id` : non vide, `:` autorisé                                    |
+
+Les deux classes appliquent `trim()` à leurs arguments et lèvent une `\InvalidArgumentException` si une contrainte n'est pas respectée. L'identifiant est encodé (`rawurlencode`) avant d'être placé dans l'URL.
+
+Pour reconstruire un identifiant stocké sous sa forme `getId()` :
+
+```php
+use AgoraLearningPhp\Identifier\ApiObjectIdentifierFactory;
+
+$identifier = ApiObjectIdentifierFactory::fromString('MonERP:S-42'); // ExternalId('MonERP', 'S-42')
+$identifier = ApiObjectIdentifierFactory::fromString('ses_abc');     // AgoraId('ses_abc')
+```
+
+---
+
 ## Auth — Vérification de connexion
 
 ### `ping()`
@@ -119,12 +151,18 @@ echo $person->givenName;  // "Jean"
 | `birthDate`       | ?\DateTimeImmutable | Date de naissance              |
 | `jobTitle`        | ?string             | Intitulé du poste              |
 
-### `getPerson(string $uuid) : PersonOutput`
+### `getPerson(ApiObjectIdentifier $identifier) : PersonOutput`
 
 Récupère une personne par son identifiant unique, retourne en cas de succès un objet PersonOutput
 
+L'identifiant est un `ApiObjectIdentifier` : `AgoraId` ou `ExternalId` (voir [Identifiants](#identifiants)).
+
 ```php
-$person = $client->getPerson('per_01KRXPMF8GENX8HCB8QKECBGZC');
+use AgoraLearningPhp\Identifier\AgoraId;
+use AgoraLearningPhp\Identifier\ExternalId;
+
+$person = $client->getPerson(new AgoraId('per_01KRXPMF8GENX8HCB8QKECBGZC'));
+$person = $client->getPerson(new ExternalId('MonERP', 'P-42'));
 
 echo $person->uuid;       // per_01KRXPMF8GENX8HCB8QKECBGZC
 echo $person->familyName; // "Dupont"
@@ -336,10 +374,10 @@ echo $trainer->uuid;
 | `billingAddressLocality`     | ?string             | Ville - Adresse de facturation                      |
 | `billingAddressCountry`      | ?string             | Pays - Adresse de facturation                       |
 
-### `getTrainer(string $uuid) : TrainerOutput`
+### `getTrainer(ApiObjectIdentifier $identifier) : TrainerOutput`
 
 ```php
-$trainer = $client->getTrainer('per_01KRXPQB15F1RSTJHET0FAWGPT');
+$trainer = $client->getTrainer(new AgoraId('per_01KRXPQB15F1RSTJHET0FAWGPT'));
 
 echo $trainer->familyName;
 echo $trainer->email;
@@ -411,10 +449,10 @@ echo $learner->uuid;
 | `birthDate`       | ?\DateTimeImmutable | Non         | Date de naissance                |
 | `jobTitle`        | ?string             | Non         | Intitulé du poste                |
 
-### `getLearner(string $uuid) : LearnerOutput`
+### `getLearner(ApiObjectIdentifier $identifier) : LearnerOutput`
 
 ```php
-$learner = $client->getLearner('per_01KRXPMF8GENX8HCB8QKECBGZC');
+$learner = $client->getLearner(new AgoraId('per_01KRXPMF8GENX8HCB8QKECBGZC'));
 
 echo $learner->uuid;
 ```
@@ -540,10 +578,10 @@ echo $society->name; // "ACME Corp"
 | `rhPerson`                  | ?PersonOutput | Référent RH                      |
 | `image`                     | ?string       | URL du logo de la société        |
 
-### `getSociety(string $uuid) : SocietyOutput`
+### `getSociety(ApiObjectIdentifier $identifier) : SocietyOutput`
 
 ```php
-$society = $client->getSociety('soc_01KRXPMF93F039K58SC9QEZZNY');
+$society = $client->getSociety(new AgoraId('soc_01KRXPMF93F039K58SC9QEZZNY'));
 
 echo $society->name;
 if ($society->legalPerson !== null) {
@@ -708,16 +746,15 @@ if ($session->sessionData instanceof OpenedSessionOutput) {
 | `urlDelayedSurvey`     | ?string                                   | URL questionnaire à froid                             |
 | `image`                | ?string                                   | URL de l'image d'illustration                         |
 
-### `getSession(string|ApiObjectIdentifier $identifier) : SessionOutput`
+### `getSession(ApiObjectIdentifier $identifier) : SessionOutput`
 
-Une session peut être lue par son identifiant Agora ou par l'identifiant qu'elle porte dans un système externe.
+Une session peut être lue par son identifiant Agora ou par l'identifiant qu'elle porte dans un système externe (voir [Identifiants](#identifiants)).
 
 ```php
 use AgoraLearningPhp\Identifier\AgoraId;
 use AgoraLearningPhp\Identifier\ExternalId;
 
-// Identifiant Agora (une string est interprétée comme un AgoraId)
-$session = $client->getSession('ses_01KRXPMF97F8BRPH7N7972QRYY');
+// Identifiant Agora
 $session = $client->getSession(new AgoraId('ses_01KRXPMF97F8BRPH7N7972QRYY'));
 
 // Identifiant externe : appelle GET /sessions/MonERP%3AS-42
@@ -725,24 +762,6 @@ $session = $client->getSession(new ExternalId('MonERP', 'S-42'));
 
 echo $session->title;
 echo $session->price;
-```
-
-> ⚠️ La lecture par `ExternalId` nécessite que le serveur Agora prenne en charge les identifiants `source:id` sur cette route.
-
-| Classe          | Format `getId()` | Contraintes                                                                                         |
-| --------------- | ---------------- | --------------------------------------------------------------------------------------------------- |
-| `AgoraId`       | `ses_…`          | non vide, ne contient jamais `:`                                                                    |
-| `ExternalId`    | `source:id`      | `source` : `[A-Za-z0-9_-]{1,50}` ; `id` : non vide, 191 caractères max, `:` autorisé                |
-
-Les deux classes appliquent `trim()` à leurs arguments et lèvent une `\InvalidArgumentException` si une contrainte n'est pas respectée. Une string contenant `:` passée à `getSession()` est rejetée : il faut utiliser `ExternalId`.
-
-Pour reconstruire un identifiant stocké sous sa forme `getId()` :
-
-```php
-use AgoraLearningPhp\Identifier\ApiObjectIdentifierFactory;
-
-$identifier = ApiObjectIdentifierFactory::fromString('MonERP:S-42'); // ExternalId('MonERP', 'S-42')
-$identifier = ApiObjectIdentifierFactory::fromString('ses_abc');     // AgoraId('ses_abc')
 ```
 
 ### `getCollectionSession() : array`
@@ -802,36 +821,36 @@ echo $enrollment->learner->familyName;
 | `availabilityStartDate` | ?\DateTimeImmutable | Date de début de disponibilité pour l'apprenant |
 | `availabilityEndDate`   | ?\DateTimeImmutable | Date de fin de disponibilité pour l'apprenant   |
 
-### `getEnrollment(string $uuid) : EnrollmentOutput`
+### `getEnrollment(ApiObjectIdentifier $identifier) : EnrollmentOutput`
 
-Récupère une inscription par son UUID.
+Récupère une inscription par son identifiant.
 
 ```php
-$enrollment = $client->getEnrollment('enr_01KRXPMF9DEXHVPG9B6WAGFX4K');
+$enrollment = $client->getEnrollment(new AgoraId('enr_01KRXPMF9DEXHVPG9B6WAGFX4K'));
 
 echo $enrollment->session->title;
 echo $enrollment->learner->familyName;
 ```
 
-### `getEnrollmentFromSessionAndLearner(string $sessionUuid, string $learnerUuid) : EnrollmentOutput`
+### `getEnrollmentFromSessionAndLearner(ApiObjectIdentifier $sessionIdentifier, ApiObjectIdentifier $learnerIdentifier) : EnrollmentOutput`
 
 Récupère l'inscription d'un apprenant dans une session donnée.
 
 ```php
 $enrollment = $client->getEnrollmentFromSessionAndLearner(
-    'ses_01KRXPMF97F8BRPH7N7972QRYY', // sessionUuid
-    'per_01KRXPMF8GENX8HCB8QKECBGZC'  // learnerUuid
+    new AgoraId('ses_01KRXPMF97F8BRPH7N7972QRYY'), // session
+    new ExternalId('MonERP', 'L-42')               // apprenant
 );
 
 echo $enrollment->uuid;
 ```
 
-### `getCollectionEnrollmentFromSession(string $sessionUuid) : array`
+### `getCollectionEnrollmentFromSession(ApiObjectIdentifier $sessionIdentifier) : array`
 
 Récupère toutes les inscriptions d'une session.
 
 ```php
-$enrollments = $client->getCollectionEnrollmentFromSession('ses_01KRXPMF97F8BRPH7N7972QRYY');
+$enrollments = $client->getCollectionEnrollmentFromSession(new AgoraId('ses_01KRXPMF97F8BRPH7N7972QRYY'));
 
 foreach ($enrollments as $enrollment) {
     // chaque élément est un EnrollmentOutput
@@ -841,12 +860,12 @@ foreach ($enrollments as $enrollment) {
 
 **Retourne :** `EnrollmentOutput[]`
 
-### `getCollectionEnrollmentFromLearner(string $learnerUuid) : array`
+### `getCollectionEnrollmentFromLearner(ApiObjectIdentifier $learnerIdentifier) : array`
 
 Récupère toutes les inscriptions d'un apprenant.
 
 ```php
-$enrollments = $client->getCollectionEnrollmentFromLearner('per_01KRXPMF8GENX8HCB8QKECBGZC');
+$enrollments = $client->getCollectionEnrollmentFromLearner(new AgoraId('per_01KRXPMF8GENX8HCB8QKECBGZC'));
 
 foreach ($enrollments as $enrollment) {
     // chaque élément est un EnrollmentOutput
@@ -888,7 +907,7 @@ use AgoraLearningPhp\Exception\AgoraLearningClientException;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 
 try {
-    $person = $client->getPerson('uuid-inexistant');
+    $person = $client->getPerson(new AgoraId('uuid-inexistant'));
 } catch (AgoraLearningClientException $e) {
     if ($e->getCode() === 404) {
         echo 'Ressource non trouvée : ' . $e->getMessage();

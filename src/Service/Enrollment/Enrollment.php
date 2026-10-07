@@ -7,6 +7,7 @@ namespace AgoraLearningPhp\Service\Enrollment;
 use AgoraLearningPhp\DTO\Input\Enrollment\EnrollmentInput;
 use AgoraLearningPhp\DTO\Output\Enrollment\EnrollmentOutput;
 use AgoraLearningPhp\Enum\RequestMethod;
+use AgoraLearningPhp\Identifier\ApiObjectIdentifier;
 use AgoraLearningPhp\Service\ClientCore\ApiService;
 use AgoraLearningPhp\Service\ClientCore\ApiUrls;
 use AgoraLearningPhp\Service\Learner\Learner;
@@ -21,12 +22,12 @@ class Enrollment extends ApiService
     /**
      * @return array<int, EnrollmentOutput>
      */
-    public function getCollectionEnrollmentFromSession(string $sessionUuid): array
+    public function getCollectionEnrollmentFromSession(ApiObjectIdentifier $sessionIdentifier): array
     {
         $body = '';
         $response = $this->httpClient->request(
             RequestMethod::GET,
-            ApiUrls::getGetCollectionEnrollmentFromSession($sessionUuid),
+            ApiUrls::getGetCollectionEnrollmentFromSession($sessionIdentifier->getId()),
             $body
         );
         return $this->convertResponseToDTOarray($response);
@@ -35,30 +36,32 @@ class Enrollment extends ApiService
     /**
      * @return array<int, EnrollmentOutput>
      */
-    public function getCollectionEnrollmentFromLearner(string $learnerUuid): array
+    public function getCollectionEnrollmentFromLearner(ApiObjectIdentifier $learnerIdentifier): array
     {
         $body = '';
         $response = $this->httpClient->request(
             RequestMethod::GET,
-            ApiUrls::getGetCollectionEnrollmentFromLearner($learnerUuid),
+            ApiUrls::getGetCollectionEnrollmentFromLearner($learnerIdentifier->getId()),
             $body
         );
         return $this->convertResponseToDTOarray($response);
     }
 
-    public function getEnrollment(string $uuid): EnrollmentOutput
+    public function getEnrollment(ApiObjectIdentifier $identifier): EnrollmentOutput
     {
         $body = '';
-        $response = $this->httpClient->request(RequestMethod::GET, ApiUrls::getGetEnrollment($uuid), $body);
+        $response = $this->httpClient->request(RequestMethod::GET, ApiUrls::getGetEnrollment($identifier->getId()), $body);
         return $this->convertResponseToDTO($response);
     }
 
-    public function getEnrollmentFromSessionAndLearner(string $sessionUuid, string $learnerUuid): EnrollmentOutput
-    {
+    public function getEnrollmentFromSessionAndLearner(
+        ApiObjectIdentifier $sessionIdentifier,
+        ApiObjectIdentifier $learnerIdentifier
+    ): EnrollmentOutput {
         $body = '';
         $response = $this->httpClient->request(
             RequestMethod::GET,
-            ApiUrls::getGetEnrollmentFromSessionAndLearner($sessionUuid, $learnerUuid),
+            ApiUrls::getGetEnrollmentFromSessionAndLearner($sessionIdentifier->getId(), $learnerIdentifier->getId()),
             $body
         );
         return $this->convertResponseToDTO($response);

@@ -6,6 +6,7 @@ namespace AgoraLearningPhp\Tests\integration;
 
 use AgoraLearningPhp\DTO\Input\Learner\LearnerInput;
 use AgoraLearningPhp\Enum\Gender;
+use AgoraLearningPhp\Identifier\AgoraId;
 
 class LearnerTest extends AbstractAgoraLearningTest
 {
@@ -107,7 +108,7 @@ class LearnerTest extends AbstractAgoraLearningTest
         $uuid = $output->uuid;
 
         //Act
-        $learnerOutput = $this->client->getLearner($uuid);
+        $learnerOutput = $this->client->getLearner(new AgoraId($uuid));
 
         // Assert
         $this->assertEquals($uuid, $learnerOutput->uuid);

@@ -9,6 +9,7 @@ use AgoraLearningPhp\DTO\Input\Trainer\TrainerEmployeeInput;
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerFreeInput;
 use AgoraLearningPhp\DTO\Output\Trainer\TrainerFreeOutput;
 use AgoraLearningPhp\Enum\Gender;
+use AgoraLearningPhp\Identifier\AgoraId;
 
 class TrainerTest extends AbstractAgoraLearningTest
 {
@@ -266,7 +267,7 @@ class TrainerTest extends AbstractAgoraLearningTest
         $uuid = $output->uuid;
 
         //Act
-        $trainerOutput = $this->client->getTrainer($uuid);
+        $trainerOutput = $this->client->getTrainer(new AgoraId($uuid));
 
         // Assert
         $this->assertEquals($uuid, $trainerOutput->uuid);

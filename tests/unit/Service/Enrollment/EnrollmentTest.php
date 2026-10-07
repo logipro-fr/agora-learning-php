@@ -11,6 +11,8 @@ use AgoraLearningPhp\DTO\Output\Session\OpenedSessionOutput;
 use AgoraLearningPhp\Enum\SessionMode;
 use AgoraLearningPhp\Enum\SessionType;
 use AgoraLearningPhp\Exception\AgoraLearningClientException;
+use AgoraLearningPhp\Identifier\AgoraId;
+use AgoraLearningPhp\Identifier\ExternalId;
 use AgoraLearningPhp\Service\ClientCore\HttpClient;
 use AgoraLearningPhp\Service\Enrollment\Enrollment;
 use AgoraLearningPhp\Tests\unit\Service\ServiceTestCase;
@@ -156,7 +158,7 @@ class EnrollmentTest extends ServiceTestCase
         $enrollment = $this->makeEnrollment($this->makeHttpClientWithResponse(200, '[]'));
 
         // Act
-        $result = $enrollment->getCollectionEnrollmentFromSession('sess-uuid-001');
+        $result = $enrollment->getCollectionEnrollmentFromSession(new AgoraId('sess-uuid-001'));
 
         // Assert
         $this->assertSame([], $result);
@@ -172,7 +174,7 @@ class EnrollmentTest extends ServiceTestCase
         );
 
         // Act
-        $result = $enrollment->getCollectionEnrollmentFromSession('sess-uuid-001');
+        $result = $enrollment->getCollectionEnrollmentFromSession(new AgoraId('sess-uuid-001'));
 
         // Assert
         $this->assertCount(2, $result);
@@ -188,7 +190,7 @@ class EnrollmentTest extends ServiceTestCase
         );
 
         // Act
-        $result = $enrollment->getCollectionEnrollmentFromLearner('learner-uuid-001');
+        $result = $enrollment->getCollectionEnrollmentFromLearner(new AgoraId('learner-uuid-001'));
 
         // Assert
         $this->assertCount(1, $result);
@@ -203,10 +205,31 @@ class EnrollmentTest extends ServiceTestCase
         );
 
         // Act
-        $result = $enrollment->getEnrollment('enroll-uuid-001');
+        $result = $enrollment->getEnrollment(new AgoraId('enroll-uuid-001'));
 
         // Assert
         $this->assertInstanceOf(EnrollmentOutput::class, $result);
+        $this->assertSame('enroll-uuid-001', $result->uuid);
+    }
+
+    public function testGetEnrollmentWithExternalIdCallsEncodedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $enrollment = $this->makeEnrollment($this->makeHttpClientInspectingRequest(
+            200,
+            json_encode($this->makeEnrollmentData($this->makeFixedSessionData())),
+            $method,
+            $url
+        ));
+
+        // Act
+        $result = $enrollment->getEnrollment(new ExternalId('Src', 'X-42'));
+
+        // Assert
+        $this->assertSame('GET', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/enrollments/Src%3AX-42', $url);
         $this->assertSame('enroll-uuid-001', $result->uuid);
     }
 
@@ -222,7 +245,7 @@ class EnrollmentTest extends ServiceTestCase
         $this->expectExceptionMessage('Enrollment not found');
 
         // Act
-        $enrollment->getEnrollment('missing-uuid');
+        $enrollment->getEnrollment(new AgoraId('missing-uuid'));
     }
 
     public function testGetEnrollmentFromSessionAndLearner(): void
@@ -233,10 +256,60 @@ class EnrollmentTest extends ServiceTestCase
         );
 
         // Act
-        $result = $enrollment->getEnrollmentFromSessionAndLearner('sess-uuid-001', 'learner-uuid-001');
+        $result = $enrollment->getEnrollmentFromSessionAndLearner(new AgoraId('sess-uuid-001'), new AgoraId('learner-uuid-001'));
 
         // Assert
         $this->assertInstanceOf(EnrollmentOutput::class, $result);
+    }
+
+    public function testGetEnrollmentFromSessionAndLearnerWithExternalIdsCallsEncodedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $enrollment = $this->makeEnrollment($this->makeHttpClientInspectingRequest(
+            200,
+            json_encode($this->makeEnrollmentData($this->makeFixedSessionData())),
+            $method,
+            $url
+        ));
+
+        // Act
+        $enrollment->getEnrollmentFromSessionAndLearner(new ExternalId('Src', 'S-42'), new ExternalId('Src', 'L-42'));
+
+        // Assert
+        $this->assertSame('GET', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/sessions/Src%3AS-42/learners/Src%3AL-42/enrollments', $url);
+    }
+
+    public function testGetCollectionEnrollmentFromSessionWithExternalIdCallsEncodedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $enrollment = $this->makeEnrollment($this->makeHttpClientInspectingRequest(200, '[]', $method, $url));
+
+        // Act
+        $enrollment->getCollectionEnrollmentFromSession(new ExternalId('Src', 'S-42'));
+
+        // Assert
+        $this->assertSame('GET', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/sessions/Src%3AS-42/enrollments', $url);
+    }
+
+    public function testGetCollectionEnrollmentFromLearnerWithExternalIdCallsEncodedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $enrollment = $this->makeEnrollment($this->makeHttpClientInspectingRequest(200, '[]', $method, $url));
+
+        // Act
+        $enrollment->getCollectionEnrollmentFromLearner(new ExternalId('Src', 'L-42'));
+
+        // Assert
+        $this->assertSame('GET', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/learners/Src%3AL-42/enrollments', $url);
     }
 
     public function testPostEnrollment(): void
@@ -289,7 +362,7 @@ class EnrollmentTest extends ServiceTestCase
         $this->expectExceptionMessage('Session not found');
 
         // Act
-        $enrollment->getCollectionEnrollmentFromSession('missing-uuid');
+        $enrollment->getCollectionEnrollmentFromSession(new AgoraId('missing-uuid'));
     }
 
     public function testGetCollectionEnrollmentFromSessionThrowsDefaultMessageWithoutDetail(): void
@@ -304,6 +377,6 @@ class EnrollmentTest extends ServiceTestCase
         $this->expectExceptionMessage('An unexpected error occured');
 
         // Act
-        $enrollment->getCollectionEnrollmentFromSession('any-uuid');
+        $enrollment->getCollectionEnrollmentFromSession(new AgoraId('any-uuid'));
     }
 }

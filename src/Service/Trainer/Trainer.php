@@ -11,6 +11,7 @@ use AgoraLearningPhp\DTO\Output\Trainer\TrainerFreeOutput;
 use AgoraLearningPhp\DTO\Output\Trainer\TrainerOutput;
 use AgoraLearningPhp\Enum\RequestMethod;
 use AgoraLearningPhp\Enum\TrainerStatut;
+use AgoraLearningPhp\Identifier\ApiObjectIdentifier;
 use AgoraLearningPhp\Service\ClientCore\ApiService;
 use AgoraLearningPhp\Service\ClientCore\ApiUrls;
 use AgoraLearningPhp\Service\Society\Society;
@@ -31,10 +32,10 @@ class Trainer extends ApiService
         return $this->convertResponseToDTOarray($response);
     }
 
-    public function getTrainer(string $uuid): TrainerOutput
+    public function getTrainer(ApiObjectIdentifier $identifier): TrainerOutput
     {
         $body = '';
-        $response = $this->httpClient->request(RequestMethod::GET, ApiUrls::getGetTrainer($uuid), $body);
+        $response = $this->httpClient->request(RequestMethod::GET, ApiUrls::getGetTrainer($identifier->getId()), $body);
         return $this->convertResponseToDTO($response);
     }
 

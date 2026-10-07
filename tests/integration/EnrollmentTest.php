@@ -11,6 +11,7 @@ use AgoraLearningPhp\DTO\Input\Session\OpenedSessionInput;
 use AgoraLearningPhp\DTO\Input\Session\SessionInput;
 use AgoraLearningPhp\Enum\SessionMode;
 use AgoraLearningPhp\Enum\SessionType;
+use AgoraLearningPhp\Identifier\AgoraId;
 
 class EnrollmentTest extends AbstractAgoraLearningTest
 {
@@ -66,7 +67,7 @@ class EnrollmentTest extends AbstractAgoraLearningTest
         $uuid = $created->uuid;
 
         //Act
-        $enrollmentOutput = $this->client->getEnrollment($uuid);
+        $enrollmentOutput = $this->client->getEnrollment(new AgoraId($uuid));
 
         // Assert
         $this->assertEquals($uuid, $enrollmentOutput->uuid);
@@ -102,7 +103,7 @@ class EnrollmentTest extends AbstractAgoraLearningTest
         );
 
         //Act
-        $enrollmentOutputs = $this->client->getCollectionEnrollmentFromSession($sessionOutput->uuid);
+        $enrollmentOutputs = $this->client->getCollectionEnrollmentFromSession(new AgoraId($sessionOutput->uuid));
 
         // Assert
         foreach ($enrollmentOutputs as $enrollmentOutput) {
@@ -151,7 +152,7 @@ class EnrollmentTest extends AbstractAgoraLearningTest
         );
 
         //Act
-        $enrollmentOutputs = $this->client->getCollectionEnrollmentFromLearner($learnerOutput->uuid);
+        $enrollmentOutputs = $this->client->getCollectionEnrollmentFromLearner(new AgoraId($learnerOutput->uuid));
 
         // Assert
         foreach ($enrollmentOutputs as $enrollmentOutput) {
@@ -188,8 +189,8 @@ class EnrollmentTest extends AbstractAgoraLearningTest
 
         //Act
         $enrollmentOutput = $this->client->getEnrollmentFromSessionAndLearner(
-            $sessionOutput->uuid,
-            $learnerOutput->uuid
+            new AgoraId($sessionOutput->uuid),
+            new AgoraId($learnerOutput->uuid)
         );
 
         // Assert

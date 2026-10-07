@@ -8,6 +8,8 @@ use AgoraLearningPhp\DTO\Input\Person\PersonInput;
 use AgoraLearningPhp\DTO\Output\Person\PersonOutput;
 use AgoraLearningPhp\Enum\Gender;
 use AgoraLearningPhp\Exception\AgoraLearningClientException;
+use AgoraLearningPhp\Identifier\AgoraId;
+use AgoraLearningPhp\Identifier\ExternalId;
 use AgoraLearningPhp\Service\ClientCore\HttpClient;
 use AgoraLearningPhp\Service\Person\Person;
 use AgoraLearningPhp\Tests\unit\Service\ServiceTestCase;
@@ -195,10 +197,31 @@ class PersonTest extends ServiceTestCase
         );
 
         // Act
-        $result = $person->getPerson('person-uuid-001');
+        $result = $person->getPerson(new AgoraId('person-uuid-001'));
 
         // Assert
         $this->assertInstanceOf(PersonOutput::class, $result);
+        $this->assertSame('person-uuid-001', $result->uuid);
+    }
+
+    public function testGetPersonWithExternalIdCallsEncodedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $person = $this->makePerson($this->makeHttpClientInspectingRequest(
+            200,
+            json_encode($this->makeMinimalData()),
+            $method,
+            $url
+        ));
+
+        // Act
+        $result = $person->getPerson(new ExternalId('Src', 'X-42'));
+
+        // Assert
+        $this->assertSame('GET', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/persons/Src%3AX-42', $url);
         $this->assertSame('person-uuid-001', $result->uuid);
     }
 
@@ -214,7 +237,7 @@ class PersonTest extends ServiceTestCase
         $this->expectExceptionMessage('Person not found');
 
         // Act
-        $person->getPerson('missing-uuid');
+        $person->getPerson(new AgoraId('missing-uuid'));
     }
 
     public function testPostPersonWithBirthDate(): void

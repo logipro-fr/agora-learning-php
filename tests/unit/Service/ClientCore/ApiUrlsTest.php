@@ -438,4 +438,47 @@ class ApiUrlsTest extends TestCase
         // Assert
         $this->assertSame($expected, $url);
     }
+
+    /**
+     * @dataProvider singleIdentifierUrlProvider
+     */
+    public function testSingleIdentifierUrlsEncodeExternalId(string $method, string $expectedPath): void
+    {
+        // Arrange
+        ApiUrls::initBaseUrl(self::BASE);
+
+        // Act
+        $url = ApiUrls::$method('Src:a/b');
+
+        // Assert
+        $this->assertSame(self::BASE . $expectedPath, $url);
+    }
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public function singleIdentifierUrlProvider(): array
+    {
+        return [
+            'person'                     => ['getGetPerson', '/api/external/v1/persons/Src%3Aa%2Fb'],
+            'trainer'                    => ['getGetTrainer', '/api/external/v1/trainers/Src%3Aa%2Fb'],
+            'learner'                    => ['getGetLearner', '/api/external/v1/learners/Src%3Aa%2Fb'],
+            'society'                    => ['getGetSociety', '/api/external/v1/societies/Src%3Aa%2Fb'],
+            'enrollment'                 => ['getGetEnrollment', '/api/external/v1/enrollments/Src%3Aa%2Fb'],
+            'enrollments from session'   => ['getGetCollectionEnrollmentFromSession', '/api/external/v1/sessions/Src%3Aa%2Fb/enrollments'],
+            'enrollments from learner'   => ['getGetCollectionEnrollmentFromLearner', '/api/external/v1/learners/Src%3Aa%2Fb/enrollments'],
+        ];
+    }
+
+    public function testGetGetEnrollmentFromSessionAndLearnerEncodesBothIdentifiers(): void
+    {
+        // Arrange
+        ApiUrls::initBaseUrl(self::BASE);
+
+        // Act
+        $url = ApiUrls::getGetEnrollmentFromSessionAndLearner('Src:S-1', 'Src:a/b');
+
+        // Assert
+        $this->assertSame(self::BASE . '/api/external/v1/sessions/Src%3AS-1/learners/Src%3Aa%2Fb/enrollments', $url);
+    }
 }

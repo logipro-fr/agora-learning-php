@@ -212,12 +212,26 @@ class AgoraLearningClientTest extends TestCase
     public function testGetPerson(): void
     {
         // Arrange
-        $uuid   = 'user-uuid-123';
+        $identifier = new AgoraId('user-uuid-123');
         $output = $this->createFinalDtoInstance(PersonOutput::class);
-        $this->personMock->expects($this->once())->method('getPerson')->with($uuid)->willReturn($output);
+        $this->personMock->expects($this->once())->method('getPerson')->with($identifier)->willReturn($output);
 
         // Act
-        $result = $this->client->getPerson($uuid);
+        $result = $this->client->getPerson($identifier);
+
+        // Assert
+        $this->assertSame($output, $result);
+    }
+
+    public function testGetPersonWithExternalId(): void
+    {
+        // Arrange
+        $identifier = new ExternalId('Src', 'X-42');
+        $output = $this->createFinalDtoInstance(PersonOutput::class);
+        $this->personMock->expects($this->once())->method('getPerson')->with($identifier)->willReturn($output);
+
+        // Act
+        $result = $this->client->getPerson($identifier);
 
         // Assert
         $this->assertSame($output, $result);
@@ -255,12 +269,26 @@ class AgoraLearningClientTest extends TestCase
     public function testGetTrainer(): void
     {
         // Arrange
-        $uuid   = 'trainer-uuid-123';
+        $identifier = new AgoraId('trainer-uuid-123');
         $output = $this->createFinalDtoInstance(TrainerOutput::class);
-        $this->trainerMock->expects($this->once())->method('getTrainer')->with($uuid)->willReturn($output);
+        $this->trainerMock->expects($this->once())->method('getTrainer')->with($identifier)->willReturn($output);
 
         // Act
-        $result = $this->client->getTrainer($uuid);
+        $result = $this->client->getTrainer($identifier);
+
+        // Assert
+        $this->assertSame($output, $result);
+    }
+
+    public function testGetTrainerWithExternalId(): void
+    {
+        // Arrange
+        $identifier = new ExternalId('Src', 'X-42');
+        $output = $this->createFinalDtoInstance(TrainerOutput::class);
+        $this->trainerMock->expects($this->once())->method('getTrainer')->with($identifier)->willReturn($output);
+
+        // Act
+        $result = $this->client->getTrainer($identifier);
 
         // Assert
         $this->assertSame($output, $result);
@@ -312,12 +340,26 @@ class AgoraLearningClientTest extends TestCase
     public function testGetLearner(): void
     {
         // Arrange
-        $uuid   = 'learner-uuid-123';
+        $identifier = new AgoraId('learner-uuid-123');
         $output = $this->createFinalDtoInstance(LearnerOutput::class);
-        $this->learnerMock->expects($this->once())->method('getLearner')->with($uuid)->willReturn($output);
+        $this->learnerMock->expects($this->once())->method('getLearner')->with($identifier)->willReturn($output);
 
         // Act
-        $result = $this->client->getLearner($uuid);
+        $result = $this->client->getLearner($identifier);
+
+        // Assert
+        $this->assertSame($output, $result);
+    }
+
+    public function testGetLearnerWithExternalId(): void
+    {
+        // Arrange
+        $identifier = new ExternalId('Src', 'X-42');
+        $output = $this->createFinalDtoInstance(LearnerOutput::class);
+        $this->learnerMock->expects($this->once())->method('getLearner')->with($identifier)->willReturn($output);
+
+        // Act
+        $result = $this->client->getLearner($identifier);
 
         // Assert
         $this->assertSame($output, $result);
@@ -355,12 +397,26 @@ class AgoraLearningClientTest extends TestCase
     public function testGetSociety(): void
     {
         // Arrange
-        $uuid   = 'society-uuid-123';
+        $identifier = new AgoraId('society-uuid-123');
         $output = $this->createFinalDtoInstance(SocietyOutput::class);
-        $this->societyMock->expects($this->once())->method('getSociety')->with($uuid)->willReturn($output);
+        $this->societyMock->expects($this->once())->method('getSociety')->with($identifier)->willReturn($output);
 
         // Act
-        $result = $this->client->getSociety($uuid);
+        $result = $this->client->getSociety($identifier);
+
+        // Assert
+        $this->assertSame($output, $result);
+    }
+
+    public function testGetSocietyWithExternalId(): void
+    {
+        // Arrange
+        $identifier = new ExternalId('Src', 'X-42');
+        $output = $this->createFinalDtoInstance(SocietyOutput::class);
+        $this->societyMock->expects($this->once())->method('getSociety')->with($identifier)->willReturn($output);
+
+        // Act
+        $result = $this->client->getSociety($identifier);
 
         // Assert
         $this->assertSame($output, $result);
@@ -442,15 +498,15 @@ class AgoraLearningClientTest extends TestCase
     public function testGetCollectionEnrollmentFromSession(): void
     {
         // Arrange
-        $sessionUuid        = 'session-uuid-789';
+        $sessionIdentifier = new ExternalId('Src', 'S-789');
         $expectedCollection = [];
         $this->enrollmentMock->expects($this->once())
             ->method('getCollectionEnrollmentFromSession')
-            ->with($sessionUuid)
+            ->with($sessionIdentifier)
             ->willReturn($expectedCollection);
 
         // Act
-        $result = $this->client->getCollectionEnrollmentFromSession($sessionUuid);
+        $result = $this->client->getCollectionEnrollmentFromSession($sessionIdentifier);
 
         // Assert
         $this->assertSame($expectedCollection, $result);
@@ -459,15 +515,15 @@ class AgoraLearningClientTest extends TestCase
     public function testGetCollectionEnrollmentFromLearner(): void
     {
         // Arrange
-        $learnerUuid        = 'learner-uuid-789';
+        $learnerIdentifier = new ExternalId('Src', 'L-789');
         $expectedCollection = [];
         $this->enrollmentMock->expects($this->once())
             ->method('getCollectionEnrollmentFromLearner')
-            ->with($learnerUuid)
+            ->with($learnerIdentifier)
             ->willReturn($expectedCollection);
 
         // Act
-        $result = $this->client->getCollectionEnrollmentFromLearner($learnerUuid);
+        $result = $this->client->getCollectionEnrollmentFromLearner($learnerIdentifier);
 
         // Assert
         $this->assertSame($expectedCollection, $result);
@@ -476,12 +532,26 @@ class AgoraLearningClientTest extends TestCase
     public function testGetEnrollment(): void
     {
         // Arrange
-        $uuid   = 'enrollment-uuid-123';
+        $identifier = new AgoraId('enrollment-uuid-123');
         $output = $this->createFinalDtoInstance(EnrollmentOutput::class);
-        $this->enrollmentMock->expects($this->once())->method('getEnrollment')->with($uuid)->willReturn($output);
+        $this->enrollmentMock->expects($this->once())->method('getEnrollment')->with($identifier)->willReturn($output);
 
         // Act
-        $result = $this->client->getEnrollment($uuid);
+        $result = $this->client->getEnrollment($identifier);
+
+        // Assert
+        $this->assertSame($output, $result);
+    }
+
+    public function testGetEnrollmentWithExternalId(): void
+    {
+        // Arrange
+        $identifier = new ExternalId('Src', 'X-42');
+        $output = $this->createFinalDtoInstance(EnrollmentOutput::class);
+        $this->enrollmentMock->expects($this->once())->method('getEnrollment')->with($identifier)->willReturn($output);
+
+        // Act
+        $result = $this->client->getEnrollment($identifier);
 
         // Assert
         $this->assertSame($output, $result);
@@ -490,16 +560,16 @@ class AgoraLearningClientTest extends TestCase
     public function testGetEnrollmentFromSessionAndLearner(): void
     {
         // Arrange
-        $sessionUuid = 'session-999';
-        $learnerUuid = 'learner-999';
+        $sessionIdentifier = new AgoraId('session-999');
+        $learnerIdentifier = new ExternalId('Src', 'L-999');
         $output      = $this->createFinalDtoInstance(EnrollmentOutput::class);
         $this->enrollmentMock->expects($this->once())
             ->method('getEnrollmentFromSessionAndLearner')
-            ->with($sessionUuid, $learnerUuid)
+            ->with($sessionIdentifier, $learnerIdentifier)
             ->willReturn($output);
 
         // Act
-        $result = $this->client->getEnrollmentFromSessionAndLearner($sessionUuid, $learnerUuid);
+        $result = $this->client->getEnrollmentFromSessionAndLearner($sessionIdentifier, $learnerIdentifier);
 
         // Assert
         $this->assertSame($output, $result);

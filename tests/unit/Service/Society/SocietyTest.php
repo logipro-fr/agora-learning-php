@@ -10,6 +10,8 @@ use AgoraLearningPhp\DTO\Output\Person\PersonOutput;
 use AgoraLearningPhp\DTO\Output\Society\SocietyOutput;
 use AgoraLearningPhp\Enum\Gender;
 use AgoraLearningPhp\Exception\AgoraLearningClientException;
+use AgoraLearningPhp\Identifier\AgoraId;
+use AgoraLearningPhp\Identifier\ExternalId;
 use AgoraLearningPhp\Service\ClientCore\HttpClient;
 use AgoraLearningPhp\Service\Society\Society;
 use AgoraLearningPhp\Tests\unit\Service\ServiceTestCase;
@@ -193,10 +195,31 @@ class SocietyTest extends ServiceTestCase
         );
 
         // Act
-        $result = $society->getSociety('soc-uuid-001');
+        $result = $society->getSociety(new AgoraId('soc-uuid-001'));
 
         // Assert
         $this->assertInstanceOf(SocietyOutput::class, $result);
+        $this->assertSame('soc-uuid-001', $result->uuid);
+    }
+
+    public function testGetSocietyWithExternalIdCallsEncodedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $society = $this->makeSociety($this->makeHttpClientInspectingRequest(
+            200,
+            json_encode(['id' => 'soc-uuid-001', 'name' => 'Acme Corp']),
+            $method,
+            $url
+        ));
+
+        // Act
+        $result = $society->getSociety(new ExternalId('Src', 'X-42'));
+
+        // Assert
+        $this->assertSame('GET', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/societies/Src%3AX-42', $url);
         $this->assertSame('soc-uuid-001', $result->uuid);
     }
 
@@ -212,7 +235,7 @@ class SocietyTest extends ServiceTestCase
         $this->expectExceptionMessage('Society not found');
 
         // Act
-        $society->getSociety('missing-uuid');
+        $society->getSociety(new AgoraId('missing-uuid'));
     }
 
     public function testPostSocietyWithPersonInputs(): void

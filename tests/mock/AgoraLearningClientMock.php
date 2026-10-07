@@ -83,7 +83,7 @@ class AgoraLearningClientMock extends AgoraLearningClient
         ];
     }
 
-    public function getPerson(string $uuid): PersonOutput
+    public function getPerson(ApiObjectIdentifier $identifier): PersonOutput
     {
         return new PersonOutput(
             $uuid,
@@ -180,7 +180,7 @@ class AgoraLearningClientMock extends AgoraLearningClient
         ];
     }
 
-    public function getTrainer(string $uuid): TrainerOutput
+    public function getTrainer(ApiObjectIdentifier $identifier): TrainerOutput
     {
         return new TrainerEmployeeOutput(
             $uuid,
@@ -298,7 +298,7 @@ class AgoraLearningClientMock extends AgoraLearningClient
         ];
     }
 
-    public function getLearner(string $uuid): LearnerOutput
+    public function getLearner(ApiObjectIdentifier $identifier): LearnerOutput
     {
         return new LearnerOutput(
             $uuid,
@@ -389,7 +389,7 @@ class AgoraLearningClientMock extends AgoraLearningClient
         ];
     }
 
-    public function getSociety(string $uuid): SocietyOutput
+    public function getSociety(ApiObjectIdentifier $identifier): SocietyOutput
     {
         return new SocietyOutput(
             $uuid,
@@ -639,7 +639,7 @@ class AgoraLearningClientMock extends AgoraLearningClient
     /**
      * @return array<int, EnrollmentOutput>
      */
-    public function getCollectionEnrollmentFromSession(string $sessionUuid): array
+    public function getCollectionEnrollmentFromSession(ApiObjectIdentifier $sessionIdentifier): array
     {
         return [
             0 => new EnrollmentOutput(
@@ -661,7 +661,7 @@ class AgoraLearningClientMock extends AgoraLearningClient
                     'Développeur'
                 ),
                 new SessionOutput(
-                    $sessionUuid,
+                    $sessionIdentifier->getId(),
                     'Formation PHP avancé',
                     SessionType::SESSION_TYPE_INTER,
                     SessionMode::SESSION_MODE_FACE_TO_FACE,
@@ -716,7 +716,7 @@ class AgoraLearningClientMock extends AgoraLearningClient
                     'Développeuse'
                 ),
                 new SessionOutput(
-                    $sessionUuid,
+                    $sessionIdentifier->getId(),
                     'Formation PHP avancé',
                     SessionType::SESSION_TYPE_INTER,
                     SessionMode::SESSION_MODE_FACE_TO_FACE,
@@ -758,13 +758,13 @@ class AgoraLearningClientMock extends AgoraLearningClient
     /**
      * @return array<int, EnrollmentOutput>
      */
-    public function getCollectionEnrollmentFromLearner(string $learnerUuid): array
+    public function getCollectionEnrollmentFromLearner(ApiObjectIdentifier $learnerIdentifier): array
     {
         return [
             0 => new EnrollmentOutput(
                 'enr_01XXXXXXXXXXXXXXXXXXXXXXXXX',
                 new LearnerOutput(
-                    $learnerUuid,
+                    $learnerIdentifier->getId(),
                     'dupont.jean',
                     'Dupont',
                     'Jean',
@@ -819,7 +819,7 @@ class AgoraLearningClientMock extends AgoraLearningClient
             1 => new EnrollmentOutput(
                 'enr_02XXXXXXXXXXXXXXXXXXXXXXXXX',
                 new LearnerOutput(
-                    $learnerUuid,
+                    $learnerIdentifier->getId(),
                     'dupont.jean',
                     'Dupont',
                     'Jean',
@@ -875,7 +875,7 @@ class AgoraLearningClientMock extends AgoraLearningClient
         ];
     }
 
-    public function getEnrollment(string $uuid): EnrollmentOutput
+    public function getEnrollment(ApiObjectIdentifier $identifier): EnrollmentOutput
     {
         return new EnrollmentOutput(
             $uuid,
@@ -934,12 +934,14 @@ class AgoraLearningClientMock extends AgoraLearningClient
         );
     }
 
-    public function getEnrollmentFromSessionAndLearner(string $sessionUuid, string $learnerUuid): EnrollmentOutput
-    {
+    public function getEnrollmentFromSessionAndLearner(
+        ApiObjectIdentifier $sessionIdentifier,
+        ApiObjectIdentifier $learnerIdentifier
+    ): EnrollmentOutput {
         return new EnrollmentOutput(
             'enr_01XXXXXXXXXXXXXXXXXXXXXXXXX',
             new LearnerOutput(
-                $learnerUuid,
+                $learnerIdentifier->getId(),
                 'dupont.jean',
                 'Dupont',
                 'Jean',
@@ -955,7 +957,7 @@ class AgoraLearningClientMock extends AgoraLearningClient
                 'Développeur'
             ),
             new SessionOutput(
-                $sessionUuid,
+                $sessionIdentifier->getId(),
                 'Formation PHP avancé',
                 SessionType::SESSION_TYPE_INTER,
                 SessionMode::SESSION_MODE_FACE_TO_FACE,

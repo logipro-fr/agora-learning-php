@@ -7,6 +7,7 @@ namespace AgoraLearningPhp\Tests\integration;
 use AgoraLearningPhp\DTO\Input\Person\PersonInput;
 use AgoraLearningPhp\DTO\Input\Society\SocietyInput;
 use AgoraLearningPhp\Enum\Gender;
+use AgoraLearningPhp\Identifier\AgoraId;
 
 class SocietyTest extends AbstractAgoraLearningTest
 {
@@ -129,7 +130,7 @@ class SocietyTest extends AbstractAgoraLearningTest
         $uuid = $output->uuid;
 
         //Act
-        $societyOutput = $this->client->getSociety($uuid);
+        $societyOutput = $this->client->getSociety(new AgoraId($uuid));
 
         // Assert
         $this->assertEquals($uuid, $societyOutput->uuid);

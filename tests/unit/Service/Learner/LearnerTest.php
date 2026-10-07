@@ -8,6 +8,8 @@ use AgoraLearningPhp\DTO\Input\Learner\LearnerInput;
 use AgoraLearningPhp\DTO\Output\Learner\LearnerOutput;
 use AgoraLearningPhp\Enum\Gender;
 use AgoraLearningPhp\Exception\AgoraLearningClientException;
+use AgoraLearningPhp\Identifier\AgoraId;
+use AgoraLearningPhp\Identifier\ExternalId;
 use AgoraLearningPhp\Service\ClientCore\HttpClient;
 use AgoraLearningPhp\Service\Learner\Learner;
 use AgoraLearningPhp\Tests\unit\Service\ServiceTestCase;
@@ -199,10 +201,31 @@ class LearnerTest extends ServiceTestCase
         );
 
         // Act
-        $result = $learner->getLearner('learner-uuid-001');
+        $result = $learner->getLearner(new AgoraId('learner-uuid-001'));
 
         // Assert
         $this->assertInstanceOf(LearnerOutput::class, $result);
+        $this->assertSame('learner-uuid-001', $result->uuid);
+    }
+
+    public function testGetLearnerWithExternalIdCallsEncodedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $learner = $this->makeLearner($this->makeHttpClientInspectingRequest(
+            200,
+            json_encode($this->makeMinimalData()),
+            $method,
+            $url
+        ));
+
+        // Act
+        $result = $learner->getLearner(new ExternalId('Src', 'X-42'));
+
+        // Assert
+        $this->assertSame('GET', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/learners/Src%3AX-42', $url);
         $this->assertSame('learner-uuid-001', $result->uuid);
     }
 
@@ -218,7 +241,7 @@ class LearnerTest extends ServiceTestCase
         $this->expectExceptionMessage('Not Found');
 
         // Act
-        $learner->getLearner('missing-uuid');
+        $learner->getLearner(new AgoraId('missing-uuid'));
     }
 
     public function testGetLearnerThrowsExceptionWithDefaultMessageWhenNoDetail(): void
@@ -233,7 +256,7 @@ class LearnerTest extends ServiceTestCase
         $this->expectExceptionMessage('An unexpected error occured');
 
         // Act
-        $learner->getLearner('some-uuid');
+        $learner->getLearner(new AgoraId('some-uuid'));
     }
 
     public function testPostLearnerWithBirthDate(): void

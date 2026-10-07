@@ -87,9 +87,12 @@ class ApiUrls
         return self::getBaseUrl() . self::CREATE_PERSON;
     }
 
-    public static function getGetPerson(string $personUuid): string
+    /**
+     * @param string $identifier Identifiant brut (uuid Agora ou "source:id"), encodé ici
+     */
+    public static function getGetPerson(string $identifier): string
     {
-        return self::getBaseUrl() . self::GET_PERSON . $personUuid;
+        return self::getBaseUrl() . self::GET_PERSON . rawurlencode($identifier);
     }
 
     public static function getGetCollectionPerson(): string
@@ -108,9 +111,12 @@ class ApiUrls
         return self::getBaseUrl() . self::CREATE_TRAINER_FREE;
     }
 
-    public static function getGetTrainer(string $trainerUuid): string
+    /**
+     * @param string $identifier Identifiant brut (uuid Agora ou "source:id"), encodé ici
+     */
+    public static function getGetTrainer(string $identifier): string
     {
-        return self::getBaseUrl() . self::GET_TRAINER . $trainerUuid;
+        return self::getBaseUrl() . self::GET_TRAINER . rawurlencode($identifier);
     }
 
     public static function getGetCollectionTrainer(): string
@@ -124,9 +130,12 @@ class ApiUrls
         return self::getBaseUrl() . self::CREATE_LEARNER;
     }
 
-    public static function getGetLearner(string $learnerUuid): string
+    /**
+     * @param string $identifier Identifiant brut (uuid Agora ou "source:id"), encodé ici
+     */
+    public static function getGetLearner(string $identifier): string
     {
-        return self::getBaseUrl() . self::GET_LEARNER . $learnerUuid;
+        return self::getBaseUrl() . self::GET_LEARNER . rawurlencode($identifier);
     }
 
     public static function getGetCollectionLearner(): string
@@ -164,9 +173,12 @@ class ApiUrls
         return self::getBaseUrl() . self::CREATE_SOCIETY;
     }
 
-    public static function getGetSociety(string $societyUuid): string
+    /**
+     * @param string $identifier Identifiant brut (uuid Agora ou "source:id"), encodé ici
+     */
+    public static function getGetSociety(string $identifier): string
     {
-        return self::getBaseUrl() . self::GET_SOCIETY . $societyUuid;
+        return self::getBaseUrl() . self::GET_SOCIETY . rawurlencode($identifier);
     }
 
     public static function getGetCollectionSociety(): string
@@ -180,23 +192,40 @@ class ApiUrls
         return self::getBaseUrl() . self::CREATE_ENROLLMENT;
     }
 
-    public static function getGetEnrollment(string $enrollmentUuid): string
+    /**
+     * @param string $identifier Identifiant brut (uuid Agora ou "source:id"), encodé ici
+     */
+    public static function getGetEnrollment(string $identifier): string
     {
-        return self::getBaseUrl() . self::GET_ENROLLMENT . $enrollmentUuid;
+        return self::getBaseUrl() . self::GET_ENROLLMENT . rawurlencode($identifier);
     }
 
-    public static function getGetEnrollmentFromSessionAndLearner(string $sessionUuid, string $learnerUuid): string
+    /**
+     * @param string $sessionIdentifier Identifiant brut de la session, encodé ici
+     * @param string $learnerIdentifier Identifiant brut de l'apprenant, encodé ici
+     */
+    public static function getGetEnrollmentFromSessionAndLearner(string $sessionIdentifier, string $learnerIdentifier): string
     {
-        return self::getBaseUrl() . sprintf(self::GET_ENROLLMENT_FROM_SESSION_AND_LEARNER, $sessionUuid, $learnerUuid);
+        return self::getBaseUrl() . sprintf(
+            self::GET_ENROLLMENT_FROM_SESSION_AND_LEARNER,
+            rawurlencode($sessionIdentifier),
+            rawurlencode($learnerIdentifier)
+        );
     }
 
-    public static function getGetCollectionEnrollmentFromSession(string $sessionUuid): string
+    /**
+     * @param string $sessionIdentifier Identifiant brut de la session, encodé ici
+     */
+    public static function getGetCollectionEnrollmentFromSession(string $sessionIdentifier): string
     {
-        return self::getBaseUrl() . sprintf(self::GET_COLLECTION_ENROLLMENT_FROM_SESSION, $sessionUuid);
+        return self::getBaseUrl() . sprintf(self::GET_COLLECTION_ENROLLMENT_FROM_SESSION, rawurlencode($sessionIdentifier));
     }
 
-    public static function getGetCollectionEnrollmentFromLearner(string $learnerUuid): string
+    /**
+     * @param string $learnerIdentifier Identifiant brut de l'apprenant, encodé ici
+     */
+    public static function getGetCollectionEnrollmentFromLearner(string $learnerIdentifier): string
     {
-        return self::getBaseUrl() . sprintf(self::GET_COLLECTION_ENROLLMENT_FROM_LEARNER, $learnerUuid);
+        return self::getBaseUrl() . sprintf(self::GET_COLLECTION_ENROLLMENT_FROM_LEARNER, rawurlencode($learnerIdentifier));
     }
 }

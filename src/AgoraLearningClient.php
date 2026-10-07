@@ -54,9 +54,9 @@ class AgoraLearningClient
         return $this->makePerson()->getCollectionPerson();
     }
 
-    public function getPerson(string $uuid): PersonOutput
+    public function getPerson(ApiObjectIdentifier $identifier): PersonOutput
     {
-        return $this->makePerson()->getPerson($uuid);
+        return $this->makePerson()->getPerson($identifier);
     }
 
     public function createPerson(PersonInput $personInput): PersonOutput
@@ -73,9 +73,9 @@ class AgoraLearningClient
         return $this->makeTrainer()->getCollectionTrainer();
     }
 
-    public function getTrainer(string $uuid): TrainerOutput
+    public function getTrainer(ApiObjectIdentifier $identifier): TrainerOutput
     {
-        return $this->makeTrainer()->getTrainer($uuid);
+        return $this->makeTrainer()->getTrainer($identifier);
     }
 
     public function createTrainerEmployee(TrainerEmployeeInput $trainerEmployeeInput): TrainerOutput
@@ -97,9 +97,9 @@ class AgoraLearningClient
         return $this->makeLearner()->getCollectionLearner();
     }
 
-    public function getLearner(string $uuid): LearnerOutput
+    public function getLearner(ApiObjectIdentifier $identifier): LearnerOutput
     {
-        return $this->makeLearner()->getLearner($uuid);
+        return $this->makeLearner()->getLearner($identifier);
     }
 
     public function createLearner(LearnerInput $learnerInput): LearnerOutput
@@ -116,9 +116,9 @@ class AgoraLearningClient
         return $this->makeSociety()->getCollectionSociety();
     }
 
-    public function getSociety(string $uuid): SocietyOutput
+    public function getSociety(ApiObjectIdentifier $identifier): SocietyOutput
     {
-        return $this->makeSociety()->getSociety($uuid);
+        return $this->makeSociety()->getSociety($identifier);
     }
 
     public function createSociety(SocietyInput $societyInput): SocietyOutput
@@ -149,27 +149,29 @@ class AgoraLearningClient
     /**
      * @return array<int, EnrollmentOutput>
      */
-    public function getCollectionEnrollmentFromSession(string $sessionUuid): array
+    public function getCollectionEnrollmentFromSession(ApiObjectIdentifier $sessionIdentifier): array
     {
-        return $this->makeEnrollment()->getCollectionEnrollmentFromSession($sessionUuid);
+        return $this->makeEnrollment()->getCollectionEnrollmentFromSession($sessionIdentifier);
     }
 
     /**
      * @return array<int, EnrollmentOutput>
      */
-    public function getCollectionEnrollmentFromLearner(string $learnerUuid): array
+    public function getCollectionEnrollmentFromLearner(ApiObjectIdentifier $learnerIdentifier): array
     {
-        return $this->makeEnrollment()->getCollectionEnrollmentFromLearner($learnerUuid);
+        return $this->makeEnrollment()->getCollectionEnrollmentFromLearner($learnerIdentifier);
     }
 
-    public function getEnrollment(string $uuid): EnrollmentOutput
+    public function getEnrollment(ApiObjectIdentifier $identifier): EnrollmentOutput
     {
-        return $this->makeEnrollment()->getEnrollment($uuid);
+        return $this->makeEnrollment()->getEnrollment($identifier);
     }
 
-    public function getEnrollmentFromSessionAndLearner(string $sessionUuid, string $learnerUuid): EnrollmentOutput
-    {
-        return $this->makeEnrollment()->getEnrollmentFromSessionAndLearner($sessionUuid, $learnerUuid);
+    public function getEnrollmentFromSessionAndLearner(
+        ApiObjectIdentifier $sessionIdentifier,
+        ApiObjectIdentifier $learnerIdentifier
+    ): EnrollmentOutput {
+        return $this->makeEnrollment()->getEnrollmentFromSessionAndLearner($sessionIdentifier, $learnerIdentifier);
     }
 
     public function createEnrollment(EnrollmentInput $enrollmentInput): EnrollmentOutput

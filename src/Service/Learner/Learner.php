@@ -8,6 +8,7 @@ use AgoraLearningPhp\DTO\Input\Learner\LearnerInput;
 use AgoraLearningPhp\DTO\Output\Learner\LearnerOutput;
 use AgoraLearningPhp\Enum\Gender;
 use AgoraLearningPhp\Enum\RequestMethod;
+use AgoraLearningPhp\Identifier\ApiObjectIdentifier;
 use AgoraLearningPhp\Service\ClientCore\ApiService;
 use AgoraLearningPhp\Service\ClientCore\ApiUrls;
 use AgoraLearningPhp\Service\Tools\JsonHandler;
@@ -27,10 +28,10 @@ class Learner extends ApiService
         return $this->convertResponseToDTOarray($response);
     }
 
-    public function getLearner(string $uuid): LearnerOutput
+    public function getLearner(ApiObjectIdentifier $identifier): LearnerOutput
     {
         $body = '';
-        $response = $this->httpClient->request(RequestMethod::GET, ApiUrls::getGetLearner($uuid), $body);
+        $response = $this->httpClient->request(RequestMethod::GET, ApiUrls::getGetLearner($identifier->getId()), $body);
         return $this->convertResponseToDTO($response);
     }
 
