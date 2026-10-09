@@ -6,12 +6,14 @@ namespace AgoraLearningPhp\Service\Trainer;
 
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerEmployeeInput;
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerFreeInput;
+use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Trainer\TrainerEmployeeOutput;
 use AgoraLearningPhp\DTO\Output\Trainer\TrainerFreeOutput;
 use AgoraLearningPhp\DTO\Output\Trainer\TrainerOutput;
 use AgoraLearningPhp\Enum\RequestMethod;
 use AgoraLearningPhp\Enum\TrainerStatut;
 use AgoraLearningPhp\Identifier\ApiObjectIdentifier;
+use AgoraLearningPhp\Identifier\ExternalId;
 use AgoraLearningPhp\Service\ClientCore\ApiService;
 use AgoraLearningPhp\Service\ClientCore\ApiUrls;
 use AgoraLearningPhp\Service\Society\Society;
@@ -39,10 +41,11 @@ class Trainer extends ApiService
         return $this->convertResponseToDTO($response);
     }
 
-    public function postTrainerEmployee(TrainerEmployeeInput $trainerEmployeeInput): TrainerOutput
+    public function postTrainerEmployee(TrainerEmployeeInput $trainerEmployeeInput): CreatedOutput
     {
         $body = JsonHandler::jsonEncode(
             [
+                "externalIdentifier" => $trainerEmployeeInput->externalIdentifier->toArray(),
                 "familyName" => $trainerEmployeeInput->familyName,
                 "givenName" => $trainerEmployeeInput->givenName,
                 "email" => $trainerEmployeeInput->email,
@@ -68,13 +71,14 @@ class Trainer extends ApiService
             ]
         );
         $response = $this->httpClient->request(RequestMethod::POST, ApiUrls::getCreateTrainerEmployee(), $body);
-        return $this->convertResponseToDTO($response);
+        return $this->convertResponsePostToDTO($response);
     }
 
-    public function postTrainerFree(TrainerFreeInput $trainerFreeInput): TrainerOutput
+    public function postTrainerFree(TrainerFreeInput $trainerFreeInput): CreatedOutput
     {
         $body = JsonHandler::jsonEncode(
             [
+                "externalIdentifier" => $trainerFreeInput->externalIdentifier->toArray(),
                 "familyName" => $trainerFreeInput->familyName,
                 "givenName" => $trainerFreeInput->givenName,
                 "email" => $trainerFreeInput->email,
@@ -110,7 +114,7 @@ class Trainer extends ApiService
             ]
         );
         $response = $this->httpClient->request(RequestMethod::POST, ApiUrls::getCreateTrainerFree(), $body);
-        return $this->convertResponseToDTO($response);
+        return $this->convertResponsePostToDTO($response);
     }
 
     /**
@@ -119,7 +123,8 @@ class Trainer extends ApiService
     public static function convertDataToDTO(array $data): TrainerOutput
     {
         /** @var array{
-         *     id: string,
+         *     agoraId: string,
+         *     externalIdentifier?: array<string, mixed>|null,
          *     familyName: string,
          *     givenName: string,
          *     email: string,
@@ -154,6 +159,7 @@ class Trainer extends ApiService
         $addressCountry = $data['addressCountry'] ?? null;
         $birthDate = !empty($data['birthDate']) ? new \DateTimeImmutable($data['birthDate']) : null;
         $jobTitle = $data['jobTitle'] ?? null;
+        $externalIdentifier = !empty($data['externalIdentifier']) ? ExternalId::fromArray($data['externalIdentifier']) : null;
         $societyData = array_key_exists('society', $data) ? Society::convertDataToDTO($data['society']) : null;
 
         switch ($data['statut'] ?? null) {
@@ -168,7 +174,7 @@ class Trainer extends ApiService
                 $billingAddressLocality = $data['billingAddressLocality'] ?? null;
                 $billingAddressCountry = $data['billingAddressCountry'] ?? null;
                 return new TrainerFreeOutput(
-                    $data['id'],
+                    $data['agoraId'],
                     $data['familyName'],
                     $data['givenName'],
                     $data['email'],
@@ -192,12 +198,13 @@ class Trainer extends ApiService
                     $billingAddressStreet,
                     $billingAddressPostcode,
                     $billingAddressLocality,
-                    $billingAddressCountry
+                    $billingAddressCountry,
+                    $externalIdentifier,
                 );
             case TrainerStatut::STATUT_EMPLOYE:
             default:
                 return new TrainerEmployeeOutput(
-                    $data['id'],
+                    $data['agoraId'],
                     $data['familyName'],
                     $data['givenName'],
                     $data['email'],
@@ -212,7 +219,8 @@ class Trainer extends ApiService
                     $addressCountry,
                     $birthDate,
                     $jobTitle,
-                    $societyData
+                    $societyData,
+                    $externalIdentifier,
                 );
         }
     }

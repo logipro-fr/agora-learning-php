@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace AgoraLearningPhp\Service\Person;
 
 use AgoraLearningPhp\DTO\Input\Person\PersonInput;
+use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Person\PersonOutput;
 use AgoraLearningPhp\Enum\Gender;
 use AgoraLearningPhp\Enum\RequestMethod;
 use AgoraLearningPhp\Identifier\ApiObjectIdentifier;
+use AgoraLearningPhp\Identifier\ExternalId;
 use AgoraLearningPhp\Service\ClientCore\ApiService;
 use AgoraLearningPhp\Service\ClientCore\ApiUrls;
 use AgoraLearningPhp\Service\Tools\JsonHandler;
@@ -35,10 +37,11 @@ class Person extends ApiService
         return $this->convertResponseToDTO($response);
     }
 
-    public function postPerson(PersonInput $personInput): PersonOutput
+    public function postPerson(PersonInput $personInput): CreatedOutput
     {
         $body = JsonHandler::jsonEncode(
             [
+                "externalIdentifier" => $personInput->externalIdentifier->toArray(),
                 "familyName" => $personInput->familyName,
                 "givenName" => $personInput->givenName,
                 "email" => $personInput->email,
@@ -54,7 +57,7 @@ class Person extends ApiService
             ]
         );
         $response = $this->httpClient->request(RequestMethod::POST, ApiUrls::getCreatePerson(), $body);
-        return $this->convertResponseToDTO($response);
+        return $this->convertResponsePostToDTO($response);
     }
 
     /**
@@ -63,7 +66,8 @@ class Person extends ApiService
     public static function convertDataToDTO(array $data): PersonOutput
     {
         /** @var array{
-         *     id: string,
+         *     agoraId: string,
+         *     externalIdentifier?: array<string, mixed>|null,
          *     familyName: string,
          *     givenName: string,
          *     email: string,
@@ -84,9 +88,10 @@ class Person extends ApiService
         $gender = $data['gender'] ?? Gender::GENDER_NA;
         $birthDate = !empty($data['birthDate']) ? new \DateTimeImmutable($data['birthDate']) : null;
         $jobTitle = $data['jobTitle'] ?? null;
+        $externalIdentifier = !empty($data['externalIdentifier']) ? ExternalId::fromArray($data['externalIdentifier']) : null;
 
         return new PersonOutput(
-            $data['id'],
+            $data['agoraId'],
             $data['familyName'],
             $data['givenName'],
             $data['email'],
@@ -98,6 +103,7 @@ class Person extends ApiService
             $gender,
             $birthDate,
             $jobTitle,
+            $externalIdentifier,
         );
     }
 }

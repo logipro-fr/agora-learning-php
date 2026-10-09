@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace AgoraLearningPhp\DTO\Input\Session;
 
+use AgoraLearningPhp\Identifier\ExternalId;
+
 final class SessionInput
 {
+    public ExternalId $externalIdentifier;
     public string $title;
     public SpecificSessionInputInterface $sessionData;
     public bool $manualDuration = false;
@@ -23,6 +26,7 @@ final class SessionInput
     public ?string $image;
 
     public function __construct(
+        ExternalId $externalIdentifier,
         string $title,
         SpecificSessionInputInterface $sessionData,
         bool $manualDuration = false,
@@ -39,6 +43,7 @@ final class SessionInput
         ?string $urlDelayedSurvey = null,
         ?string $image = null
     ) {
+        $this->externalIdentifier = $externalIdentifier;
         $this->title = $title;
         $this->sessionData = $sessionData;
         $this->manualDuration = $manualDuration;

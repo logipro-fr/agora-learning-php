@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace AgoraLearningPhp\Service\Learner;
 
 use AgoraLearningPhp\DTO\Input\Learner\LearnerInput;
+use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Learner\LearnerOutput;
 use AgoraLearningPhp\Enum\Gender;
 use AgoraLearningPhp\Enum\RequestMethod;
 use AgoraLearningPhp\Identifier\ApiObjectIdentifier;
+use AgoraLearningPhp\Identifier\ExternalId;
 use AgoraLearningPhp\Service\ClientCore\ApiService;
 use AgoraLearningPhp\Service\ClientCore\ApiUrls;
 use AgoraLearningPhp\Service\Tools\JsonHandler;
@@ -35,10 +37,11 @@ class Learner extends ApiService
         return $this->convertResponseToDTO($response);
     }
 
-    public function postLearner(LearnerInput $learnerInput): LearnerOutput
+    public function postLearner(LearnerInput $learnerInput): CreatedOutput
     {
         $body = JsonHandler::jsonEncode(
             [
+                "externalIdentifier" => $learnerInput->externalIdentifier->toArray(),
                 "familyName" => $learnerInput->familyName,
                 "givenName" => $learnerInput->givenName,
                 "gender" => $learnerInput->gender,
@@ -55,7 +58,7 @@ class Learner extends ApiService
             ]
         );
         $response = $this->httpClient->request(RequestMethod::POST, ApiUrls::getCreateLearner(), $body);
-        return $this->convertResponseToDTO($response);
+        return $this->convertResponsePostToDTO($response);
     }
 
     /**
@@ -64,7 +67,8 @@ class Learner extends ApiService
     public static function convertDataToDTO(array $data): LearnerOutput
     {
         /** @var array{
-         *     id: string,
+         *     agoraId: string,
+         *     externalIdentifier?: array<string, mixed>|null,
          *     username: string,
          *     familyName: string,
          *     givenName: string,
@@ -87,9 +91,10 @@ class Learner extends ApiService
         $gender = $data['gender'] ?? Gender::GENDER_NA;
         $birthDate = !empty($data['birthDate']) ? new \DateTimeImmutable($data['birthDate']) : null;
         $jobTitle = $data['jobTitle'] ?? null;
+        $externalIdentifier = !empty($data['externalIdentifier']) ? ExternalId::fromArray($data['externalIdentifier']) : null;
 
         return new LearnerOutput(
-            $data['id'],
+            $data['agoraId'],
             $data['username'],
             $data['familyName'],
             $data['givenName'],
@@ -102,7 +107,8 @@ class Learner extends ApiService
             $addressLocality,
             $addressCountry,
             $birthDate,
-            $jobTitle
+            $jobTitle,
+            $externalIdentifier,
         );
     }
 }

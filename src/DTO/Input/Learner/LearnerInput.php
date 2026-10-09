@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace AgoraLearningPhp\DTO\Input\Learner;
 
 use AgoraLearningPhp\Enum\Gender;
+use AgoraLearningPhp\Identifier\ExternalId;
 
 final class LearnerInput
 {
+    public ExternalId $externalIdentifier;
     public string $familyName;
     public string $givenName;
     public string $gender;
@@ -23,6 +25,7 @@ final class LearnerInput
     public ?string $jobTitle;
 
     public function __construct(
+        ExternalId $externalIdentifier,
         string $familyName,
         string $givenName,
         string $recoverEmail,
@@ -37,6 +40,7 @@ final class LearnerInput
         ?\DateTimeImmutable $birthDate = null,
         ?string $jobTitle = null
     ) {
+        $this->externalIdentifier = $externalIdentifier;
         $this->familyName = $familyName;
         $this->givenName = $givenName;
         $this->gender = $gender;

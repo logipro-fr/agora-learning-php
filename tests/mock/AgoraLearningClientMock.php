@@ -8,12 +8,11 @@ use AgoraLearningPhp\AgoraLearningClient;
 use AgoraLearningPhp\DTO\Input\Enrollment\EnrollmentInput;
 use AgoraLearningPhp\DTO\Input\Learner\LearnerInput;
 use AgoraLearningPhp\DTO\Input\Person\PersonInput;
-use AgoraLearningPhp\DTO\Input\Session\FixedSessionInput;
-use AgoraLearningPhp\DTO\Input\Session\OpenedSessionInput;
 use AgoraLearningPhp\DTO\Input\Session\SessionInput;
 use AgoraLearningPhp\DTO\Input\Society\SocietyInput;
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerEmployeeInput;
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerFreeInput;
+use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Enrollment\EnrollmentOutput;
 use AgoraLearningPhp\DTO\Output\Learner\LearnerOutput;
 use AgoraLearningPhp\DTO\Output\Person\PersonOutput;
@@ -27,6 +26,7 @@ use AgoraLearningPhp\DTO\Output\Trainer\TrainerOutput;
 use AgoraLearningPhp\Enum\Gender;
 use AgoraLearningPhp\Enum\SessionMode;
 use AgoraLearningPhp\Enum\SessionType;
+use AgoraLearningPhp\Identifier\AgoraId;
 use AgoraLearningPhp\Identifier\ApiObjectIdentifier;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -101,21 +101,11 @@ class AgoraLearningClientMock extends AgoraLearningClient
         );
     }
 
-    public function createPerson(PersonInput $personInput): PersonOutput
+    public function createPerson(PersonInput $personInput): CreatedOutput
     {
-        return new PersonOutput(
-            'per_01XXXXXXXXXXXXXXXXXXXXXXXXX',
-            $personInput->familyName,
-            $personInput->givenName,
-            $personInput->email,
-            $personInput->telephone,
-            $personInput->addressStreet,
-            $personInput->addressPostcode,
-            $personInput->addressLocality,
-            $personInput->addressCountry,
-            $personInput->gender,
-            $personInput->birthDate,
-            $personInput->jobTitle
+        return new CreatedOutput(
+            new AgoraId('per_01XXXXXXXXXXXXXXXXXXXXXXXXX'),
+            $personInput->externalIdentifier
         );
     }
 
@@ -205,62 +195,19 @@ class AgoraLearningClientMock extends AgoraLearningClient
         );
     }
 
-    public function createTrainerEmployee(TrainerEmployeeInput $trainerEmployeeInput): TrainerOutput
+    public function createTrainerEmployee(TrainerEmployeeInput $trainerEmployeeInput): CreatedOutput
     {
-        return new TrainerEmployeeOutput(
-            'per_01XXXXXXXXXXXXXXXXXXXXXXXXX',
-            'Martin',
-            'Sophie',
-            'sophie.martin@example.com',
-            true,
-            Gender::GENDER_FEMALE,
-            ['ses_01XXXXXXXXXXXXXXXXXXXXXXXXX'],
-            '0123456789',
-            '0612345678',
-            '12 avenue des Formateurs',
-            '69001',
-            'Lyon',
-            'France',
-            new \DateTimeImmutable('1990-03-20'),
-            'Formatrice senior',
-            new SocietyOutput(
-                'soc_01XXXXXXXXXXXXXXXXXXXXXXXXX',
-                'Formation Excellence SAS'
-            )
+        return new CreatedOutput(
+            new AgoraId('per_01XXXXXXXXXXXXXXXXXXXXXXXXX'),
+            $trainerEmployeeInput->externalIdentifier
         );
     }
 
-    public function createTrainerFree(TrainerFreeInput $trainerFreeInput): TrainerOutput
+    public function createTrainerFree(TrainerFreeInput $trainerFreeInput): CreatedOutput
     {
-        return new TrainerFreeOutput(
-            'per_01XXXXXXXXXXXXXXXXXXXXXXXXX',
-            'Bernard',
-            'Pierre',
-            'pierre.bernard@example.com',
-            true,
-            Gender::GENDER_MALE,
-            [],
-            '0123456789',
-            '0612345678',
-            '5 rue des Indépendants',
-            '33000',
-            'Bordeaux',
-            'France',
-            new \DateTimeImmutable('1982-11-08'),
-            'Formateur indépendant',
-            new SocietyOutput(
-                'soc_01XXXXXXXXXXXXXXXXXXXXXXXXX',
-                'Formation Excellence SAS'
-            ),
-            80.0,
-            600.0,
-            '12345678901234',
-            'FR12345678901',
-            '987654321',
-            '5 rue des Indépendants',
-            '33000',
-            'Bordeaux',
-            'France'
+        return new CreatedOutput(
+            new AgoraId('per_01XXXXXXXXXXXXXXXXXXXXXXXXX'),
+            $trainerFreeInput->externalIdentifier
         );
     }
 
@@ -318,23 +265,11 @@ class AgoraLearningClientMock extends AgoraLearningClient
         );
     }
 
-    public function createLearner(LearnerInput $learnerInput): LearnerOutput
+    public function createLearner(LearnerInput $learnerInput): CreatedOutput
     {
-        return new LearnerOutput(
-            'per_01XXXXXXXXXXXXXXXXXXXXXXXXX',
-            'user.name',
-            $learnerInput->familyName,
-            $learnerInput->givenName,
-            $learnerInput->gender,
-            $learnerInput->recoverEmail,
-            $learnerInput->email,
-            $learnerInput->telephone,
-            $learnerInput->addressStreet,
-            $learnerInput->addressPostcode,
-            $learnerInput->addressLocality,
-            $learnerInput->addressCountry,
-            $learnerInput->birthDate,
-            $learnerInput->jobTitle
+        return new CreatedOutput(
+            new AgoraId('per_01XXXXXXXXXXXXXXXXXXXXXXXXX'),
+            $learnerInput->externalIdentifier
         );
     }
 
@@ -430,26 +365,11 @@ class AgoraLearningClientMock extends AgoraLearningClient
         );
     }
 
-    public function createSociety(SocietyInput $societyInput): SocietyOutput
+    public function createSociety(SocietyInput $societyInput): CreatedOutput
     {
-        return new SocietyOutput(
-            'soc_01XXXXXXXXXXXXXXXXXXXXXXXXX',
-            $societyInput->name,
-            $societyInput->siret,
-            $societyInput->legalStatus,
-            $societyInput->email,
-            $societyInput->telephone,
-            $societyInput->addressStreetHeadOffice,
-            $societyInput->addressPostcodeHeadOffice,
-            $societyInput->addressLocalityHeadOffice,
-            $societyInput->addressCountryHeadOffice,
-            $societyInput->addressStreetInvoicing,
-            $societyInput->addressPostcodeInvoicing,
-            $societyInput->addressLocalityInvoicing,
-            $societyInput->addressCountryInvoicing,
-            $societyInput->legalPerson,
-            $societyInput->administrativePerson,
-            $societyInput->rhPerson
+        return new CreatedOutput(
+            new AgoraId('soc_01XXXXXXXXXXXXXXXXXXXXXXXXX'),
+            $societyInput->externalIdentifier
         );
     }
 
@@ -570,68 +490,11 @@ class AgoraLearningClientMock extends AgoraLearningClient
         );
     }
 
-    public function createSession(SessionInput $sessionInput): SessionOutput
+    public function createSession(SessionInput $sessionInput): CreatedOutput
     {
-        $sessionData = $sessionInput->sessionData;
-        if ($sessionData instanceof FixedSessionInput) {
-            $type = $sessionData->type;
-            $mode = $sessionData->mode;
-            $dateData = new FixedSessionOutput(
-                $sessionData->availabilityStartDate,
-                $sessionData->availabilityEndDate
-            );
-        } elseif ($sessionData instanceof OpenedSessionInput) {
-            $type = SessionType::SESSION_TYPE_INTER;
-            $mode = SessionMode::SESSION_MODE_E_LEARNING;
-            $dateData = new OpenedSessionOutput(
-                $sessionData->subscribeStartDate,
-                $sessionData->subscribeEndDate,
-                $sessionData->accessDurationDays
-            );
-        } else {
-            throw new \Exception('Wrong SessionInput');
-        }
-
-        $trainer = null;
-        if ($sessionInput->pedagogicalTrainer) {
-            $trainer = new TrainerEmployeeOutput(
-                'per_01XXXXXXXXXXXXXXXXXXXXXXXXX',
-                'Martin',
-                'Sophie',
-                'sophie.martin@example.com',
-                true,
-                Gender::GENDER_FEMALE,
-                ['ses_01XXXXXXXXXXXXXXXXXXXXXXXXX']
-            );
-        }
-
-        $administrativePerson = null;
-        if ($sessionInput->administrativePerson) {
-            $administrativePerson = new PersonOutput(
-                'per_02XXXXXXXXXXXXXXXXXXXXXXXXX',
-                'Derivière',
-                'Olivia'
-            );
-        }
-
-        return new SessionOutput(
-            'ses_01XXXXXXXXXXXXXXXXXXXXXXXXX',
-            $sessionInput->title,
-            $type,
-            $mode,
-            $dateData,
-            $sessionInput->manualDuration,
-            $sessionInput->hasForum,
-            $sessionInput->notifyMailForum,
-            $sessionInput->price,
-            $sessionInput->durationInSeconds,
-            $sessionInput->description,
-            $sessionInput->maxPlaces,
-            $trainer,
-            $administrativePerson,
-            $sessionInput->urlPreTrainingSurvey,
-            $sessionInput->urlOnTheSpotSurvey,
-            $sessionInput->urlDelayedSurvey
+        return new CreatedOutput(
+            new AgoraId('ses_01XXXXXXXXXXXXXXXXXXXXXXXXX'),
+            $sessionInput->externalIdentifier
         );
     }
 
@@ -995,62 +858,11 @@ class AgoraLearningClientMock extends AgoraLearningClient
         );
     }
 
-    public function createEnrollment(EnrollmentInput $enrollmentInput): EnrollmentOutput
+    public function createEnrollment(EnrollmentInput $enrollmentInput): CreatedOutput
     {
-        return new EnrollmentOutput(
-            'enr_01XXXXXXXXXXXXXXXXXXXXXXXXX',
-            new LearnerOutput(
-                $enrollmentInput->learnerUuid,
-                'dupont.jean',
-                'Dupont',
-                'Jean',
-                Gender::GENDER_MALE,
-                'jean.dupont.recovery@example.com',
-                'jean.dupont@example.com',
-                '0123456789',
-                '3 rue de la Paix',
-                '75001',
-                'Paris',
-                'France',
-                new \DateTimeImmutable('1985-06-15'),
-                'Développeur'
-            ),
-            new SessionOutput(
-                $enrollmentInput->sessionUuid,
-                'Formation PHP avancé',
-                SessionType::SESSION_TYPE_INTER,
-                SessionMode::SESSION_MODE_FACE_TO_FACE,
-                new FixedSessionOutput(
-                    new \DateTimeImmutable('2026-09-01'),
-                    new \DateTimeImmutable('2026-09-05')
-                ),
-                false,
-                true,
-                true,
-                1500.0,
-                28800,
-                'Formation intensive sur les bonnes pratiques PHP',
-                12,
-                new TrainerEmployeeOutput(
-                    'per_01XXXXXXXXXXXXXXXXXXXXXXXXX',
-                    'Martin',
-                    'Sophie',
-                    'sophie.martin@example.com',
-                    true,
-                    Gender::GENDER_FEMALE,
-                    ['ses_01XXXXXXXXXXXXXXXXXXXXXXXXX']
-                ),
-                new PersonOutput(
-                    'per_02XXXXXXXXXXXXXXXXXXXXXXXXX',
-                    'Derivière',
-                    'Olivia'
-                ),
-                'https://example.com/survey/pre',
-                'https://example.com/survey/spot',
-                'https://example.com/survey/delayed'
-            ),
-            new \DateTimeImmutable('2026-09-01'),
-            new \DateTimeImmutable('2026-09-05')
+        return new CreatedOutput(
+            new AgoraId('enr_01XXXXXXXXXXXXXXXXXXXXXXXXX'),
+            $enrollmentInput->externalIdentifier
         );
     }
 }

@@ -6,6 +6,7 @@ namespace AgoraLearningPhp\Tests\unit\Service\Society;
 
 use AgoraLearningPhp\DTO\Input\Person\PersonInput;
 use AgoraLearningPhp\DTO\Input\Society\SocietyInput;
+use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Person\PersonOutput;
 use AgoraLearningPhp\DTO\Output\Society\SocietyOutput;
 use AgoraLearningPhp\Enum\Gender;
@@ -25,7 +26,7 @@ class SocietyTest extends ServiceTestCase
     private function makeMinimalData(): array
     {
         return [
-            'id'   => 'soc-uuid-001',
+            'agoraId' => 'soc-uuid-001',
             'name' => 'Acme Corp',
         ];
     }
@@ -33,7 +34,7 @@ class SocietyTest extends ServiceTestCase
     private function makePersonData(): array
     {
         return [
-            'id'         => 'person-uuid-001',
+            'agoraId'    => 'person-uuid-001',
             'familyName' => 'Doe',
             'givenName'  => 'John',
             'email' => 'john.doe@example.net'
@@ -71,6 +72,30 @@ class SocietyTest extends ServiceTestCase
         // Assert
         $this->assertSame('soc-uuid-001', $dto->uuid);
         $this->assertSame('Acme Corp', $dto->name);
+    }
+
+    public function testConvertDataToDTOMapsExternalIdentifier(): void
+    {
+        // Arrange
+        $data = array_merge($this->makeMinimalData(), [
+            'externalIdentifier' => ['sourceName' => 'MonERP', 'id' => 'X-42'],
+        ]);
+
+        // Act
+        $dto = Society::convertDataToDTO($data);
+
+        // Assert
+        $this->assertInstanceOf(ExternalId::class, $dto->externalIdentifier);
+        $this->assertSame('MonERP:X-42', $dto->externalIdentifier->getId());
+    }
+
+    public function testConvertDataToDTOSetsExternalIdentifierToNullWhenAbsent(): void
+    {
+        // Act
+        $dto = Society::convertDataToDTO($this->makeMinimalData());
+
+        // Assert
+        $this->assertNull($dto->externalIdentifier);
     }
 
     public function testConvertDataToDTOSetsOptionalFieldsToNullWhenAbsent(): void
@@ -139,9 +164,9 @@ class SocietyTest extends ServiceTestCase
     {
         // Arrange
         $data = array_merge($this->makeMinimalData(), [
-            'legalPerson'          => array_merge($this->makePersonData(), ['id' => 'p1']),
-            'administrativePerson' => array_merge($this->makePersonData(), ['id' => 'p2']),
-            'rhPerson'             => array_merge($this->makePersonData(), ['id' => 'p3']),
+            'legalPerson'          => array_merge($this->makePersonData(), ['agoraId' => 'p1']),
+            'administrativePerson' => array_merge($this->makePersonData(), ['agoraId' => 'p2']),
+            'rhPerson'             => array_merge($this->makePersonData(), ['agoraId' => 'p3']),
         ]);
 
         // Act
@@ -173,8 +198,8 @@ class SocietyTest extends ServiceTestCase
     {
         // Arrange
         $body    = json_encode([
-            ['id' => 's1', 'name' => 'Corp A'],
-            ['id' => 's2', 'name' => 'Corp B'],
+            ['agoraId' => 's1', 'name' => 'Corp A'],
+            ['agoraId' => 's2', 'name' => 'Corp B'],
         ]);
         $society = $this->makeSociety($this->makeHttpClientWithResponse(200, $body));
 
@@ -191,7 +216,7 @@ class SocietyTest extends ServiceTestCase
     {
         // Arrange
         $society = $this->makeSociety(
-            $this->makeHttpClientWithResponse(200, json_encode(['id' => 'soc-uuid-001', 'name' => 'Acme Corp']))
+            $this->makeHttpClientWithResponse(200, json_encode(['agoraId' => 'soc-uuid-001', 'name' => 'Acme Corp']))
         );
 
         // Act
@@ -209,7 +234,7 @@ class SocietyTest extends ServiceTestCase
         $url = '';
         $society = $this->makeSociety($this->makeHttpClientInspectingRequest(
             200,
-            json_encode(['id' => 'soc-uuid-001', 'name' => 'Acme Corp']),
+            json_encode(['agoraId' => 'soc-uuid-001', 'name' => 'Acme Corp']),
             $method,
             $url
         ));
@@ -242,10 +267,11 @@ class SocietyTest extends ServiceTestCase
     {
         // Arrange
         $society     = $this->makeSociety(
-            $this->makeHttpClientWithResponse(200, json_encode(['id' => 'soc-new-001', 'name' => 'NewCorp']))
+            $this->makeHttpClientWithResponse(200, json_encode(['agoraId' => 'soc_new_001', 'sourceName' => 'Test', 'externalId' => 'SOC-1']))
         );
-        $legalPerson = new PersonInput('Legal', 'Rep', 'legal.rep@example.com', Gender::GENDER_MALE);
+        $legalPerson = new PersonInput(new ExternalId('Test', 'P-1'), 'Legal', 'Rep', 'legal.rep@example.com', Gender::GENDER_MALE);
         $input       = new SocietyInput(
+            new ExternalId('Test', 'SOC-1'),
             'NewCorp',
             null,
             null,
@@ -266,21 +292,21 @@ class SocietyTest extends ServiceTestCase
         $result = $society->postSociety($input);
 
         // Assert
-        $this->assertInstanceOf(SocietyOutput::class, $result);
+        $this->assertInstanceOf(CreatedOutput::class, $result);
     }
 
     public function testPostSocietyWithNullPersonInputs(): void
     {
         // Arrange
         $society = $this->makeSociety(
-            $this->makeHttpClientWithResponse(200, json_encode(['id' => 'soc-new-002', 'name' => 'EmptyCorp']))
+            $this->makeHttpClientWithResponse(200, json_encode(['agoraId' => 'soc_new_002', 'sourceName' => 'Test', 'externalId' => 'SOC-2']))
         );
 
         // Act
-        $result = $society->postSociety(new SocietyInput('EmptyCorp'));
+        $result = $society->postSociety(new SocietyInput(new ExternalId('Test', 'SOC-2'), 'EmptyCorp'));
 
         // Assert
-        $this->assertInstanceOf(SocietyOutput::class, $result);
+        $this->assertInstanceOf(CreatedOutput::class, $result);
     }
 
     public function testPostSocietySendsAllFieldsInBody(): void
@@ -288,9 +314,10 @@ class SocietyTest extends ServiceTestCase
         // Arrange
         $capturedBody = '';
         $society      = $this->makeSociety(
-            $this->makeHttpClientInspectingBody(200, json_encode(['id' => 'soc-new-003', 'name' => 'FullCorp']), $capturedBody)
+            $this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'soc_new_003', 'sourceName' => 'Test', 'externalId' => 'SOC-3']), $capturedBody)
         );
         $input = new SocietyInput(
+            new ExternalId('Test', 'SOC-3'),
             'FullCorp',
             '12345678900001',
             'SAS',

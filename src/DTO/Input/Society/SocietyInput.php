@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace AgoraLearningPhp\DTO\Input\Society;
 
 use AgoraLearningPhp\DTO\Input\Person\PersonInput;
+use AgoraLearningPhp\Identifier\ExternalId;
 
 final class SocietyInput
 {
+    public ExternalId $externalIdentifier;
     public string $name;
     public ?string $siret;
     public ?string $legalStatus;
@@ -27,6 +29,7 @@ final class SocietyInput
     public ?string $image;
 
     public function __construct(
+        ExternalId $externalIdentifier,
         string $name,
         ?string $siret = null,
         ?string $legalStatus = null,
@@ -45,6 +48,7 @@ final class SocietyInput
         ?PersonInput $rhPerson = null,
         ?string $image = null
     ) {
+        $this->externalIdentifier = $externalIdentifier;
         $this->name = $name;
         $this->siret = $siret;
         $this->legalStatus = $legalStatus;

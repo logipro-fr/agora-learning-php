@@ -16,8 +16,8 @@ class TrainerTest extends AbstractAgoraLearningTest
     public function testCreateCompleteTrainerEmployee(): void
     {
         //Arrange - créer une société en dépendance
-        $societyInput = new SocietyInput('Société Test Formateur Employé');
-        $societyOutput = $this->client->createSociety($societyInput);
+        $societyInput = new SocietyInput($this->newExternalId('SOC'), 'Société Test Formateur Employé');
+        $societyCreated = $this->client->createSociety($societyInput);
 
         $familyName = 'Martin';
         $givenName = 'Sophie';
@@ -40,6 +40,7 @@ class TrainerTest extends AbstractAgoraLearningTest
         $jobDescription = 'https://www.agora-learning.com/apiAgoraLearning/ressources/a-pdf-test.pdf';
 
         $trainerInput = new TrainerEmployeeInput(
+            $this->newExternalId('T'),
             $familyName,
             $givenName,
             $email,
@@ -55,7 +56,7 @@ class TrainerTest extends AbstractAgoraLearningTest
             $image,
             $birthDate,
             $jobTitle,
-            $societyOutput->uuid,
+            $societyCreated->agoraId->getId(),
             $cv,
             $degree,
             $contract,
@@ -63,7 +64,8 @@ class TrainerTest extends AbstractAgoraLearningTest
         );
 
         //Act
-        $trainerOutput = $this->client->createTrainerEmployee($trainerInput);
+        $created = $this->client->createTrainerEmployee($trainerInput);
+        $trainerOutput = $this->client->getTrainer($created->agoraId);
 
         // Assert
         $this->assertEquals($familyName, $trainerOutput->familyName);
@@ -80,7 +82,7 @@ class TrainerTest extends AbstractAgoraLearningTest
         $this->assertEquals($birthDate, $trainerOutput->birthDate);
         $this->assertEquals($jobTitle, $trainerOutput->jobTitle);
         $this->assertNotNull($trainerOutput->society);
-        $this->assertEquals($societyOutput->uuid, $trainerOutput->society->uuid);
+        $this->assertEquals($societyCreated->agoraId->getId(), $trainerOutput->society->uuid);
     }
 
     public function testCreateMinimumTrainerEmployee(): void
@@ -90,13 +92,15 @@ class TrainerTest extends AbstractAgoraLearningTest
         $givenName = 'Pierre';
         $email = 'pierre.durand.min@example.com';
         $trainerInput = new TrainerEmployeeInput(
+            $this->newExternalId('T'),
             $familyName,
             $givenName,
             $email
         );
 
         //Act
-        $trainerOutput = $this->client->createTrainerEmployee($trainerInput);
+        $created = $this->client->createTrainerEmployee($trainerInput);
+        $trainerOutput = $this->client->getTrainer($created->agoraId);
 
         // Assert
         $this->assertEquals($familyName, $trainerOutput->familyName);
@@ -116,8 +120,8 @@ class TrainerTest extends AbstractAgoraLearningTest
     public function testCreateCompleteTrainerFree(): void
     {
         //Arrange - créer une société en dépendance
-        $societyInput = new SocietyInput('Société Test Formateur Libre');
-        $societyOutput = $this->client->createSociety($societyInput);
+        $societyInput = new SocietyInput($this->newExternalId('SOC'), 'Société Test Formateur Libre');
+        $societyCreated = $this->client->createSociety($societyInput);
 
         $familyName = 'Bernard';
         $givenName = 'Pierre';
@@ -148,6 +152,7 @@ class TrainerTest extends AbstractAgoraLearningTest
         $billingAddressCountry = 'France';
 
         $trainerInput = new TrainerFreeInput(
+            $this->newExternalId('T'),
             $familyName,
             $givenName,
             $email,
@@ -163,7 +168,7 @@ class TrainerTest extends AbstractAgoraLearningTest
             $image,
             $birthDate,
             $jobTitle,
-            $societyOutput->uuid,
+            $societyCreated->agoraId->getId(),
             $cv,
             $degree,
             $contract,
@@ -181,7 +186,8 @@ class TrainerTest extends AbstractAgoraLearningTest
         );
 
         //Act
-        $trainerOutput = $this->client->createTrainerFree($trainerInput);
+        $created = $this->client->createTrainerFree($trainerInput);
+        $trainerOutput = $this->client->getTrainer($created->agoraId);
 
         // Assert
         $this->assertInstanceOf(TrainerFreeOutput::class, $trainerOutput);
@@ -199,7 +205,7 @@ class TrainerTest extends AbstractAgoraLearningTest
         $this->assertEquals($birthDate, $trainerOutput->birthDate);
         $this->assertEquals($jobTitle, $trainerOutput->jobTitle);
         $this->assertNotNull($trainerOutput->society);
-        $this->assertEquals($societyOutput->uuid, $trainerOutput->society->uuid);
+        $this->assertEquals($societyCreated->agoraId->getId(), $trainerOutput->society->uuid);
         $this->assertEquals($hourlyCost, $trainerOutput->hourlyCost);
         $this->assertEquals($daylyCost, $trainerOutput->daylyCost);
         $this->assertEquals($siret, $trainerOutput->siret);
@@ -218,13 +224,15 @@ class TrainerTest extends AbstractAgoraLearningTest
         $givenName = 'Marc';
         $email = 'marc.leroy.min@example.com';
         $trainerInput = new TrainerFreeInput(
+            $this->newExternalId('T'),
             $familyName,
             $givenName,
             $email
         );
 
         //Act
-        $trainerOutput = $this->client->createTrainerFree($trainerInput);
+        $created = $this->client->createTrainerFree($trainerInput);
+        $trainerOutput = $this->client->getTrainer($created->agoraId);
 
         // Assert
         $this->assertInstanceOf(TrainerFreeOutput::class, $trainerOutput);
@@ -259,12 +267,12 @@ class TrainerTest extends AbstractAgoraLearningTest
         $givenName = 'Lucas';
         $email = 'lucas.moreau.get@example.com';
         $trainerInput = new TrainerEmployeeInput(
+            $this->newExternalId('T'),
             $familyName,
             $givenName,
             $email
         );
-        $output = $this->client->createTrainerEmployee($trainerInput);
-        $uuid = $output->uuid;
+        $uuid = $this->client->createTrainerEmployee($trainerInput)->agoraId->getId();
 
         //Act
         $trainerOutput = $this->client->getTrainer(new AgoraId($uuid));
@@ -282,16 +290,14 @@ class TrainerTest extends AbstractAgoraLearningTest
         $familyName1 = 'TrainerUn';
         $givenName1 = 'Jean';
         $email1 = 'trainer.un.coll@example.com';
-        $trainerInput1 = new TrainerEmployeeInput($familyName1, $givenName1, $email1);
-        $output1 = $this->client->createTrainerEmployee($trainerInput1);
-        $uuid1 = $output1->uuid;
+        $trainerInput1 = new TrainerEmployeeInput($this->newExternalId('T'), $familyName1, $givenName1, $email1);
+        $uuid1 = $this->client->createTrainerEmployee($trainerInput1)->agoraId->getId();
 
         $familyName2 = 'TrainerDeux';
         $givenName2 = 'Jean';
         $email2 = 'trainer.deux.coll@example.com';
-        $trainerInput2 = new TrainerEmployeeInput($familyName2, $givenName2, $email2);
-        $output2 = $this->client->createTrainerEmployee($trainerInput2);
-        $uuid2 = $output2->uuid;
+        $trainerInput2 = new TrainerEmployeeInput($this->newExternalId('T'), $familyName2, $givenName2, $email2);
+        $uuid2 = $this->client->createTrainerEmployee($trainerInput2)->agoraId->getId();
 
         //Act
         $trainerOutputs = $this->client->getCollectionTrainer();

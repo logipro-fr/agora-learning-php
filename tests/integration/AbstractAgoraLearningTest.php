@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AgoraLearningPhp\Tests\integration;
 
 use AgoraLearningPhp\AgoraLearningClient;
+use AgoraLearningPhp\Identifier\ExternalId;
 use PHPUnit\Framework\TestCase;
 
 abstract class AbstractAgoraLearningTest extends TestCase
@@ -38,6 +39,14 @@ abstract class AbstractAgoraLearningTest extends TestCase
             self::getConfig('AGORA_BASE_URL'),
             self::getConfig('AGORA_API_KEY')
         );
+    }
+
+    /**
+     * Identifiant externe unique par appel : le serveur refuse (409) un identifiant déjà utilisé.
+     */
+    protected function newExternalId(string $prefix): ExternalId
+    {
+        return new ExternalId('IntegrationTest', uniqid($prefix . '-', true));
     }
 
     /**

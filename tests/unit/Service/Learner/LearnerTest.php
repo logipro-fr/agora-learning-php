@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AgoraLearningPhp\Tests\unit\Service\Learner;
 
 use AgoraLearningPhp\DTO\Input\Learner\LearnerInput;
+use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Learner\LearnerOutput;
 use AgoraLearningPhp\Enum\Gender;
 use AgoraLearningPhp\Exception\AgoraLearningClientException;
@@ -23,7 +24,7 @@ class LearnerTest extends ServiceTestCase
     private function makeMinimalData(): array
     {
         return [
-            'id'           => 'learner-uuid-001',
+            'agoraId'      => 'learner-uuid-001',
             'username'     => 'jdupont',
             'familyName'   => 'Dupont',
             'givenName'    => 'Jean',
@@ -66,6 +67,30 @@ class LearnerTest extends ServiceTestCase
         $this->assertSame('Dupont', $dto->familyName);
         $this->assertSame('Jean', $dto->givenName);
         $this->assertSame('jean@example.com', $dto->recoverEmail);
+    }
+
+    public function testConvertDataToDTOMapsExternalIdentifier(): void
+    {
+        // Arrange
+        $data = array_merge($this->makeMinimalData(), [
+            'externalIdentifier' => ['sourceName' => 'MonERP', 'id' => 'X-42'],
+        ]);
+
+        // Act
+        $dto = Learner::convertDataToDTO($data);
+
+        // Assert
+        $this->assertInstanceOf(ExternalId::class, $dto->externalIdentifier);
+        $this->assertSame('MonERP:X-42', $dto->externalIdentifier->getId());
+    }
+
+    public function testConvertDataToDTOSetsExternalIdentifierToNullWhenAbsent(): void
+    {
+        // Act
+        $dto = Learner::convertDataToDTO($this->makeMinimalData());
+
+        // Assert
+        $this->assertNull($dto->externalIdentifier);
     }
 
     public function testConvertDataToDTOSetsGenderNaByDefault(): void
@@ -179,8 +204,8 @@ class LearnerTest extends ServiceTestCase
     {
         // Arrange
         $body = json_encode([
-            array_merge($this->makeMinimalData(), ['id' => 'l1', 'username' => 'user1']),
-            array_merge($this->makeMinimalData(), ['id' => 'l2', 'username' => 'user2']),
+            array_merge($this->makeMinimalData(), ['agoraId' => 'l1', 'username' => 'user1']),
+            array_merge($this->makeMinimalData(), ['agoraId' => 'l2', 'username' => 'user2']),
         ]);
         $learner = $this->makeLearner($this->makeHttpClientWithResponse(200, $body));
 
@@ -262,11 +287,12 @@ class LearnerTest extends ServiceTestCase
     public function testPostLearnerWithBirthDate(): void
     {
         // Arrange
-        $responseData = array_merge($this->makeMinimalData(), ['id' => 'learner-new-001', 'username' => 'new_user']);
+        $responseData = ['agoraId' => 'per_new_001', 'sourceName' => 'Test', 'externalId' => 'L-1'];
         $learner      = $this->makeLearner(
             $this->makeHttpClientWithResponse(200, json_encode($responseData))
         );
         $input = new LearnerInput(
+            new ExternalId('Test', 'L-1'),
             'Nouveau',
             'Apprenant',
             'new@example.com',
@@ -286,20 +312,23 @@ class LearnerTest extends ServiceTestCase
         $result = $learner->postLearner($input);
 
         // Assert
-        $this->assertInstanceOf(LearnerOutput::class, $result);
-        $this->assertSame('learner-new-001', $result->uuid);
+        $this->assertInstanceOf(CreatedOutput::class, $result);
+        $this->assertSame('per_new_001', $result->agoraId->getId());
+        $this->assertNotNull($result->externalId);
+        $this->assertSame('Test:L-1', $result->externalId->getId());
     }
 
     public function testPostLearnerWithoutBirthDate(): void
     {
         // Arrange
-        $responseData = array_merge($this->makeMinimalData(), ['id' => 'learner-new-002', 'username' => 'user2']);
+        $responseData = ['agoraId' => 'per_new_002', 'sourceName' => 'Test', 'externalId' => 'L-2'];
         $learner      = $this->makeLearner(
             $this->makeHttpClientWithResponse(200, json_encode($responseData))
         );
 
         // Act
         $result = $learner->postLearner(new LearnerInput(
+            new ExternalId('Test', 'L-2'),
             'Test',
             'User',
             'u@u.com',
@@ -307,18 +336,19 @@ class LearnerTest extends ServiceTestCase
         ));
 
         // Assert
-        $this->assertInstanceOf(LearnerOutput::class, $result);
+        $this->assertInstanceOf(CreatedOutput::class, $result);
     }
 
     public function testPostLearnerSendsAllFieldsInBody(): void
     {
         // Arrange
         $capturedBody = '';
-        $responseData = array_merge($this->makeMinimalData(), ['id' => 'learner-new-003', 'username' => 'u3']);
+        $responseData = ['agoraId' => 'per_new_003', 'sourceName' => 'Test', 'externalId' => 'L-3'];
         $learner      = $this->makeLearner(
             $this->makeHttpClientInspectingBody(200, json_encode($responseData), $capturedBody)
         );
         $input = new LearnerInput(
+            new ExternalId('Test', 'L-3'),
             'Dupont',
             'Jean',
             'jean@example.com',

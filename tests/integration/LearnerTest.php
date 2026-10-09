@@ -28,6 +28,7 @@ class LearnerTest extends AbstractAgoraLearningTest
         $jobTitle = 'Chargée de projet';
 
         $learnerInput = new LearnerInput(
+            $this->newExternalId('L'),
             $familyName,
             $givenName,
             $recoverEmail,
@@ -44,7 +45,8 @@ class LearnerTest extends AbstractAgoraLearningTest
         );
 
         //Act
-        $learnerOutput = $this->client->createLearner($learnerInput);
+        $created = $this->client->createLearner($learnerInput);
+        $learnerOutput = $this->client->getLearner($created->agoraId);
 
         // Assert
         $this->assertEquals($familyName, $learnerOutput->familyName);
@@ -69,6 +71,7 @@ class LearnerTest extends AbstractAgoraLearningTest
         $recoverEmail = 'matt.palin.recovery2@example.com';
 
         $learnerInput = new LearnerInput(
+            $this->newExternalId('L'),
             $familyName,
             $givenName,
             $recoverEmail,
@@ -76,7 +79,8 @@ class LearnerTest extends AbstractAgoraLearningTest
         );
 
         //Act
-        $learnerOutput = $this->client->createLearner($learnerInput);
+        $created = $this->client->createLearner($learnerInput);
+        $learnerOutput = $this->client->getLearner($created->agoraId);
 
         // Assert
         $this->assertEquals($familyName, $learnerOutput->familyName);
@@ -99,13 +103,13 @@ class LearnerTest extends AbstractAgoraLearningTest
         $givenName = 'Ana';
         $recoverEmail = 'ana.garcia.get@example.com';
         $learnerInput = new LearnerInput(
+            $this->newExternalId('L'),
             $familyName,
             $givenName,
             $recoverEmail,
             $recoverEmail
         );
-        $output = $this->client->createLearner($learnerInput);
-        $uuid = $output->uuid;
+        $uuid = $this->client->createLearner($learnerInput)->agoraId->getId();
 
         //Act
         $learnerOutput = $this->client->getLearner(new AgoraId($uuid));
@@ -123,16 +127,14 @@ class LearnerTest extends AbstractAgoraLearningTest
         $familyName1 = 'LearnerUn';
         $givenName1 = 'Jean';
         $recoverEmail1 = 'learner.un.coll@example.com';
-        $learnerInput1 = new LearnerInput($familyName1, $givenName1, $recoverEmail1, $recoverEmail1);
-        $output1 = $this->client->createLearner($learnerInput1);
-        $uuid1 = $output1->uuid;
+        $learnerInput1 = new LearnerInput($this->newExternalId('L'), $familyName1, $givenName1, $recoverEmail1, $recoverEmail1);
+        $uuid1 = $this->client->createLearner($learnerInput1)->agoraId->getId();
 
         $familyName2 = 'LearnerDeux';
         $givenName2 = 'Jean';
         $recoverEmail2 = 'learner.deux.coll@example.com';
-        $learnerInput2 = new LearnerInput($familyName2, $givenName2, $recoverEmail2, $recoverEmail2);
-        $output2 = $this->client->createLearner($learnerInput2);
-        $uuid2 = $output2->uuid;
+        $learnerInput2 = new LearnerInput($this->newExternalId('L'), $familyName2, $givenName2, $recoverEmail2, $recoverEmail2);
+        $uuid2 = $this->client->createLearner($learnerInput2)->agoraId->getId();
 
         //Act
         $learnerOutputs = $this->client->getCollectionLearner();

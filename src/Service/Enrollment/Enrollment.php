@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace AgoraLearningPhp\Service\Enrollment;
 
 use AgoraLearningPhp\DTO\Input\Enrollment\EnrollmentInput;
+use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Enrollment\EnrollmentOutput;
 use AgoraLearningPhp\Enum\RequestMethod;
 use AgoraLearningPhp\Identifier\ApiObjectIdentifier;
+use AgoraLearningPhp\Identifier\ExternalId;
 use AgoraLearningPhp\Service\ClientCore\ApiService;
 use AgoraLearningPhp\Service\ClientCore\ApiUrls;
 use AgoraLearningPhp\Service\Learner\Learner;
@@ -67,16 +69,17 @@ class Enrollment extends ApiService
         return $this->convertResponseToDTO($response);
     }
 
-    public function postEnrollment(EnrollmentInput $enrollmentInput): EnrollmentOutput
+    public function postEnrollment(EnrollmentInput $enrollmentInput): CreatedOutput
     {
         $data = [
+            'externalIdentifier' => $enrollmentInput->externalIdentifier->toArray(),
             'sessionId' => $enrollmentInput->sessionUuid,
             'learnerId' => $enrollmentInput->learnerUuid,
             'sendingInvite' => $enrollmentInput->sendingInvite
         ];
         $body = JsonHandler::jsonEncode($data);
         $response = $this->httpClient->request(RequestMethod::POST, ApiUrls::getCreateEnrollment(), $body);
-        return $this->convertResponseToDTO($response);
+        return $this->convertResponsePostToDTO($response);
     }
 
     /**
@@ -85,7 +88,8 @@ class Enrollment extends ApiService
     public static function convertDataToDTO(array $data): EnrollmentOutput
     {
         /** @var array{
-         *     id: string,
+         *     agoraId: string,
+         *     externalIdentifier?: array<string, mixed>|null,
          *     learner: array<string, mixed>,
          *     session: array<string, mixed>,
          *     availabilityStartDate?: string|null,
@@ -95,13 +99,15 @@ class Enrollment extends ApiService
         $session = Session::convertDataToDTO($data['session']);
         $availabilityStartDate = !empty($data['availabilityStartDate']) ? new \DateTimeImmutable($data['availabilityStartDate']) : null;
         $availabilityEndDate = !empty($data['availabilityEndDate']) ? new \DateTimeImmutable($data['availabilityEndDate']) : null;
+        $externalIdentifier = !empty($data['externalIdentifier']) ? ExternalId::fromArray($data['externalIdentifier']) : null;
 
         return new EnrollmentOutput(
-            $data['id'],
+            $data['agoraId'],
             $learner,
             $session,
             $availabilityStartDate,
-            $availabilityEndDate
+            $availabilityEndDate,
+            $externalIdentifier,
         );
     }
 }

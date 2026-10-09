@@ -6,6 +6,7 @@ namespace AgoraLearningPhp\Tests\unit\Service\Trainer;
 
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerEmployeeInput;
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerFreeInput;
+use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Trainer\TrainerEmployeeOutput;
 use AgoraLearningPhp\DTO\Output\Trainer\TrainerFreeOutput;
 use AgoraLearningPhp\DTO\Output\Trainer\TrainerOutput;
@@ -27,7 +28,7 @@ class TrainerTest extends ServiceTestCase
     private function makeMinimalEmployeeData(): array
     {
         return [
-            'id'                        => 'trainer-emp-001',
+            'agoraId'                   => 'trainer-emp-001',
             'familyName'                => 'Dupont',
             'givenName'                 => 'Jean',
             'email'                     => 'jean@example.com',
@@ -41,7 +42,7 @@ class TrainerTest extends ServiceTestCase
     private function makeMinimalFreeData(): array
     {
         return [
-            'id'                        => 'trainer-free-001',
+            'agoraId'                   => 'trainer-free-001',
             'familyName'                => 'Leclerc',
             'givenName'                 => 'Paul',
             'email'                     => 'paul@example.com',
@@ -82,6 +83,30 @@ class TrainerTest extends ServiceTestCase
 
         // Assert
         $this->assertInstanceOf(TrainerFreeOutput::class, $dto);
+    }
+
+    public function testConvertDataToDTOMapsExternalIdentifier(): void
+    {
+        // Arrange
+        $data = array_merge($this->makeMinimalFreeData(), [
+            'externalIdentifier' => ['sourceName' => 'MonERP', 'id' => 'X-42'],
+        ]);
+
+        // Act
+        $dto = Trainer::convertDataToDTO($data);
+
+        // Assert
+        $this->assertInstanceOf(ExternalId::class, $dto->externalIdentifier);
+        $this->assertSame('MonERP:X-42', $dto->externalIdentifier->getId());
+    }
+
+    public function testConvertDataToDTOSetsExternalIdentifierToNullWhenAbsent(): void
+    {
+        // Act
+        $dto = Trainer::convertDataToDTO($this->makeMinimalFreeData());
+
+        // Assert
+        $this->assertNull($dto->externalIdentifier);
     }
 
     public function testConvertDataToDTODefaultsToEmployeeWhenStatutIsMissing(): void
@@ -237,7 +262,7 @@ class TrainerTest extends ServiceTestCase
         // Arrange
         $data = array_merge($this->makeMinimalEmployeeData(), [
             'society' => [
-                'id'    => 'soc-uuid-001',
+                'agoraId' => 'soc-uuid-001',
                 'name'  => 'Société Test',
                 'email' => 'contact@soc.com',
             ],
@@ -293,8 +318,8 @@ class TrainerTest extends ServiceTestCase
     {
         // Arrange
         $body    = json_encode([
-            array_merge($this->makeMinimalEmployeeData(), ['id' => 't1']),
-            array_merge($this->makeMinimalFreeData(), ['id' => 't2']),
+            array_merge($this->makeMinimalEmployeeData(), ['agoraId' => 't1']),
+            array_merge($this->makeMinimalFreeData(), ['agoraId' => 't2']),
         ]);
         $trainer = $this->makeTrainer($this->makeHttpClientWithResponse(200, $body));
 
@@ -379,25 +404,26 @@ class TrainerTest extends ServiceTestCase
     {
         // Arrange
         $trainer = $this->makeTrainer(
-            $this->makeHttpClientWithResponse(200, json_encode($this->makeMinimalEmployeeData()))
+            $this->makeHttpClientWithResponse(200, json_encode(['agoraId' => 'per_emp_new', 'sourceName' => 'Test', 'externalId' => 'T-E']))
         );
-        $input = new TrainerEmployeeInput('Dupont', 'Jean', 'jean@example.com');
+        $input = new TrainerEmployeeInput(new ExternalId('Test', 'T-1'), 'Dupont', 'Jean', 'jean@example.com');
 
         // Act
         $result = $trainer->postTrainerEmployee($input);
 
         // Assert
-        $this->assertInstanceOf(TrainerOutput::class, $result);
-        $this->assertSame('trainer-emp-001', $result->uuid);
+        $this->assertInstanceOf(CreatedOutput::class, $result);
+        $this->assertSame('per_emp_new', $result->agoraId->getId());
     }
 
     public function testPostTrainerEmployeeWithBirthDate(): void
     {
         // Arrange
         $trainer = $this->makeTrainer(
-            $this->makeHttpClientWithResponse(200, json_encode($this->makeMinimalEmployeeData()))
+            $this->makeHttpClientWithResponse(200, json_encode(['agoraId' => 'per_emp_new', 'sourceName' => 'Test', 'externalId' => 'T-E']))
         );
         $input = new TrainerEmployeeInput(
+            new ExternalId('Test', 'T-2'),
             'Dupont',
             'Jean',
             'jean@example.com',
@@ -418,32 +444,33 @@ class TrainerTest extends ServiceTestCase
         $result = $trainer->postTrainerEmployee($input);
 
         // Assert
-        $this->assertInstanceOf(TrainerOutput::class, $result);
+        $this->assertInstanceOf(CreatedOutput::class, $result);
     }
 
     public function testPostTrainerFreeReturnsDTO(): void
     {
         // Arrange
         $trainer = $this->makeTrainer(
-            $this->makeHttpClientWithResponse(200, json_encode($this->makeMinimalFreeData()))
+            $this->makeHttpClientWithResponse(200, json_encode(['agoraId' => 'per_free_new', 'sourceName' => 'Test', 'externalId' => 'T-F']))
         );
-        $input = new TrainerFreeInput('Leclerc', 'Paul', 'paul@example.com');
+        $input = new TrainerFreeInput(new ExternalId('Test', 'T-3'), 'Leclerc', 'Paul', 'paul@example.com');
 
         // Act
         $result = $trainer->postTrainerFree($input);
 
         // Assert
-        $this->assertInstanceOf(TrainerOutput::class, $result);
-        $this->assertSame('trainer-free-001', $result->uuid);
+        $this->assertInstanceOf(CreatedOutput::class, $result);
+        $this->assertSame('per_free_new', $result->agoraId->getId());
     }
 
     public function testPostTrainerFreeWithBirthDate(): void
     {
         // Arrange
         $trainer = $this->makeTrainer(
-            $this->makeHttpClientWithResponse(200, json_encode($this->makeMinimalFreeData()))
+            $this->makeHttpClientWithResponse(200, json_encode(['agoraId' => 'per_free_new', 'sourceName' => 'Test', 'externalId' => 'T-F']))
         );
         $input = new TrainerFreeInput(
+            new ExternalId('Test', 'T-4'),
             'Leclerc',
             'Paul',
             'paul@example.com',
@@ -464,7 +491,7 @@ class TrainerTest extends ServiceTestCase
         $result = $trainer->postTrainerFree($input);
 
         // Assert
-        $this->assertInstanceOf(TrainerOutput::class, $result);
+        $this->assertInstanceOf(CreatedOutput::class, $result);
     }
 
     public function testPostTrainerEmployeeThrowsExceptionOnError(): void
@@ -479,7 +506,7 @@ class TrainerTest extends ServiceTestCase
         $this->expectExceptionMessage('Invalid data');
 
         // Act
-        $trainer->postTrainerEmployee(new TrainerEmployeeInput('F', 'G', 'bad@example.com'));
+        $trainer->postTrainerEmployee(new TrainerEmployeeInput(new ExternalId('Test', 'T-5'), 'F', 'G', 'bad@example.com'));
     }
 
     public function testPostTrainerFreeThrowsExceptionOnError(): void
@@ -494,7 +521,7 @@ class TrainerTest extends ServiceTestCase
         $this->expectExceptionMessage('Validation failed');
 
         // Act
-        $trainer->postTrainerFree(new TrainerFreeInput('F', 'G', 'bad@example.com'));
+        $trainer->postTrainerFree(new TrainerFreeInput(new ExternalId('Test', 'T-6'), 'F', 'G', 'bad@example.com'));
     }
 
     public function testPostTrainerEmployeeSendsAllFieldsInBody(): void
@@ -502,9 +529,10 @@ class TrainerTest extends ServiceTestCase
         // Arrange
         $capturedBody = '';
         $trainer      = $this->makeTrainer(
-            $this->makeHttpClientInspectingBody(200, json_encode($this->makeMinimalEmployeeData()), $capturedBody)
+            $this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'per_emp_new', 'sourceName' => 'Test', 'externalId' => 'T-E']), $capturedBody)
         );
         $input = new TrainerEmployeeInput(
+            new ExternalId('Test', 'T-7'),
             'Dupont',
             'Jean',
             'jean@example.com',
@@ -559,9 +587,10 @@ class TrainerTest extends ServiceTestCase
         // Arrange
         $capturedBody = '';
         $trainer      = $this->makeTrainer(
-            $this->makeHttpClientInspectingBody(200, json_encode($this->makeMinimalFreeData()), $capturedBody)
+            $this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'per_free_new', 'sourceName' => 'Test', 'externalId' => 'T-F']), $capturedBody)
         );
         $input = new TrainerFreeInput(
+            new ExternalId('Test', 'T-8'),
             'Leclerc',
             'Paul',
             'paul@example.com',

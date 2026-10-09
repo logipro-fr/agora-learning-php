@@ -7,6 +7,7 @@ namespace AgoraLearningPhp\Tests\unit\Service\Session;
 use AgoraLearningPhp\DTO\Input\Session\FixedSessionInput;
 use AgoraLearningPhp\DTO\Input\Session\OpenedSessionInput;
 use AgoraLearningPhp\DTO\Input\Session\SessionInput;
+use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Session\FixedSessionOutput;
 use AgoraLearningPhp\DTO\Output\Session\OpenedSessionOutput;
 use AgoraLearningPhp\DTO\Output\Session\SessionOutput;
@@ -30,7 +31,8 @@ class SessionTest extends ServiceTestCase
     private function makeBaseSessionData(): array
     {
         return [
-            'id'              => 'sess-uuid-001',
+            'agoraId'         => 'sess-uuid-001',
+            'externalIdentifier' => ['sourceName' => 'Test', 'id' => 'S-1'],
             'title'           => 'Formation PHP',
             'type'            => SessionType::SESSION_TYPE_INTER,
             'mode'            => SessionMode::SESSION_MODE_E_LEARNING,
@@ -77,7 +79,7 @@ class SessionTest extends ServiceTestCase
     private function makePersonData(): array
     {
         return [
-            'id'         => 'person-uuid-001',
+            'agoraId'    => 'person-uuid-001',
             'familyName' => 'Doe',
             'givenName'  => 'John',
             'email' => 'john.doe@example.net'
@@ -87,7 +89,7 @@ class SessionTest extends ServiceTestCase
     private function makeTrainerData(): array
     {
         return [
-            'id'                        => 'trainer-emp-001',
+            'agoraId'                   => 'trainer-emp-001',
             'familyName'                => 'Dupont',
             'givenName'                 => 'Jean',
             'email'                     => 'jean@example.com',
@@ -122,6 +124,8 @@ class SessionTest extends ServiceTestCase
 
         // Assert
         $this->assertSame('sess-uuid-001', $dto->uuid);
+        $this->assertNotNull($dto->externalIdentifier);
+        $this->assertSame('Test:S-1', $dto->externalIdentifier->getId());
         $this->assertSame('Formation PHP', $dto->title);
         $this->assertSame(SessionType::SESSION_TYPE_INTER, $dto->type);
         $this->assertSame(SessionMode::SESSION_MODE_E_LEARNING, $dto->mode);
@@ -212,8 +216,8 @@ class SessionTest extends ServiceTestCase
     public function testGetCollectionSessionReturnsDTOArray(): void
     {
         // Arrange
-        $row1    = array_merge($this->makeBaseSessionData(), $this->makeFixedSessionData(), ['id' => 's1']);
-        $row2    = array_merge($this->makeBaseSessionData(), $this->makeOpenedSessionData(), ['id' => 's2']);
+        $row1    = array_merge($this->makeBaseSessionData(), $this->makeFixedSessionData(), ['agoraId' => 's1']);
+        $row2    = array_merge($this->makeBaseSessionData(), $this->makeOpenedSessionData(), ['agoraId' => 's2']);
         $session = $this->makeSession(
             $this->makeHttpClientWithResponse(200, json_encode([$row1, $row2]))
         );
@@ -356,8 +360,8 @@ class SessionTest extends ServiceTestCase
     {
         // Arrange
         $session = $this->makeSession(
-            $this->makeHttpClientWithResponse(200, json_encode(
-                array_merge($this->makeBaseSessionData(), $this->makeFixedSessionData())
+            $this->makeHttpClientWithResponse(201, json_encode(
+                ['agoraId' => 'ses_new_001', 'sourceName' => 'Test', 'externalId' => 'S-1']
             ))
         );
         $fixedData    = new FixedSessionInput(
@@ -366,21 +370,24 @@ class SessionTest extends ServiceTestCase
             SessionType::SESSION_TYPE_INTER,
             SessionMode::SESSION_MODE_FACE_TO_FACE
         );
-        $sessionInput = new SessionInput('Formation PHP', $fixedData);
+        $sessionInput = new SessionInput(new ExternalId('Test', 'S-1'), 'Formation PHP', $fixedData);
 
         // Act
         $result = $session->postSession($sessionInput);
 
         // Assert
-        $this->assertInstanceOf(SessionOutput::class, $result);
+        $this->assertInstanceOf(CreatedOutput::class, $result);
+        $this->assertSame('ses_new_001', $result->agoraId->getId());
+        $this->assertNotNull($result->externalId);
+        $this->assertSame('Test:S-1', $result->externalId->getId());
     }
 
     public function testPostSessionWithOpenedSessionInput(): void
     {
         // Arrange
         $session = $this->makeSession(
-            $this->makeHttpClientWithResponse(200, json_encode(
-                array_merge($this->makeBaseSessionData(), $this->makeOpenedSessionData())
+            $this->makeHttpClientWithResponse(201, json_encode(
+                ['agoraId' => 'ses_new_002', 'sourceName' => 'Test', 'externalId' => 'S-2']
             ))
         );
         $openedData   = new OpenedSessionInput(
@@ -388,13 +395,14 @@ class SessionTest extends ServiceTestCase
             new \DateTimeImmutable('2024-09-30'),
             90
         );
-        $sessionInput = new SessionInput('Formation Ouverte', $openedData);
+        $sessionInput = new SessionInput(new ExternalId('Test', 'S-2'), 'Formation Ouverte', $openedData);
 
         // Act
         $result = $session->postSession($sessionInput);
 
         // Assert
-        $this->assertInstanceOf(SessionOutput::class, $result);
+        $this->assertInstanceOf(CreatedOutput::class, $result);
+        $this->assertSame('ses_new_002', $result->agoraId->getId());
     }
 
     public function testPostSessionThrowsOnInvalidSessionData(): void
@@ -402,7 +410,7 @@ class SessionTest extends ServiceTestCase
         // Arrange
         $session      = $this->makeSession($this->makeHttpClientWithResponse(200, '{}'));
         $mockSpecific = $this->createMock(\AgoraLearningPhp\DTO\Input\Session\SpecificSessionInputInterface::class);
-        $sessionInput = new SessionInput('Formation Invalide', $mockSpecific);
+        $sessionInput = new SessionInput(new ExternalId('Test', 'S-3'), 'Formation Invalide', $mockSpecific);
 
         // Assert
         $this->expectException(\ErrorException::class);
@@ -418,7 +426,7 @@ class SessionTest extends ServiceTestCase
         $session      = $this->makeSession(
             $this->makeHttpClientInspectingBody(
                 200,
-                json_encode(array_merge($this->makeBaseSessionData(), $this->makeFixedSessionData())),
+                json_encode(['agoraId' => 'ses_new_004']),
                 $capturedBody
             )
         );
@@ -429,6 +437,7 @@ class SessionTest extends ServiceTestCase
             SessionMode::SESSION_MODE_E_LEARNING
         );
         $sessionInput = new SessionInput(
+            new ExternalId('Test', 'S-4'),
             'Formation PHP',
             $fixedData,
             false,
@@ -474,7 +483,7 @@ class SessionTest extends ServiceTestCase
         $session      = $this->makeSession(
             $this->makeHttpClientInspectingBody(
                 200,
-                json_encode(array_merge($this->makeBaseSessionData(), $this->makeOpenedSessionData())),
+                json_encode(['agoraId' => 'ses_new_005']),
                 $capturedBody
             )
         );
@@ -483,7 +492,7 @@ class SessionTest extends ServiceTestCase
             new \DateTimeImmutable('2024-09-30'),
             90
         );
-        $sessionInput = new SessionInput('Formation Ouverte', $openedData);
+        $sessionInput = new SessionInput(new ExternalId('Test', 'S-5'), 'Formation Ouverte', $openedData);
 
         // Act
         $session->postSession($sessionInput);

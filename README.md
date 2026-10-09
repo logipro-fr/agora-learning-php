@@ -37,6 +37,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 use AgoraLearningPhp\AgoraLearningClient;
 use AgoraLearningPhp\DTO\Input\Learner\LearnerInput;
+use AgoraLearningPhp\Identifier\ExternalId;
 
 $client = new AgoraLearningClient(
     'https://votre-instance.example.com', // TODO: à adapter
@@ -52,13 +53,18 @@ if ($ping->getStatusCode() !== 200) {
 }
 
 // Créer un apprenant
-$learner = $client->createLearner(new LearnerInput(
+$created = $client->createLearner(new LearnerInput(
+    new ExternalId('MonERP', 'L-41'),
     'Dupont',
     'Marie',
-    'marie.dupont@example.com'
+    'marie.dupont@example.com', // recoverEmail
+    'marie.dupont@example.com'  // email
 ));
 
-echo $learner->uuid;
+echo $created->agoraId->getId(); // identifiant Agora de l'apprenant créé
+
+// Les créations ne renvoient que les identifiants : relire l'objet complet si besoin
+$learner = $client->getLearner($created->agoraId);
 ```
 
 ---
@@ -72,8 +78,10 @@ echo $learner->uuid;
 | **Trainer**    | `getTrainer()`, `getCollectionTrainer()`, `createTrainerEmployee()`, `createTrainerFree()`                                                                      |
 | **Learner**    | `getLearner()`, `getCollectionLearner()`, `createLearner()`                                                                                                     |
 | **Society**    | `getSociety()`, `getCollectionSociety()`, `createSociety()`                                                                                                     |
-| **Session**    | `getSession()` (par `AgoraId` ou `ExternalId`), `getCollectionSession()`, `createSession()`                                                                     |
+| **Session**    | `getSession()`, `getCollectionSession()`, `createSession()`                                                                     |
 | **Enrollment** | `getEnrollment()`, `getCollectionEnrollmentFromSession()`, `getCollectionEnrollmentFromLearner()`, `getEnrollmentFromSessionAndLearner()`, `createEnrollment()` |
+
+Les lectures unitaires acceptent un `AgoraId` ou un `ExternalId` ; les créations prennent un `ExternalId` obligatoire et renvoient un `CreatedOutput` (`agoraId`, `externalId`).
 
 Consultez [docs/usage.md](docs/usage.md) pour un exemple complet par méthode.
 
@@ -100,6 +108,26 @@ php examples/person/get_collection.php
 php examples/society/create.php
 # etc.
 ```
+
+#### Avec Docker, sur une instance Agora locale
+
+Si l'URL de `examples/config.php` pointe vers une instance Agora qui tourne dans Docker sur la même machine (par exemple `http://agoralearning-local/phoenix`), le nom d'hôte n'est connu que sur le réseau Docker `agora-network`. Un conteneur lancé par `docker compose run` n'est pas sur ce réseau et échoue avec `Could not resolve host`.
+
+Lancer l'exemple avec `docker run` en le rattachant à ce réseau :
+
+```bash
+# PHP 7.4 (dépendances dans vendor74/)
+docker run --rm --network agora-network \
+  -v "$PWD":/app -v "$PWD/vendor74":/app/vendor -w /app \
+  agora-learning-php-php74 php examples/ping.php
+
+# PHP 8.2 (dépendances dans vendor/)
+docker run --rm --network agora-network \
+  -v "$PWD":/app -w /app \
+  agora-learning-php-php php examples/ping.php
+```
+
+> Les images doivent avoir été construites (`docker compose build`) et les dépendances installées dans le dossier `vendor*` correspondant. La stack Agora doit être démarrée pour que le réseau `agora-network` existe.
 
 ### Arborescence
 

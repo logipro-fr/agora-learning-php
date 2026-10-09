@@ -10,17 +10,19 @@ use AgoraLearningPhp\DTO\Input\Session\FixedSessionInput;
 use AgoraLearningPhp\DTO\Input\Session\SessionInput;
 use AgoraLearningPhp\Enum\SessionMode;
 use AgoraLearningPhp\Enum\SessionType;
+use AgoraLearningPhp\Identifier\ExternalId;
 
 $client = new AgoraLearningClient($config['url'], $config['api_key']);
 
 $fixedSessionData = new FixedSessionInput(
-    new \DateTimeImmutable('2026-09-01'),
-    new \DateTimeImmutable('2026-09-05'),
+    new \DateTimeImmutable('today'),
+    new \DateTimeImmutable('today +15 days'),
     SessionType::SESSION_TYPE_INTER,
     SessionMode::SESSION_MODE_FACE_TO_FACE
 );
 
 $sessionInput = new SessionInput(
+    new ExternalId('MonERP', uniqid('S-')),
     'Formation PHP avancé',
     $fixedSessionData,
     false,
@@ -30,8 +32,8 @@ $sessionInput = new SessionInput(
     28800,
     'Formation intensive sur les bonnes pratiques PHP',
     12,
-    'per_01XXXXXXXXXXXXXXXXXXXXXXXXX',
-    'per_01XXXXXXXXXXXXXXXXXXXXXXXXX',
+    null,
+    null,
     'https://example.com/survey/pre',
     'https://example.com/survey/spot',
     'https://example.com/survey/delayed',
@@ -39,8 +41,9 @@ $sessionInput = new SessionInput(
 );
 
 try {
-    $session = $client->createSession($sessionInput);
-    var_dump($session);
+    $created = $client->createSession($sessionInput);
+    var_dump($created);
+    var_dump($client->getSession($created->agoraId));
 } catch (\Exception $e) {
     echo 'Erreur : ' . $e->getMessage() . PHP_EOL;
     exit(1);

@@ -6,9 +6,11 @@ namespace AgoraLearningPhp\Service\Society;
 
 use AgoraLearningPhp\DTO\Input\Person\PersonInput;
 use AgoraLearningPhp\DTO\Input\Society\SocietyInput;
+use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Society\SocietyOutput;
 use AgoraLearningPhp\Enum\RequestMethod;
 use AgoraLearningPhp\Identifier\ApiObjectIdentifier;
+use AgoraLearningPhp\Identifier\ExternalId;
 use AgoraLearningPhp\Service\ClientCore\ApiService;
 use AgoraLearningPhp\Service\ClientCore\ApiUrls;
 use AgoraLearningPhp\Service\ClientCore\HttpClient;
@@ -38,10 +40,11 @@ class Society extends ApiService
         return $this->convertResponseToDTO($response);
     }
 
-    public function postSociety(SocietyInput $societyInput): SocietyOutput
+    public function postSociety(SocietyInput $societyInput): CreatedOutput
     {
         $body = JsonHandler::jsonEncode(
             [
+                "externalId" => $societyInput->externalIdentifier->toArray(),
                 "name" => $societyInput->name,
                 "siret" => $societyInput->siret,
                 "telephone" => $societyInput->telephone,
@@ -62,7 +65,7 @@ class Society extends ApiService
             ]
         );
         $response = $this->httpClient->request(RequestMethod::POST, ApiUrls::getCreateSociety(), $body);
-        return $this->convertResponseToDTO($response);
+        return $this->convertResponsePostToDTO($response);
     }
 
     protected function convertResponseToDTO(ResponseInterface $response): SocietyOutput
@@ -105,7 +108,8 @@ class Society extends ApiService
     public static function convertDataToDTO(array $data): SocietyOutput
     {
         /** @var array{
-         *     id: string,
+         *     agoraId: string,
+         *     externalIdentifier?: array<string, mixed>|null,
          *     name: string,
          *     siret?: string|null,
          *     legalStatus?: string|null,
@@ -135,6 +139,7 @@ class Society extends ApiService
         $addressPostcodeInvoicing = $data['addressPostcodeInvoicing'] ?? null;
         $addressLocalityInvoicing = $data['addressLocalityInvoicing'] ?? null;
         $addressCountryInvoicing = $data['addressCountryInvoicing'] ?? null;
+        $externalIdentifier = !empty($data['externalIdentifier']) ? ExternalId::fromArray($data['externalIdentifier']) : null;
 
         $legalPerson = array_key_exists('legalPerson', $data)
             ? Person::convertDataToDTO($data['legalPerson'])
@@ -147,7 +152,7 @@ class Society extends ApiService
             : null;
 
         return new SocietyOutput(
-            $data['id'],
+            $data['agoraId'],
             $data['name'],
             $siret,
             $legalStatus,
@@ -163,12 +168,13 @@ class Society extends ApiService
             $addressCountryInvoicing,
             $legalPerson,
             $administrativePerson,
-            $rhPerson
+            $rhPerson,
+            $externalIdentifier,
         );
     }
 
     /**
-     * @return array<string, string|null>|null
+     * @return array<string, array<string, string>|string|null>|null
      */
     private function serializePersonInput(?PersonInput $person): ?array
     {
@@ -176,6 +182,7 @@ class Society extends ApiService
             return null;
         }
         return [
+            'externalIdentifier' => $person->externalIdentifier->toArray(),
             'familyName'      => $person->familyName,
             'givenName'       => $person->givenName,
             'gender'          => $person->gender,

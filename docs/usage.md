@@ -50,6 +50,24 @@ $identifier = ApiObjectIdentifierFactory::fromString('MonERP:S-42'); // External
 $identifier = ApiObjectIdentifierFactory::fromString('ses_abc');     // AgoraId('ses_abc')
 ```
 
+### Identifiant externe à la création
+
+Chaque DTO de création (`PersonInput`, `TrainerEmployeeInput`, `TrainerFreeInput`, `LearnerInput`, `SocietyInput`, `SessionInput`, `EnrollmentInput`) prend en **premier argument obligatoire** un `ExternalId` : l'identifiant de l'objet dans votre système. Il est envoyé à l'API (`{"sourceName": ..., "id": ...}`) et permet ensuite de relire l'objet sans connaître son `AgoraId`. L'API répond `409` si cet identifiant externe existe déjà.
+
+Les méthodes `create*()` ne renvoient que les identifiants de l'objet créé, sous la forme d'un `CreatedOutput` :
+
+| Champ        | Type        | Description                              |
+| ------------ | ----------- | ---------------------------------------- |
+| `agoraId`    | AgoraId     | Identifiant Agora de l'objet créé        |
+| `externalId` | ?ExternalId | Identifiant externe renvoyé par l'API    |
+
+```php
+$created = $client->createLearner($input);
+$learner = $client->getLearner($created->agoraId); // relire l'objet complet si besoin
+```
+
+En lecture, chaque DTO de sortie expose `uuid` (l'`agoraId`) et `externalIdentifier` (`?ExternalId`).
+
 ---
 
 ## Auth — Vérification de connexion
@@ -86,50 +104,55 @@ Gender::GENDER_FEMALE;
 Gender::GENDER_MALE;
 ```
 
-### `createPerson(PersonInput $input) : PersonOutput`
+### `createPerson(PersonInput $input) : CreatedOutput`
 
-Crée une nouvelle personne à partir d'un objet PersonInput, retourne en cas de succès un objet PersonOutput
+Crée une nouvelle personne à partir d'un objet PersonInput, retourne en cas de succès un objet CreatedOutput contenant les identifiants de la personne créée (`agoraId` et `externalId`). Utilisez `getPerson()` pour récupérer la personne complète.
 
 ```php
 use AgoraLearningPhp\DTO\Input\Person\PersonInput;
 use AgoraLearningPhp\Enum\Gender;
+use AgoraLearningPhp\Identifier\ExternalId;
 
 $input = new PersonInput(
+    new ExternalId('MonERP', 'P-41'),  // externalIdentifier (obligatoire)
     'Dupont',                  // familyName (obligatoire)
     'Jean',                    // givenName (obligatoire)
-    'jean.dupont@example.com', // email
+    'jean.dupont@example.com', // email (obligatoire)
+    Gender::GENDER_MALE,       // gender
     '0601020304',              // telephone
     '12 rue de la Paix',       // addressStreet
     '75001',                   // addressPostcode
     'Paris',                   // addressLocality
     'FR',                      // addressCountry
     'url/image.jpeg',          // image (URL)
-    Gender::GENDER_MALE,       // gender
     new \DateTimeImmutable(),  // birthDate
     'Directeur commercial'     // jobTitle
 );
 
-$person = $client->createPerson($input);
+$created = $client->createPerson($input);
 
-echo $person->uuid;       // "per_01KRXPMF8FET29Q0YV9CYQ3Z8C"
+echo $created->agoraId->getId();    // "per_01KRXPMF8FET29Q0YV9CYQ3Z8C"
+echo $created->externalId->getId(); // "MonERP:P-41"
+
+$person = $client->getPerson($created->agoraId);
 echo $person->familyName; // "Dupont"
-echo $person->givenName;  // "Jean"
 ```
 
 **Champs de `PersonInput` :**
 
 | Champ             | Type                | Obligatoire | Description                    |
 | ----------------- | ------------------- | ----------- | ------------------------------ |
+| `externalIdentifier` | ExternalId | Oui         | Identifiant dans le système externe |
 | `familyName`      | string              | Oui         | Nom de famille                 |
 | `givenName`       | string              | Oui         | Prénom                         |
-| `email`           | ?string             | Non         | Adresse e-mail                 |
+| `email`           | string              | Oui         | Adresse e-mail                 |
+| `gender`          | string              | Non         | `Gender::GENDER_NA` par défaut |
 | `telephone`       | ?string             | Non         | Numéro de téléphone            |
 | `addressStreet`   | ?string             | Non         | Rue                            |
 | `addressPostcode` | ?string             | Non         | Code postal                    |
 | `addressLocality` | ?string             | Non         | Ville                          |
 | `addressCountry`  | ?string             | Non         | Pays                           |
 | `image`           | ?string             | Non         | URL d'avatar                   |
-| `gender`          | string              | Non         | `Gender::GENDER_NA` par défaut |
 | `birthDate`       | ?\DateTimeImmutable | Non         | Date de naissance              |
 | `jobTitle`        | ?string             | Non         | Intitulé du poste              |
 
@@ -138,6 +161,7 @@ echo $person->givenName;  // "Jean"
 | Champ             | Type                | Description                    |
 | ----------------- | ------------------- | ------------------------------ |
 | `uuid`            | string              | Identifiant unique             |
+| `externalIdentifier` | ?ExternalId         | Identifiant dans le système externe |
 | `familyName`      | string              | Nom de famille                 |
 | `givenName`       | string              | Prénom                         |
 | `email`           | ?string             | Adresse e-mail                 |
@@ -202,15 +226,17 @@ TrainerStatut::STATUT_EMPLOYE; // formateur salarié
 TrainerStatut::STATUT_FREE;    // formateur indépendant
 ```
 
-### `createTrainerEmployee(TrainerEmployeeInput $input) : TrainerOutput`
+### `createTrainerEmployee(TrainerEmployeeInput $input) : CreatedOutput`
 
-Crée un formateur salarié.
+Crée un formateur salarié, retourne en cas de succès un objet CreatedOutput contenant les identifiants du formateur créé (`agoraId` et `externalId`). Utilisez `getTrainer()` pour récupérer le formateur complet.
 
 ```php
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerEmployeeInput;
 use AgoraLearningPhp\Enum\Gender;
+use AgoraLearningPhp\Identifier\ExternalId;
 
 $input = new TrainerEmployeeInput(
+    new ExternalId('MonERP', 'T-41'),  // externalIdentifier (obligatoire)
     'Bernard',                        // familyName (obligatoire)
     'Luc',                            // givenName (obligatoire)
     'luc.bernard@example.com',        // email (obligatoire)
@@ -230,12 +256,15 @@ $input = new TrainerEmployeeInput(
     'url/cv_file.pdf',                // cv (url)
     'url/degree_file.pdf',            // degree (url)
     'url/contract_file.pdf',          // contract (url)
-    'Description du poste'            // jobDescription
+    'url/job_description.pdf'         // jobDescription (url)
 );
 
-$trainer = $client->createTrainerEmployee($input);
+$created = $client->createTrainerEmployee($input);
 
-echo $trainer->uuid;
+echo $created->agoraId->getId();    // "per_01KRXPMF8GENX8HCB8QKECBGZC"
+echo $created->externalId->getId(); // "MonERP:T-41"
+
+$trainer = $client->getTrainer($created->agoraId);
 echo $trainer->familyName; // "Bernard"
 ```
 
@@ -243,6 +272,7 @@ echo $trainer->familyName; // "Bernard"
 
 | Champ                | Type                | Obligatoire | Description                    |
 | -------------------- | ------------------- | ----------- | ------------------------------ |
+| `externalIdentifier` | ExternalId | Oui         | Identifiant dans le système externe |
 | `familyName`         | string              | Oui         | Nom de famille                 |
 | `givenName`          | string              | Oui         | Prénom                         |
 | `email`              | string              | Oui         | Adresse e-mail                 |
@@ -262,16 +292,18 @@ echo $trainer->familyName; // "Bernard"
 | `cv`                 | ?string             | Non         | URL du CV                      |
 | `degree`             | ?string             | Non         | URL des Diplômes               |
 | `contract`           | ?string             | Non         | URL du contrat                 |
-| `jobDescription`     | ?string             | Non         | Description du poste           |
+| `jobDescription`     | ?string             | Non         | URL de la fiche de poste       |
 
-### `createTrainerFree(TrainerFreeInput $input) : TrainerOutput`
+### `createTrainerFree(TrainerFreeInput $input) : CreatedOutput`
 
-Crée un formateur indépendant. Hérite de tous les champs de `TrainerEmployeeInput` et ajoute :
+Crée un formateur indépendant, retourne en cas de succès un objet CreatedOutput contenant les identifiants du formateur créé (`agoraId` et `externalId`). Utilisez `getTrainer()` pour récupérer le formateur complet. Hérite de tous les champs de `TrainerEmployeeInput` et ajoute :
 
 ```php
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerFreeInput;
+use AgoraLearningPhp\Identifier\ExternalId;
 
 $input = new TrainerFreeInput(
+    new ExternalId('MonERP', 'T-42'), // externalIdentifier (obligatoire)
     'Martin',                      // familyName (obligatoire)
     'Claire',                      // givenName (obligatoire)
     'claire.martin@freelance.com', // email (obligatoire)
@@ -292,9 +324,12 @@ $input = new TrainerFreeInput(
     'FR'                           // billingAddressCountry
 );
 
-$trainer = $client->createTrainerFree($input);
+$created = $client->createTrainerFree($input);
 
-echo $trainer->uuid;
+echo $created->agoraId->getId();    // "per_01KRXPMF8GENX8HCB8QKECBGZD"
+echo $created->externalId->getId(); // "MonERP:T-42"
+
+$trainer = $client->getTrainer($created->agoraId);
 ```
 
 **Champs supplémentaires de `TrainerFreeInput` :**
@@ -317,6 +352,7 @@ echo $trainer->uuid;
 | Champ                        | Type                | Description                                         |
 | ---------------------------- | ------------------- | --------------------------------------------------- |
 | `uuid`                       | string              | Identifiant unique                                  |
+| `externalIdentifier`         | ?ExternalId         | Identifiant dans le système externe                 |
 | `familyName`                 | string              | Nom de famille                                      |
 | `givenName`                  | string              | Prénom                                              |
 | `email`                      | string              | Adresse e-mail                                      |
@@ -336,13 +372,14 @@ echo $trainer->uuid;
 | `cv`                         | ?string             | URL du CV                                           |
 | `degree`                     | ?string             | URL des Diplômes                                    |
 | `contract`                   | ?string             | URL du contrat                                      |
-| `jobDescription`             | ?string             | Description du poste                                |
+| `jobDescription`             | ?string             | URL de la fiche de poste                            |
 
 **Champs de `TrainerFreeOutput` :**
 
 | Champ                        | Type                | Description                                         |
 | ---------------------------- | ------------------- | --------------------------------------------------- |
 | `uuid`                       | string              | Identifiant unique                                  |
+| `externalIdentifier`         | ?ExternalId         | Identifiant dans le système externe                 |
 | `familyName`                 | string              | Nom de famille                                      |
 | `givenName`                  | string              | Prénom                                              |
 | `email`                      | string              | Adresse e-mail                                      |
@@ -362,7 +399,7 @@ echo $trainer->uuid;
 | `cv`                         | ?string             | URL du CV                                           |
 | `degree`                     | ?string             | URL des Diplômes                                    |
 | `contract`                   | ?string             | URL du contrat                                      |
-| `jobDescription`             | ?string             | Description du poste                                |
+| `jobDescription`             | ?string             | URL de la fiche de poste                            |
 | `hourlyCost`                 | ?float              | Coût horaire en euros                               |
 | `daylyCost`                  | ?float              | Coût journalier en euros                            |
 | `siret`                      | ?string             | Numéro SIRET                                        |
@@ -402,20 +439,22 @@ foreach ($trainers as $trainer) {
 
 Un **Learner** est un compte apprenant pouvant se connecter à l'espace apprenant.
 
-### `createLearner(LearnerInput $input) : LearnerOutput`
+### `createLearner(LearnerInput $input) : CreatedOutput`
 
-Crée un nouvel apprenant.
+Crée un nouvel apprenant, retourne en cas de succès un objet CreatedOutput contenant les identifiants de l'apprenant créé (`agoraId` et `externalId`). Utilisez `getLearner()` pour récupérer l'apprenant complet.
 
 ```php
 use AgoraLearningPhp\DTO\Input\Learner\LearnerInput;
 use AgoraLearningPhp\Enum\Gender;
+use AgoraLearningPhp\Identifier\ExternalId;
 
 $input = new LearnerInput(
+    new ExternalId('MonERP', 'L-41'), // externalIdentifier (obligatoire)
     'Martin',                    // familyName (obligatoire)
     'Sophie',                    // givenName (obligatoire)
     'sophie.martin@example.com', // recoverEmail (obligatoire) — e-mail de récupération
+    'sophie@pro.example.com',    // email (obligatoire) — e-mail de contact
     Gender::GENDER_FEMALE,       // gender
-    'sophie@pro.example.com',    // email (e-mail de contact)
     '0612131415',                // telephone
     '5 avenue des Fleurs',       // addressStreet
     '69001',                     // addressPostcode
@@ -426,20 +465,24 @@ $input = new LearnerInput(
     'Responsable RH'             // jobTitle
 );
 
-$learner = $client->createLearner($input);
+$created = $client->createLearner($input);
 
-echo $learner->uuid;
+echo $created->agoraId->getId();    // "per_01KRXPMF8GENX8HCB8QKECBGZC"
+echo $created->externalId->getId(); // "MonERP:L-41"
+
+$learner = $client->getLearner($created->agoraId);
 ```
 
 **Champs de `LearnerInput` :**
 
 | Champ             | Type                | Obligatoire | Description                      |
 | ----------------- | ------------------- | ----------- | -------------------------------- |
+| `externalIdentifier` | ExternalId | Oui         | Identifiant dans le système externe |
 | `familyName`      | string              | Oui         | Nom de famille                   |
 | `givenName`       | string              | Oui         | Prénom                           |
 | `recoverEmail`    | string              | Oui         | E-mail de récupération du compte |
+| `email`           | string              | Oui         | E-mail de contact                |
 | `gender`          | string              | Non         | `Gender::GENDER_NA` par défaut   |
-| `email`           | ?string             | Non         | E-mail de contact                |
 | `telephone`       | ?string             | Non         | Numéro de téléphone              |
 | `addressStreet`   | ?string             | Non         | Rue                              |
 | `addressPostcode` | ?string             | Non         | Code postal                      |
@@ -476,38 +519,43 @@ foreach ($learners as $learner) {
 
 Une **Society** représente une entreprise cliente ou partenaire. Elle peut embarquer jusqu'à trois contacts (référent légal, référent administratif, référent RH), chacun modélisé par un `PersonInput`.
 
-### `createSociety(SocietyInput $input) : SocietyOutput`
+### `createSociety(SocietyInput $input) : CreatedOutput`
 
-Crée une nouvelle société.
+Crée une nouvelle société, retourne en cas de succès un objet CreatedOutput contenant les identifiants de la société créée (`agoraId` et `externalId`). Utilisez `getSociety()` pour récupérer la société complète.
 
 ```php
 use AgoraLearningPhp\DTO\Input\Society\SocietyInput;
 use AgoraLearningPhp\DTO\Input\Person\PersonInput;
 use AgoraLearningPhp\Enum\Gender;
+use AgoraLearningPhp\Identifier\ExternalId;
 
 // Contacts optionnels
 $legalPerson = new PersonInput(
+    new ExternalId('MonERP', 'P-42'),
     'Legrand',
     'Pierre',
-    'pierre.legrand@acme.example.com'
+    'pierre.legrand@acme.example.com',
     Gender::GENDER_MALE
 );
 
 $administrativePerson = new PersonInput(
+    new ExternalId('MonERP', 'P-43'),
     'Legrand',
     'Paul',
-    'paul.legrand@acme.example.com'
+    'paul.legrand@acme.example.com',
     Gender::GENDER_MALE
 );
 
 $rhPerson = new PersonInput(
+    new ExternalId('MonERP', 'P-44'),
     'Legrand',
     'Jacques',
-    'jacques.legrand@acme.example.com'
+    'jacques.legrand@acme.example.com',
     Gender::GENDER_MALE
 );
 
 $input = new SocietyInput(
+    new ExternalId('MonERP', 'SOC-41'), // externalIdentifier (obligatoire)
     'ACME Corp',                    // name (obligatoire)
     '12345678901234',               // siret
     'SAS',                          // legalStatus
@@ -527,9 +575,12 @@ $input = new SocietyInput(
     'url/image.jpeg',               // image
 );
 
-$society = $client->createSociety($input);
+$created = $client->createSociety($input);
 
-echo $society->uuid; // "soc_01KRXPMF93F039K58SC9QEZZNY"
+echo $created->agoraId->getId();    // "soc_01KRXPMF93F039K58SC9QEZZNY"
+echo $created->externalId->getId(); // "MonERP:SOC-41"
+
+$society = $client->getSociety($created->agoraId);
 echo $society->name; // "ACME Corp"
 ```
 
@@ -537,6 +588,7 @@ echo $society->name; // "ACME Corp"
 
 | Champ                       | Type         | Obligatoire | Description                      |
 | --------------------------- | ------------ | ----------- | -------------------------------- |
+| `externalIdentifier`        | ExternalId | Oui         | Identifiant dans le système externe |
 | `name`                      | string       | Oui         | Raison sociale                   |
 | `siret`                     | ?string      | Non         | Numéro SIRET                     |
 | `legalStatus`               | ?string      | Non         | Forme juridique (ex : SAS, SARL) |
@@ -560,6 +612,7 @@ echo $society->name; // "ACME Corp"
 | Champ                       | Type          | Description                      |
 | --------------------------- | ------------- | -------------------------------- |
 | `uuid`                      | string        | Identifiant unique               |
+| `externalIdentifier`        | ?ExternalId   | Identifiant dans le système externe |
 | `name`                      | string        | Raison sociale                   |
 | `siret`                     | ?string       | Numéro SIRET                     |
 | `legalStatus`               | ?string       | Forme juridique (ex : SAS, SARL) |
@@ -628,13 +681,16 @@ SessionMode::SESSION_MODE_BLENDED;      // mixte
 SessionMode::SESSION_MODE_DISTANCE;     // à distance
 ```
 
-### `createSession(SessionInput $input) : SessionOutput` — Session fixe
+### `createSession(SessionInput $input) : CreatedOutput` — Session fixe
+
+Crée une session à partir d'un objet SessionInput, retourne en cas de succès un objet CreatedOutput contenant les identifiants de la session créée (`agoraId` et `externalId`). Utilisez `getSession()` pour récupérer la session complète.
 
 ```php
 use AgoraLearningPhp\DTO\Input\Session\SessionInput;
 use AgoraLearningPhp\DTO\Input\Session\FixedSessionInput;
 use AgoraLearningPhp\Enum\SessionType;
 use AgoraLearningPhp\Enum\SessionMode;
+use AgoraLearningPhp\Identifier\ExternalId;
 
 $sessionData = new FixedSessionInput(
     new \DateTimeImmutable('2026-06-01'),  // availabilityStartDate
@@ -644,6 +700,7 @@ $sessionData = new FixedSessionInput(
 );
 
 $input = new SessionInput(
+    new ExternalId('MonERP', 'S-41'),          // externalIdentifier (obligatoire)
     'Formation PHP avancé',                    // title (obligatoire)
     $sessionData,                              // sessionData (obligatoire)
     false,                                     // manualDuration
@@ -653,15 +710,20 @@ $input = new SessionInput(
     21600,                                     // durationInSeconds (6 heures)
     'Formation intensive PHP',                 // description
     20,                                        // maxPlaces
+    null,                                      // pedagogicalTrainer (UUID du référent pédagogique)
+    null,                                      // administrativePerson (UUID du référent administratif)
     'mon-site.com/questionnaire_preliminaire', // urlPreTrainingSurvey
     'mon-site.com/questionnaire_a_chaud',      // urlOnTheSpotSurvey
     'mon-site.com/questionnaire_a_froid',      // urlDelayedSurvey
     'url/image.jpeg'                           // image
 );
 
-$session = $client->createSession($input);
+$created = $client->createSession($input);
+echo $created->agoraId->getId();    // "ses_01KRXPMF96F9DVGQKHHPD386D7"
+echo $created->externalId->getId(); // "MonERP:S-41"
 
-echo $session->uuid;  // "ses_01KRXPMF96F9DVGQKHHPD386D7"
+// Récupérer la session complète
+$session = $client->getSession($created->agoraId);
 echo $session->title; // "Formation PHP avancé"
 echo $session->type;  // "INTER"
 echo $session->mode;  // "FACE_TO_FACE"
@@ -674,11 +736,12 @@ if ($session->sessionData instanceof FixedSessionOutput) {
 }
 ```
 
-### `createSession(SessionInput $input) : SessionOutput` — Session ouverte
+### `createSession(SessionInput $input) : CreatedOutput` — Session ouverte
 
 ```php
 use AgoraLearningPhp\DTO\Input\Session\SessionInput;
 use AgoraLearningPhp\DTO\Input\Session\OpenedSessionInput;
+use AgoraLearningPhp\Identifier\ExternalId;
 
 $sessionData = new OpenedSessionInput(
     new \DateTimeImmutable('2026-01-01'), // subscribeStartDate (Y-m-d)
@@ -687,14 +750,17 @@ $sessionData = new OpenedSessionInput(
 );
 
 $input = new SessionInput(
+    new ExternalId('MonERP', 'S-42'), // externalIdentifier (obligatoire)
     'Parcours e-learning PHP',
     $sessionData
     // tous les autres paramètres sont optionnels
 );
 
-$session = $client->createSession($input);
+$created = $client->createSession($input);
+echo $created->agoraId->getId(); // "ses_01KRXPMF97F8BRPH7N7972QRYY"
 
-echo $session->uuid; // "ses_01KRXPMF97F8BRPH7N7972QRYY"
+// Récupérer la session complète
+$session = $client->getSession($created->agoraId);
 echo $session->type; // "INTER" (fixé automatiquement)
 echo $session->mode; // "E_LEARNING" (fixé automatiquement)
 
@@ -711,6 +777,7 @@ if ($session->sessionData instanceof OpenedSessionOutput) {
 
 | Champ                  | Type                                    | Obligatoire | Description                     |
 | ---------------------- | --------------------------------------- | ----------- | ------------------------------- |
+| `externalIdentifier`   | ExternalId | Oui         | Identifiant dans le système externe |
 | `title`                | string                                  | Oui         | Titre de la session             |
 | `sessionData`          | `FixedSessionInput\|OpenedSessionInput` | Oui         | Données spécifiques au type     |
 | `manualDuration`       | bool                                    | Non         | `false` par défaut              |
@@ -720,6 +787,8 @@ if ($session->sessionData instanceof OpenedSessionOutput) {
 | `durationInSeconds`    | int                                     | Non         | `0` par défaut                  |
 | `description`          | ?string                                 | Non         | Description de la session       |
 | `maxPlaces`            | ?int                                    | Non         | Nombre de places maximum        |
+| `pedagogicalTrainer`   | ?string                                 | Non         | UUID du référent pédagogique    |
+| `administrativePerson` | ?string                                 | Non         | UUID du référent administratif  |
 | `urlPreTrainingSurvey` | ?string                                 | Non         | URL questionnaire pré-formation |
 | `urlOnTheSpotSurvey`   | ?string                                 | Non         | URL questionnaire à chaud       |
 | `urlDelayedSurvey`     | ?string                                 | Non         | URL questionnaire à froid       |
@@ -730,6 +799,7 @@ if ($session->sessionData instanceof OpenedSessionOutput) {
 | Champ                  | Type                                      | Description                                           |
 | ---------------------- | ----------------------------------------- | ----------------------------------------------------- |
 | `uuid`                 | string                                    | Identifiant unique                                    |
+| `externalIdentifier`   | ?ExternalId                               | Identifiant dans le système externe                   |
 | `title`                | string                                    | Titre de la session                                   |
 | `type`                 | string                                    | `INTER` ou `INTRA`                                    |
 | `mode`                 | string                                    | `FACE_TO_FACE`, `E_LEARNING`, `BLENDED` ou `DISTANCE` |
@@ -783,22 +853,27 @@ foreach ($sessions as $session) {
 
 Une **Enrollment** représente l'inscription d'un apprenant à une session. Elle lie un `Learner` à une `Session`.
 
-### `createEnrollment(EnrollmentInput $input) : EnrollmentOutput`
+### `createEnrollment(EnrollmentInput $input) : CreatedOutput`
 
-Inscrit un apprenant à une session.
+Inscrit un apprenant à une session, retourne en cas de succès un objet CreatedOutput contenant les identifiants de l'inscription créée (`agoraId` et `externalId`). Utilisez `getEnrollment()` pour récupérer l'inscription complète.
 
 ```php
 use AgoraLearningPhp\DTO\Input\Enrollment\EnrollmentInput;
+use AgoraLearningPhp\Identifier\ExternalId;
 
 $input = new EnrollmentInput(
+    new ExternalId('MonERP', 'E-41'),  // externalIdentifier (obligatoire)
     'ses_01KRXPMF97F8BRPH7N7972QRYY', // sessionUuid (obligatoire)
     'per_01KRXPMF8GENX8HCB8QKECBGZC', // learnerUuid (obligatoire)
     true                              // sendingInvite — envoie un e-mail d'invitation (dans le cadre d'une session open, l'invitation déclenche le début de la session)
 );
 
-$enrollment = $client->createEnrollment($input);
+$created = $client->createEnrollment($input);
 
-echo $enrollment->uuid;
+echo $created->agoraId->getId();    // "enr_01KRXPMF9AF2Y5ZT0B3R1N6QXW"
+echo $created->externalId->getId(); // "MonERP:E-41"
+
+$enrollment = $client->getEnrollment($created->agoraId);
 echo $enrollment->session->title;
 echo $enrollment->learner->familyName;
 ```
@@ -807,6 +882,7 @@ echo $enrollment->learner->familyName;
 
 | Champ           | Type   | Obligatoire | Description                   |
 | --------------- | ------ | ----------- | ----------------------------- |
+| `externalIdentifier` | ExternalId | Oui    | Identifiant dans le système externe |
 | `sessionUuid`   | string | Oui         | UUID de la session            |
 | `learnerUuid`   | string | Oui         | UUID de l'apprenant           |
 | `sendingInvite` | bool   | Oui         | Envoie un e-mail d'invitation |
@@ -816,6 +892,7 @@ echo $enrollment->learner->familyName;
 | Champ                   | Type                | Description                                     |
 | ----------------------- | ------------------- | ----------------------------------------------- |
 | `uuid`                  | string              | Identifiant unique de l'inscription             |
+| `externalIdentifier`    | ?ExternalId         | Identifiant dans le système externe             |
 | `learner`               | PersonOutput        | Apprenant inscrit                               |
 | `session`               | SessionOutput       | Session concernée                               |
 | `availabilityStartDate` | ?\DateTimeImmutable | Date de début de disponibilité pour l'apprenant |

@@ -32,6 +32,7 @@ class SocietyTest extends AbstractAgoraLearningTest
         $legalPersonFamilyName = 'Durand';
         $legalPersonGivenName = 'Paul';
         $legalPerson = new PersonInput(
+            $this->newExternalId('P'),
             $legalPersonFamilyName,
             $legalPersonGivenName,
             'paul.durand@example.com',
@@ -41,6 +42,7 @@ class SocietyTest extends AbstractAgoraLearningTest
         $adminPersonFamilyName = 'Girard';
         $adminPersonGivenName = 'Marie';
         $adminPerson = new PersonInput(
+            $this->newExternalId('P'),
             $adminPersonFamilyName,
             $adminPersonGivenName,
             'marie.girard@example.com',
@@ -48,6 +50,7 @@ class SocietyTest extends AbstractAgoraLearningTest
         );
 
         $societyInput = new SocietyInput(
+            $this->newExternalId('SOC'),
             $name,
             $siret,
             $legalStatus,
@@ -68,7 +71,8 @@ class SocietyTest extends AbstractAgoraLearningTest
         );
 
         //Act
-        $societyOutput = $this->client->createSociety($societyInput);
+        $created = $this->client->createSociety($societyInput);
+        $societyOutput = $this->client->getSociety($created->agoraId);
 
         // Assert
         $this->assertEquals($name, $societyOutput->name);
@@ -97,10 +101,11 @@ class SocietyTest extends AbstractAgoraLearningTest
     {
         //Arrange
         $name = 'Société Minimum Test';
-        $societyInput = new SocietyInput($name);
+        $societyInput = new SocietyInput($this->newExternalId('SOC'), $name);
 
         //Act
-        $societyOutput = $this->client->createSociety($societyInput);
+        $created = $this->client->createSociety($societyInput);
+        $societyOutput = $this->client->getSociety($created->agoraId);
 
         // Assert
         $this->assertEquals($name, $societyOutput->name);
@@ -125,9 +130,8 @@ class SocietyTest extends AbstractAgoraLearningTest
     {
         //Arrange
         $name = 'Société Get Test';
-        $societyInput = new SocietyInput($name);
-        $output = $this->client->createSociety($societyInput);
-        $uuid = $output->uuid;
+        $societyInput = new SocietyInput($this->newExternalId('SOC'), $name);
+        $uuid = $this->client->createSociety($societyInput)->agoraId->getId();
 
         //Act
         $societyOutput = $this->client->getSociety(new AgoraId($uuid));
@@ -141,14 +145,12 @@ class SocietyTest extends AbstractAgoraLearningTest
     {
         //Arrange
         $name1 = 'Société Collection Un Test';
-        $societyInput1 = new SocietyInput($name1);
-        $output1 = $this->client->createSociety($societyInput1);
-        $uuid1 = $output1->uuid;
+        $societyInput1 = new SocietyInput($this->newExternalId('SOC'), $name1);
+        $uuid1 = $this->client->createSociety($societyInput1)->agoraId->getId();
 
         $name2 = 'Société Collection Deux Test';
-        $societyInput2 = new SocietyInput($name2);
-        $output2 = $this->client->createSociety($societyInput2);
-        $uuid2 = $output2->uuid;
+        $societyInput2 = new SocietyInput($this->newExternalId('SOC'), $name2);
+        $uuid2 = $this->client->createSociety($societyInput2)->agoraId->getId();
 
         //Act
         $societyOutputs = $this->client->getCollectionSociety();

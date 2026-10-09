@@ -23,11 +23,11 @@ class SessionTest extends AbstractAgoraLearningTest
     public function testCreateCompleteFixedSession(): void
     {
         //Arrange - créer les dépendances
-        $trainerOutput = $this->client->createTrainerEmployee(
-            new TrainerEmployeeInput('Formateur', 'Session', 'formateur.session.fixed@example.com')
+        $trainerCreated = $this->client->createTrainerEmployee(
+            new TrainerEmployeeInput($this->newExternalId('T'), 'Formateur', 'Session', 'formateur.session.fixed@example.com')
         );
-        $personOutput = $this->client->createPerson(
-            new PersonInput('Admin', 'Session', 'administrateur.session.fixed@example.com', Gender::GENDER_NA)
+        $personCreated = $this->client->createPerson(
+            new PersonInput($this->newExternalId('P'), 'Admin', 'Session', 'administrateur.session.fixed@example.com', Gender::GENDER_NA)
         );
 
         $title = 'Formation PHP avancé';
@@ -48,6 +48,7 @@ class SessionTest extends AbstractAgoraLearningTest
         $image = 'https://www.agora-learning.com/apiAgoraLearning/ressources/formation.jpg';
 
         $sessionInput = new SessionInput(
+            $this->newExternalId('S'),
             $title,
             new FixedSessionInput($startDate, $endDate, $type, $mode),
             $manualDuration,
@@ -57,8 +58,8 @@ class SessionTest extends AbstractAgoraLearningTest
             $durationInSeconds,
             $description,
             $maxPlaces,
-            $trainerOutput->uuid,
-            $personOutput->uuid,
+            $trainerCreated->agoraId->getId(),
+            $personCreated->agoraId->getId(),
             $urlPreTrainingSurvey,
             $urlOnTheSpotSurvey,
             $urlDelayedSurvey,
@@ -66,7 +67,8 @@ class SessionTest extends AbstractAgoraLearningTest
         );
 
         //Act
-        $sessionOutput = $this->client->createSession($sessionInput);
+        $created = $this->client->createSession($sessionInput);
+        $sessionOutput = $this->client->getSession($created->agoraId);
 
         // Assert
         $this->assertEquals($title, $sessionOutput->title);
@@ -80,9 +82,9 @@ class SessionTest extends AbstractAgoraLearningTest
         $this->assertEquals($description, $sessionOutput->description);
         $this->assertEquals($maxPlaces, $sessionOutput->maxPlaces);
         $this->assertNotNull($sessionOutput->pedagogicalTrainer);
-        $this->assertEquals($trainerOutput->uuid, $sessionOutput->pedagogicalTrainer->uuid);
+        $this->assertEquals($trainerCreated->agoraId->getId(), $sessionOutput->pedagogicalTrainer->uuid);
         $this->assertNotNull($sessionOutput->administrativePerson);
-        $this->assertEquals($personOutput->uuid, $sessionOutput->administrativePerson->uuid);
+        $this->assertEquals($personCreated->agoraId->getId(), $sessionOutput->administrativePerson->uuid);
         $this->assertEquals($urlPreTrainingSurvey, $sessionOutput->urlPreTrainingSurvey);
         $this->assertEquals($urlOnTheSpotSurvey, $sessionOutput->urlOnTheSpotSurvey);
         $this->assertEquals($urlDelayedSurvey, $sessionOutput->urlDelayedSurvey);
@@ -103,12 +105,14 @@ class SessionTest extends AbstractAgoraLearningTest
         $mode = SessionMode::SESSION_MODE_BLENDED;
 
         $sessionInput = new SessionInput(
+            $this->newExternalId('S'),
             $title,
             new FixedSessionInput($startDate, $endDate, $type, $mode)
         );
 
         //Act
-        $sessionOutput = $this->client->createSession($sessionInput);
+        $created = $this->client->createSession($sessionInput);
+        $sessionOutput = $this->client->getSession($created->agoraId);
 
         // Assert
         $this->assertEquals($title, $sessionOutput->title);
@@ -131,11 +135,11 @@ class SessionTest extends AbstractAgoraLearningTest
     public function testCreateCompleteOpenedSession(): void
     {
         //Arrange - créer les dépendances
-        $trainerOutput = $this->client->createTrainerEmployee(
-            new TrainerEmployeeInput('Formateur', 'Opened', 'formateur.opened.complete@example.com')
+        $trainerCreated = $this->client->createTrainerEmployee(
+            new TrainerEmployeeInput($this->newExternalId('T'), 'Formateur', 'Opened', 'formateur.opened.complete@example.com')
         );
-        $personOutput = $this->client->createPerson(
-            new PersonInput('Admin', 'Opened', 'administrateur.session.fixed@example.com', Gender::GENDER_NA)
+        $personCreated = $this->client->createPerson(
+            new PersonInput($this->newExternalId('P'), 'Admin', 'Opened', 'administrateur.session.fixed@example.com', Gender::GENDER_NA)
         );
 
         $title = 'E-learning : Introduction au management';
@@ -152,6 +156,7 @@ class SessionTest extends AbstractAgoraLearningTest
         $image = 'https://www.agora-learning.com/apiAgoraLearning/ressources/formation.jpg';
 
         $sessionInput = new SessionInput(
+            $this->newExternalId('S'),
             $title,
             new OpenedSessionInput($subscribeStartDate, $subscribeEndDate, $accessDurationDays),
             $manualDuration,
@@ -161,8 +166,8 @@ class SessionTest extends AbstractAgoraLearningTest
             $durationInSeconds,
             $description,
             null,
-            $trainerOutput->uuid,
-            $personOutput->uuid,
+            $trainerCreated->agoraId->getId(),
+            $personCreated->agoraId->getId(),
             null,
             null,
             $urlDelayedSurvey,
@@ -170,7 +175,8 @@ class SessionTest extends AbstractAgoraLearningTest
         );
 
         //Act
-        $sessionOutput = $this->client->createSession($sessionInput);
+        $created = $this->client->createSession($sessionInput);
+        $sessionOutput = $this->client->getSession($created->agoraId);
 
         // Assert
         $this->assertEquals($title, $sessionOutput->title);
@@ -184,9 +190,9 @@ class SessionTest extends AbstractAgoraLearningTest
         $this->assertEquals($description, $sessionOutput->description);
         $this->assertNull($sessionOutput->maxPlaces);
         $this->assertNotNull($sessionOutput->pedagogicalTrainer);
-        $this->assertEquals($trainerOutput->uuid, $sessionOutput->pedagogicalTrainer->uuid);
+        $this->assertEquals($trainerCreated->agoraId->getId(), $sessionOutput->pedagogicalTrainer->uuid);
         $this->assertNotNull($sessionOutput->administrativePerson);
-        $this->assertEquals($personOutput->uuid, $sessionOutput->administrativePerson->uuid);
+        $this->assertEquals($personCreated->agoraId->getId(), $sessionOutput->administrativePerson->uuid);
         $this->assertNull($sessionOutput->urlPreTrainingSurvey);
         $this->assertNull($sessionOutput->urlOnTheSpotSurvey);
         $this->assertEquals($urlDelayedSurvey, $sessionOutput->urlDelayedSurvey);
@@ -207,12 +213,14 @@ class SessionTest extends AbstractAgoraLearningTest
         $accessDurationDays = 30;
 
         $sessionInput = new SessionInput(
+            $this->newExternalId('S'),
             $title,
             new OpenedSessionInput($subscribeStartDate, $subscribeEndDate, $accessDurationDays)
         );
 
         //Act
-        $sessionOutput = $this->client->createSession($sessionInput);
+        $created = $this->client->createSession($sessionInput);
+        $sessionOutput = $this->client->getSession($created->agoraId);
 
         // Assert
         $this->assertEquals($title, $sessionOutput->title);
@@ -238,6 +246,7 @@ class SessionTest extends AbstractAgoraLearningTest
         //Arrange
         $title = 'Formation Get Session Test';
         $sessionInput = new SessionInput(
+            $this->newExternalId('S'),
             $title,
             new FixedSessionInput(
                 new \DateTimeImmutable('2026-10-10'),
@@ -247,7 +256,7 @@ class SessionTest extends AbstractAgoraLearningTest
             )
         );
         $output = $this->client->createSession($sessionInput);
-        $uuid = $output->uuid;
+        $uuid = $output->agoraId->getId();
 
         //Act
         $sessionOutput = $this->client->getSession(new AgoraId($uuid));
@@ -262,6 +271,7 @@ class SessionTest extends AbstractAgoraLearningTest
         //Arrange - une session fixe et une session ouverte
         $title1 = 'Session Fixe Collection Test';
         $sessionInput1 = new SessionInput(
+            $this->newExternalId('S'),
             $title1,
             new FixedSessionInput(
                 new \DateTimeImmutable('2026-10-20'),
@@ -271,10 +281,11 @@ class SessionTest extends AbstractAgoraLearningTest
             )
         );
         $output1 = $this->client->createSession($sessionInput1);
-        $uuid1 = $output1->uuid;
+        $uuid1 = $output1->agoraId->getId();
 
         $title2 = 'Session Ouverte Collection Test';
         $sessionInput2 = new SessionInput(
+            $this->newExternalId('S'),
             $title2,
             new OpenedSessionInput(
                 new \DateTimeImmutable('2026-12-01'),
@@ -283,7 +294,7 @@ class SessionTest extends AbstractAgoraLearningTest
             )
         );
         $output2 = $this->client->createSession($sessionInput2);
-        $uuid2 = $output2->uuid;
+        $uuid2 = $output2->agoraId->getId();
 
         //Act
         $sessionOutputs = $this->client->getCollectionSession();

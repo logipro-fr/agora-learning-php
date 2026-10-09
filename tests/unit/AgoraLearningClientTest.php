@@ -12,6 +12,7 @@ use AgoraLearningPhp\DTO\Input\Session\SessionInput;
 use AgoraLearningPhp\DTO\Input\Society\SocietyInput;
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerEmployeeInput;
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerFreeInput;
+use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Enrollment\EnrollmentOutput;
 use AgoraLearningPhp\DTO\Output\Learner\LearnerOutput;
 use AgoraLearningPhp\DTO\Output\Person\PersonOutput;
@@ -241,7 +242,7 @@ class AgoraLearningClientTest extends TestCase
     {
         // Arrange
         $input  = $this->createFinalDtoInstance(PersonInput::class);
-        $output = $this->createFinalDtoInstance(PersonOutput::class);
+        $output = new CreatedOutput(new AgoraId('per_1'));
         $this->personMock->expects($this->once())->method('postPerson')->with($input)->willReturn($output);
 
         // Act
@@ -298,7 +299,7 @@ class AgoraLearningClientTest extends TestCase
     {
         // Arrange
         $input  = $this->createFinalDtoInstance(TrainerEmployeeInput::class);
-        $output = $this->createFinalDtoInstance(TrainerOutput::class);
+        $output = new CreatedOutput(new AgoraId('per_1'));
         $this->trainerMock->expects($this->once())->method('postTrainerEmployee')->with($input)->willReturn($output);
 
         // Act
@@ -312,7 +313,7 @@ class AgoraLearningClientTest extends TestCase
     {
         // Arrange
         $input  = $this->createFinalDtoInstance(TrainerFreeInput::class);
-        $output = $this->createFinalDtoInstance(TrainerOutput::class);
+        $output = new CreatedOutput(new AgoraId('per_2'));
         $this->trainerMock->expects($this->once())->method('postTrainerFree')->with($input)->willReturn($output);
 
         // Act
@@ -369,7 +370,7 @@ class AgoraLearningClientTest extends TestCase
     {
         // Arrange
         $input  = $this->createFinalDtoInstance(LearnerInput::class);
-        $output = $this->createFinalDtoInstance(LearnerOutput::class);
+        $output = new CreatedOutput(new AgoraId('per_3'));
         $this->learnerMock->expects($this->once())->method('postLearner')->with($input)->willReturn($output);
 
         // Act
@@ -426,7 +427,7 @@ class AgoraLearningClientTest extends TestCase
     {
         // Arrange
         $input  = $this->createFinalDtoInstance(SocietyInput::class);
-        $output = $this->createFinalDtoInstance(SocietyOutput::class);
+        $output = new CreatedOutput(new AgoraId('soc_1'));
         $this->societyMock->expects($this->once())->method('postSociety')->with($input)->willReturn($output);
 
         // Act
@@ -483,7 +484,7 @@ class AgoraLearningClientTest extends TestCase
     {
         // Arrange
         $input  = $this->createFinalDtoInstance(SessionInput::class);
-        $output = $this->createFinalDtoInstance(SessionOutput::class);
+        $output = $this->createFinalDtoInstance(CreatedOutput::class);
         $this->sessionMock->expects($this->once())->method('postSession')->with($input)->willReturn($output);
 
         // Act
@@ -579,7 +580,7 @@ class AgoraLearningClientTest extends TestCase
     {
         // Arrange
         $input  = $this->createFinalDtoInstance(EnrollmentInput::class);
-        $output = $this->createFinalDtoInstance(EnrollmentOutput::class);
+        $output = new CreatedOutput(new AgoraId('enr_1'));
         $this->enrollmentMock->expects($this->once())->method('postEnrollment')->with($input)->willReturn($output);
 
         // Act

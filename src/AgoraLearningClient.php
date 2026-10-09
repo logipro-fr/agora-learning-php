@@ -11,6 +11,7 @@ use AgoraLearningPhp\DTO\Input\Session\SessionInput;
 use AgoraLearningPhp\DTO\Input\Society\SocietyInput;
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerEmployeeInput;
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerFreeInput;
+use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Enrollment\EnrollmentOutput;
 use AgoraLearningPhp\DTO\Output\Learner\LearnerOutput;
 use AgoraLearningPhp\DTO\Output\Person\PersonOutput;
@@ -59,7 +60,7 @@ class AgoraLearningClient
         return $this->makePerson()->getPerson($identifier);
     }
 
-    public function createPerson(PersonInput $personInput): PersonOutput
+    public function createPerson(PersonInput $personInput): CreatedOutput
     {
         return $this->makePerson()->postPerson($personInput);
     }
@@ -78,12 +79,12 @@ class AgoraLearningClient
         return $this->makeTrainer()->getTrainer($identifier);
     }
 
-    public function createTrainerEmployee(TrainerEmployeeInput $trainerEmployeeInput): TrainerOutput
+    public function createTrainerEmployee(TrainerEmployeeInput $trainerEmployeeInput): CreatedOutput
     {
         return $this->makeTrainer()->postTrainerEmployee($trainerEmployeeInput);
     }
 
-    public function createTrainerFree(TrainerFreeInput $trainerFreeInput): TrainerOutput
+    public function createTrainerFree(TrainerFreeInput $trainerFreeInput): CreatedOutput
     {
         return $this->makeTrainer()->postTrainerFree($trainerFreeInput);
     }
@@ -102,7 +103,7 @@ class AgoraLearningClient
         return $this->makeLearner()->getLearner($identifier);
     }
 
-    public function createLearner(LearnerInput $learnerInput): LearnerOutput
+    public function createLearner(LearnerInput $learnerInput): CreatedOutput
     {
         return $this->makeLearner()->postLearner($learnerInput);
     }
@@ -121,7 +122,7 @@ class AgoraLearningClient
         return $this->makeSociety()->getSociety($identifier);
     }
 
-    public function createSociety(SocietyInput $societyInput): SocietyOutput
+    public function createSociety(SocietyInput $societyInput): CreatedOutput
     {
         return $this->makeSociety()->postSociety($societyInput);
     }
@@ -140,7 +141,7 @@ class AgoraLearningClient
         return $this->makeSession()->getSession($identifier);
     }
 
-    public function createSession(SessionInput $sessionInput): SessionOutput
+    public function createSession(SessionInput $sessionInput): CreatedOutput
     {
         return $this->makeSession()->postSession($sessionInput);
     }
@@ -174,7 +175,7 @@ class AgoraLearningClient
         return $this->makeEnrollment()->getEnrollmentFromSessionAndLearner($sessionIdentifier, $learnerIdentifier);
     }
 
-    public function createEnrollment(EnrollmentInput $enrollmentInput): EnrollmentOutput
+    public function createEnrollment(EnrollmentInput $enrollmentInput): CreatedOutput
     {
         return $this->makeEnrollment()->postEnrollment($enrollmentInput);
     }

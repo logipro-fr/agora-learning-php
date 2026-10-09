@@ -26,6 +26,7 @@ class PersonTest extends AbstractAgoraLearningTest
         $birthDate = new \DateTimeImmutable('1985-06-15');
         $jobTitle = 'Développeur';
         $personInput = new PersonInput(
+            $this->newExternalId('P'),
             $familyName,
             $givenName,
             $email,
@@ -41,7 +42,8 @@ class PersonTest extends AbstractAgoraLearningTest
         );
 
         //Act
-        $personOutput = $this->client->createPerson($personInput);
+        $created = $this->client->createPerson($personInput);
+        $personOutput = $this->client->getPerson($created->agoraId);
 
         // Assert
         $this->assertEquals($familyName, $personOutput->familyName);
@@ -65,6 +67,7 @@ class PersonTest extends AbstractAgoraLearningTest
         $email = 'jean.grand@example.com';
         $gender = Gender::GENDER_MALE;
         $personInput = new PersonInput(
+            $this->newExternalId('P'),
             $familyName,
             $givenName,
             $email,
@@ -72,7 +75,8 @@ class PersonTest extends AbstractAgoraLearningTest
         );
 
         //Act
-        $personOutput = $this->client->createPerson($personInput);
+        $created = $this->client->createPerson($personInput);
+        $personOutput = $this->client->getPerson($created->agoraId);
 
         // Assert
         $this->assertEquals($familyName, $personOutput->familyName);
@@ -96,13 +100,13 @@ class PersonTest extends AbstractAgoraLearningTest
         $email = 'jean.pris@example.com';
         $gender = Gender::GENDER_MALE;
         $personInput = new PersonInput(
+            $this->newExternalId('P'),
             $familyName,
             $givenName,
             $email,
             $gender
         );
-        $output = $this->client->createPerson($personInput);
-        $uuid = $output->uuid;
+        $uuid = $this->client->createPerson($personInput)->agoraId->getId();
 
         //Act
         $personOutput = $this->client->getPerson(new AgoraId($uuid));
@@ -130,26 +134,26 @@ class PersonTest extends AbstractAgoraLearningTest
         $email1 = 'jean.un@example.com';
         $gender1 = Gender::GENDER_MALE;
         $personInput1 = new PersonInput(
+            $this->newExternalId('P'),
             $familyName1,
             $givenName1,
             $email1,
             $gender1
         );
-        $output1 = $this->client->createPerson($personInput1);
-        $uuid1 = $output1->uuid;
+        $uuid1 = $this->client->createPerson($personInput1)->agoraId->getId();
 
         $familyName2 = 'Deux';
         $givenName2 = 'Jean';
         $email2 = 'jean.deux@example.com';
         $gender2 = Gender::GENDER_MALE;
         $personInput2 = new PersonInput(
+            $this->newExternalId('P'),
             $familyName2,
             $givenName2,
             $email2,
             $gender2
         );
-        $output2 = $this->client->createPerson($personInput2);
-        $uuid2 = $output2->uuid;
+        $uuid2 = $this->client->createPerson($personInput2)->agoraId->getId();
 
         //Act
         $personOutputs = $this->client->getCollectionPerson();

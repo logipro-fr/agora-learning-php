@@ -7,6 +7,7 @@ namespace AgoraLearningPhp\Service\Session;
 use AgoraLearningPhp\DTO\Input\Session\FixedSessionInput;
 use AgoraLearningPhp\DTO\Input\Session\OpenedSessionInput;
 use AgoraLearningPhp\DTO\Input\Session\SessionInput;
+use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Session\FixedSessionOutput;
 use AgoraLearningPhp\DTO\Output\Session\OpenedSessionOutput;
 use AgoraLearningPhp\DTO\Output\Session\SessionOutput;
@@ -14,6 +15,7 @@ use AgoraLearningPhp\Enum\RequestMethod;
 use AgoraLearningPhp\Enum\SessionMode;
 use AgoraLearningPhp\Enum\SessionType;
 use AgoraLearningPhp\Identifier\ApiObjectIdentifier;
+use AgoraLearningPhp\Identifier\ExternalId;
 use AgoraLearningPhp\Service\ClientCore\ApiService;
 use AgoraLearningPhp\Service\ClientCore\ApiUrls;
 use AgoraLearningPhp\Service\Person\Person;
@@ -42,9 +44,10 @@ class Session extends ApiService
         return $this->convertResponseToDTO($response);
     }
 
-    public function postSession(SessionInput $sessionInput): SessionOutput
+    public function postSession(SessionInput $sessionInput): CreatedOutput
     {
         $data = [
+            'externalIdentifier' => $sessionInput->externalIdentifier->toArray(),
             'title' => $sessionInput->title,
             'description' => $sessionInput->description,
             'price' => $sessionInput->price,
@@ -79,13 +82,13 @@ class Session extends ApiService
                 'mode' => SessionMode::SESSION_MODE_E_LEARNING,
             ];
         } else {
-            throw new \ErrorException();
+            throw new \ErrorException('Unsupported session data type: ' . get_class($sessionInput->sessionData));
         }
 
         $data = array_merge($data, $specificData);
         $body = JsonHandler::jsonEncode($data);
         $response = $this->httpClient->request(RequestMethod::POST, $url, $body);
-        return $this->convertResponseToDTO($response);
+        return $this->convertResponsePostToDTO($response);
     }
 
     /**
@@ -94,7 +97,8 @@ class Session extends ApiService
     public static function convertDataToDTO(array $data): SessionOutput
     {
         /** @var array{
-         *     id: string,
+         *     agoraId: string,
+         *     externalIdentifier?: array<string, mixed>|null,
          *     title: string,
          *     type: string,
          *     mode: string,
@@ -120,6 +124,7 @@ class Session extends ApiService
         $urlPreTrainingSurvey = $data['urlPreTrainingSurvey'] ?? null;
         $urlOnTheSpotSurvey = $data['urlOnTheSpotSurvey'] ?? null;
         $urlDelayedSurvey = $data['urlDelayedSurvey'] ?? null;
+        $externalIdentifier = !empty($data['externalIdentifier']) ? ExternalId::fromArray($data['externalIdentifier']) : null;
 
         $pedagogicalTrainer = isset($data['pedagogicalTrainer'])
             ? Trainer::convertDataToDTO($data['pedagogicalTrainer'])
@@ -142,11 +147,11 @@ class Session extends ApiService
                 $openedData['accessDurationDays'],
             );
         } else {
-            throw new \Exception();
+            throw new \UnexpectedValueException('Session data must contain dataSessionFixed or dataSessionOpened');
         }
 
         return new SessionOutput(
-            $data['id'],
+            $data['agoraId'],
             $data['title'],
             $data['type'],
             $data['mode'],
@@ -162,7 +167,8 @@ class Session extends ApiService
             $administrativePerson,
             $urlPreTrainingSurvey,
             $urlOnTheSpotSurvey,
-            $urlDelayedSurvey
+            $urlDelayedSurvey,
+            $externalIdentifier,
         );
     }
 }

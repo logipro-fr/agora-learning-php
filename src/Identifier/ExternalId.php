@@ -51,4 +51,28 @@ final class ExternalId implements ApiObjectIdentifier
     {
         return $this->sourceName . self::SEPARATOR . $this->id;
     }
+
+    /**
+     * Reconstruit l'identifiant à partir du format renvoyé par l'API ({sourceName, id}).
+     *
+     * @param array<string, mixed> $data
+     */
+    public static function fromArray(array $data): self
+    {
+        /** @var array{sourceName: string, id: string} $data */
+        return new self($data['sourceName'], $data['id']);
+    }
+
+    /**
+     * Représentation attendue par l'API dans le corps des requêtes de création.
+     *
+     * @return array{sourceName: string, id: string}
+     */
+    public function toArray(): array
+    {
+        return [
+            'sourceName' => $this->sourceName,
+            'id' => $this->id,
+        ];
+    }
 }

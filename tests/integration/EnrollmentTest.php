@@ -18,10 +18,11 @@ class EnrollmentTest extends AbstractAgoraLearningTest
     public function testCreateEnrollment(): void
     {
         //Arrange
-        $learnerOutput = $this->client->createLearner(
-            new LearnerInput('Dupont', 'Jean', 'jean.dupont.enr@example.com', 'jean.dupont.enr@example.com')
+        $learnerCreated = $this->client->createLearner(
+            new LearnerInput($this->newExternalId('L'), 'Dupont', 'Jean', 'jean.dupont.enr@example.com', 'jean.dupont.enr@example.com')
         );
         $sessionOutput = $this->client->createSession(new SessionInput(
+            $this->newExternalId('S'),
             'Session Enrollment Test',
             new FixedSessionInput(
                 new \DateTimeImmutable('2026-09-01'),
@@ -32,27 +33,30 @@ class EnrollmentTest extends AbstractAgoraLearningTest
         ));
 
         $enrollmentInput = new EnrollmentInput(
-            $sessionOutput->uuid,
-            $learnerOutput->uuid,
+            $this->newExternalId('E'),
+            $sessionOutput->agoraId->getId(),
+            $learnerCreated->agoraId->getId(),
             true
         );
 
         //Act
-        $enrollmentOutput = $this->client->createEnrollment($enrollmentInput);
+        $created = $this->client->createEnrollment($enrollmentInput);
+        $enrollmentOutput = $this->client->getEnrollment($created->agoraId);
 
         // Assert
-        $this->assertNotEmpty($enrollmentOutput->uuid);
-        $this->assertEquals($learnerOutput->uuid, $enrollmentOutput->learner->uuid);
-        $this->assertEquals($sessionOutput->uuid, $enrollmentOutput->session->uuid);
+        $this->assertEquals($created->agoraId->getId(), $enrollmentOutput->uuid);
+        $this->assertEquals($learnerCreated->agoraId->getId(), $enrollmentOutput->learner->uuid);
+        $this->assertEquals($sessionOutput->agoraId->getId(), $enrollmentOutput->session->uuid);
     }
 
     public function testGetEnrollment(): void
     {
         //Arrange
-        $learnerOutput = $this->client->createLearner(
-            new LearnerInput('Martin', 'Luc', 'luc.martin.enr@example.com', 'luc.martin.enr@example.com')
+        $learnerCreated = $this->client->createLearner(
+            new LearnerInput($this->newExternalId('L'), 'Martin', 'Luc', 'luc.martin.enr@example.com', 'luc.martin.enr@example.com')
         );
         $sessionOutput = $this->client->createSession(new SessionInput(
+            $this->newExternalId('S'),
             'Session Get Enrollment Test',
             new FixedSessionInput(
                 new \DateTimeImmutable('2026-09-10'),
@@ -62,23 +66,24 @@ class EnrollmentTest extends AbstractAgoraLearningTest
             )
         ));
         $created = $this->client->createEnrollment(
-            new EnrollmentInput($sessionOutput->uuid, $learnerOutput->uuid, false)
+            new EnrollmentInput($this->newExternalId('E'), $sessionOutput->agoraId->getId(), $learnerCreated->agoraId->getId(), false)
         );
-        $uuid = $created->uuid;
+        $uuid = $created->agoraId->getId();
 
         //Act
         $enrollmentOutput = $this->client->getEnrollment(new AgoraId($uuid));
 
         // Assert
         $this->assertEquals($uuid, $enrollmentOutput->uuid);
-        $this->assertEquals($learnerOutput->uuid, $enrollmentOutput->learner->uuid);
-        $this->assertEquals($sessionOutput->uuid, $enrollmentOutput->session->uuid);
+        $this->assertEquals($learnerCreated->agoraId->getId(), $enrollmentOutput->learner->uuid);
+        $this->assertEquals($sessionOutput->agoraId->getId(), $enrollmentOutput->session->uuid);
     }
 
     public function testGetCollectionEnrollmentFromSession(): void
     {
         //Arrange - 1 session, 2 apprenants
         $sessionOutput = $this->client->createSession(new SessionInput(
+            $this->newExternalId('S'),
             'Session For Enrollment Collection Test',
             new FixedSessionInput(
                 new \DateTimeImmutable('2026-09-15'),
@@ -88,33 +93,33 @@ class EnrollmentTest extends AbstractAgoraLearningTest
             )
         ));
 
-        $learnerOutput1 = $this->client->createLearner(
-            new LearnerInput('Simon', 'Paul', 'paul.simon.enr1@example.com', 'paul.simon.enr1@example.com')
+        $learnerCreated1 = $this->client->createLearner(
+            new LearnerInput($this->newExternalId('L'), 'Simon', 'Paul', 'paul.simon.enr1@example.com', 'paul.simon.enr1@example.com')
         );
-        $learnerOutput2 = $this->client->createLearner(
-            new LearnerInput('Garfunkel', 'Art', 'art.garfunkel.enr2@example.com', 'art.garfunkel.enr2@example.com')
+        $learnerCreated2 = $this->client->createLearner(
+            new LearnerInput($this->newExternalId('L'), 'Garfunkel', 'Art', 'art.garfunkel.enr2@example.com', 'art.garfunkel.enr2@example.com')
         );
 
         $enrollment1 = $this->client->createEnrollment(
-            new EnrollmentInput($sessionOutput->uuid, $learnerOutput1->uuid, false)
+            new EnrollmentInput($this->newExternalId('E'), $sessionOutput->agoraId->getId(), $learnerCreated1->agoraId->getId(), false)
         );
         $enrollment2 = $this->client->createEnrollment(
-            new EnrollmentInput($sessionOutput->uuid, $learnerOutput2->uuid, false)
+            new EnrollmentInput($this->newExternalId('E'), $sessionOutput->agoraId->getId(), $learnerCreated2->agoraId->getId(), false)
         );
 
         //Act
-        $enrollmentOutputs = $this->client->getCollectionEnrollmentFromSession(new AgoraId($sessionOutput->uuid));
+        $enrollmentOutputs = $this->client->getCollectionEnrollmentFromSession($sessionOutput->agoraId);
 
         // Assert
         foreach ($enrollmentOutputs as $enrollmentOutput) {
-            if ($enrollment1->uuid === $enrollmentOutput->uuid) {
-                $this->assertEquals($enrollment1->uuid, $enrollmentOutput->uuid);
-                $this->assertEquals($learnerOutput1->uuid, $enrollmentOutput->learner->uuid);
-                $this->assertEquals($sessionOutput->uuid, $enrollmentOutput->session->uuid);
-            } elseif ($enrollment2->uuid === $enrollmentOutput->uuid) {
-                $this->assertEquals($enrollment2->uuid, $enrollmentOutput->uuid);
-                $this->assertEquals($learnerOutput2->uuid, $enrollmentOutput->learner->uuid);
-                $this->assertEquals($sessionOutput->uuid, $enrollmentOutput->session->uuid);
+            if ($enrollment1->agoraId->getId() === $enrollmentOutput->uuid) {
+                $this->assertEquals($enrollment1->agoraId->getId(), $enrollmentOutput->uuid);
+                $this->assertEquals($learnerCreated1->agoraId->getId(), $enrollmentOutput->learner->uuid);
+                $this->assertEquals($sessionOutput->agoraId->getId(), $enrollmentOutput->session->uuid);
+            } elseif ($enrollment2->agoraId->getId() === $enrollmentOutput->uuid) {
+                $this->assertEquals($enrollment2->agoraId->getId(), $enrollmentOutput->uuid);
+                $this->assertEquals($learnerCreated2->agoraId->getId(), $enrollmentOutput->learner->uuid);
+                $this->assertEquals($sessionOutput->agoraId->getId(), $enrollmentOutput->session->uuid);
             }
         }
     }
@@ -122,11 +127,12 @@ class EnrollmentTest extends AbstractAgoraLearningTest
     public function testGetCollectionEnrollmentFromLearner(): void
     {
         //Arrange - 1 apprenant, 2 sessions
-        $learnerOutput = $this->client->createLearner(
-            new LearnerInput('Lennon', 'John', 'john.lennon.enr@example.com', 'john.lennon.enr@example.com')
+        $learnerCreated = $this->client->createLearner(
+            new LearnerInput($this->newExternalId('L'), 'Lennon', 'John', 'john.lennon.enr@example.com', 'john.lennon.enr@example.com')
         );
 
         $sessionOutput1 = $this->client->createSession(new SessionInput(
+            $this->newExternalId('S'),
             'Session FIXED Learner Collection Test 1',
             new FixedSessionInput(
                 new \DateTimeImmutable('2026-10-01'),
@@ -136,6 +142,7 @@ class EnrollmentTest extends AbstractAgoraLearningTest
             )
         ));
         $sessionOutput2 = $this->client->createSession(new SessionInput(
+            $this->newExternalId('S'),
             'Session OPENED Learner Collection Test 2',
             new OpenedSessionInput(
                 new \DateTimeImmutable('2026-11-01'),
@@ -145,25 +152,25 @@ class EnrollmentTest extends AbstractAgoraLearningTest
         ));
 
         $enrollment1 = $this->client->createEnrollment(
-            new EnrollmentInput($sessionOutput1->uuid, $learnerOutput->uuid, false)
+            new EnrollmentInput($this->newExternalId('E'), $sessionOutput1->agoraId->getId(), $learnerCreated->agoraId->getId(), false)
         );
         $enrollment2 = $this->client->createEnrollment(
-            new EnrollmentInput($sessionOutput2->uuid, $learnerOutput->uuid, false)
+            new EnrollmentInput($this->newExternalId('E'), $sessionOutput2->agoraId->getId(), $learnerCreated->agoraId->getId(), false)
         );
 
         //Act
-        $enrollmentOutputs = $this->client->getCollectionEnrollmentFromLearner(new AgoraId($learnerOutput->uuid));
+        $enrollmentOutputs = $this->client->getCollectionEnrollmentFromLearner($learnerCreated->agoraId);
 
         // Assert
         foreach ($enrollmentOutputs as $enrollmentOutput) {
-            if ($enrollment1->uuid === $enrollmentOutput->uuid) {
-                $this->assertEquals($enrollment1->uuid, $enrollmentOutput->uuid);
-                $this->assertEquals($learnerOutput->uuid, $enrollmentOutput->learner->uuid);
-                $this->assertEquals($sessionOutput1->uuid, $enrollmentOutput->session->uuid);
-            } elseif ($enrollment2->uuid === $enrollmentOutput->uuid) {
-                $this->assertEquals($enrollment2->uuid, $enrollmentOutput->uuid);
-                $this->assertEquals($learnerOutput->uuid, $enrollmentOutput->learner->uuid);
-                $this->assertEquals($sessionOutput2->uuid, $enrollmentOutput->session->uuid);
+            if ($enrollment1->agoraId->getId() === $enrollmentOutput->uuid) {
+                $this->assertEquals($enrollment1->agoraId->getId(), $enrollmentOutput->uuid);
+                $this->assertEquals($learnerCreated->agoraId->getId(), $enrollmentOutput->learner->uuid);
+                $this->assertEquals($sessionOutput1->agoraId->getId(), $enrollmentOutput->session->uuid);
+            } elseif ($enrollment2->agoraId->getId() === $enrollmentOutput->uuid) {
+                $this->assertEquals($enrollment2->agoraId->getId(), $enrollmentOutput->uuid);
+                $this->assertEquals($learnerCreated->agoraId->getId(), $enrollmentOutput->learner->uuid);
+                $this->assertEquals($sessionOutput2->agoraId->getId(), $enrollmentOutput->session->uuid);
             }
         }
     }
@@ -171,10 +178,11 @@ class EnrollmentTest extends AbstractAgoraLearningTest
     public function testGetEnrollmentFromSessionAndLearner(): void
     {
         //Arrange
-        $learnerOutput = $this->client->createLearner(
-            new LearnerInput('McCartney', 'Paul', 'paul.mccartney.enr@example.com', 'paul.mccartney.enr@example.com')
+        $learnerCreated = $this->client->createLearner(
+            new LearnerInput($this->newExternalId('L'), 'McCartney', 'Paul', 'paul.mccartney.enr@example.com', 'paul.mccartney.enr@example.com')
         );
         $sessionOutput = $this->client->createSession(new SessionInput(
+            $this->newExternalId('S'),
             'Session For Enrollment By Session And Learner Test',
             new FixedSessionInput(
                 new \DateTimeImmutable('2026-09-22'),
@@ -184,18 +192,18 @@ class EnrollmentTest extends AbstractAgoraLearningTest
             )
         ));
         $created = $this->client->createEnrollment(
-            new EnrollmentInput($sessionOutput->uuid, $learnerOutput->uuid, false)
+            new EnrollmentInput($this->newExternalId('E'), $sessionOutput->agoraId->getId(), $learnerCreated->agoraId->getId(), false)
         );
 
         //Act
         $enrollmentOutput = $this->client->getEnrollmentFromSessionAndLearner(
-            new AgoraId($sessionOutput->uuid),
-            new AgoraId($learnerOutput->uuid)
+            $sessionOutput->agoraId,
+            $learnerCreated->agoraId
         );
 
         // Assert
-        $this->assertEquals($created->uuid, $enrollmentOutput->uuid);
-        $this->assertEquals($learnerOutput->uuid, $enrollmentOutput->learner->uuid);
-        $this->assertEquals($sessionOutput->uuid, $enrollmentOutput->session->uuid);
+        $this->assertEquals($created->agoraId->getId(), $enrollmentOutput->uuid);
+        $this->assertEquals($learnerCreated->agoraId->getId(), $enrollmentOutput->learner->uuid);
+        $this->assertEquals($sessionOutput->agoraId->getId(), $enrollmentOutput->session->uuid);
     }
 }

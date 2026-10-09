@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AgoraLearningPhp\Tests\unit\Service\Person;
 
 use AgoraLearningPhp\DTO\Input\Person\PersonInput;
+use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Person\PersonOutput;
 use AgoraLearningPhp\Enum\Gender;
 use AgoraLearningPhp\Exception\AgoraLearningClientException;
@@ -23,10 +24,19 @@ class PersonTest extends ServiceTestCase
     private function makeMinimalData(): array
     {
         return [
-            'id'         => 'person-uuid-001',
+            'agoraId'    => 'person-uuid-001',
             'familyName' => 'Martin',
             'givenName'  => 'Claire',
             'email'  => 'claire.martin@example.net'
+        ];
+    }
+
+    private function makeCreatedData(string $agoraId): array
+    {
+        return [
+            'agoraId'    => $agoraId,
+            'sourceName' => 'Test',
+            'externalId' => 'P-1',
         ];
     }
 
@@ -86,6 +96,30 @@ class PersonTest extends ServiceTestCase
         $this->assertNull($dto->addressCountry);
         $this->assertNull($dto->birthDate);
         $this->assertNull($dto->jobTitle);
+    }
+
+    public function testConvertDataToDTOMapsExternalIdentifier(): void
+    {
+        // Arrange
+        $data = array_merge($this->makeMinimalData(), [
+            'externalIdentifier' => ['sourceName' => 'MonERP', 'id' => 'P-42'],
+        ]);
+
+        // Act
+        $dto = Person::convertDataToDTO($data);
+
+        // Assert
+        $this->assertInstanceOf(ExternalId::class, $dto->externalIdentifier);
+        $this->assertSame('MonERP:P-42', $dto->externalIdentifier->getId());
+    }
+
+    public function testConvertDataToDTOSetsExternalIdentifierToNullWhenAbsent(): void
+    {
+        // Act
+        $dto = Person::convertDataToDTO($this->makeMinimalData());
+
+        // Assert
+        $this->assertNull($dto->externalIdentifier);
     }
 
     public function testConvertDataToDTOMapsGender(): void
@@ -175,8 +209,8 @@ class PersonTest extends ServiceTestCase
     {
         // Arrange
         $body   = json_encode([
-            array_merge($this->makeMinimalData(), ['id' => 'p1']),
-            array_merge($this->makeMinimalData(), ['id' => 'p2']),
+            array_merge($this->makeMinimalData(), ['agoraId' => 'p1']),
+            array_merge($this->makeMinimalData(), ['agoraId' => 'p2']),
         ]);
         $person = $this->makePerson($this->makeHttpClientWithResponse(200, $body));
 
@@ -243,11 +277,12 @@ class PersonTest extends ServiceTestCase
     public function testPostPersonWithBirthDate(): void
     {
         // Arrange
-        $responseData = array_merge($this->makeMinimalData(), ['id' => 'person-new-001']);
+        $responseData = $this->makeCreatedData('per_new_001');
         $person       = $this->makePerson(
             $this->makeHttpClientWithResponse(200, json_encode($responseData))
         );
         $input = new PersonInput(
+            new ExternalId('Test', 'P-1'),
             'Nouveau',
             'Contact',
             'contact@example.com',
@@ -266,34 +301,37 @@ class PersonTest extends ServiceTestCase
         $result = $person->postPerson($input);
 
         // Assert
-        $this->assertInstanceOf(PersonOutput::class, $result);
-        $this->assertSame('person-new-001', $result->uuid);
+        $this->assertInstanceOf(CreatedOutput::class, $result);
+        $this->assertSame('per_new_001', $result->agoraId->getId());
+        $this->assertNotNull($result->externalId);
+        $this->assertSame('Test:P-1', $result->externalId->getId());
     }
 
     public function testPostPersonWithoutBirthDate(): void
     {
         // Arrange
-        $responseData = array_merge($this->makeMinimalData(), ['id' => 'person-new-002']);
+        $responseData = $this->makeCreatedData('per_new_002');
         $person       = $this->makePerson(
             $this->makeHttpClientWithResponse(200, json_encode($responseData))
         );
 
         // Act
-        $result = $person->postPerson(new PersonInput('Test', 'Contact', 'contact@example.com'));
+        $result = $person->postPerson(new PersonInput(new ExternalId('Test', 'P-2'), 'Test', 'Contact', 'contact@example.com'));
 
         // Assert
-        $this->assertInstanceOf(PersonOutput::class, $result);
+        $this->assertInstanceOf(CreatedOutput::class, $result);
     }
 
     public function testPostPersonSendsAllFieldsInBody(): void
     {
         // Arrange
         $capturedBody = '';
-        $responseData = array_merge($this->makeMinimalData(), ['id' => 'person-new-003']);
+        $responseData = $this->makeCreatedData('per_new_003');
         $person       = $this->makePerson(
             $this->makeHttpClientInspectingBody(200, json_encode($responseData), $capturedBody)
         );
         $input = new PersonInput(
+            new ExternalId('Test', 'P-3'),
             'Martin',
             'Claire',
             'claire@example.com',

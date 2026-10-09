@@ -8,10 +8,12 @@ $config = require __DIR__ . '/../config.php';
 use AgoraLearningPhp\AgoraLearningClient;
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerEmployeeInput;
 use AgoraLearningPhp\Enum\Gender;
+use AgoraLearningPhp\Identifier\ExternalId;
 
 $client = new AgoraLearningClient($config['url'], $config['api_key']);
 
 $trainerInput = new TrainerEmployeeInput(
+    new ExternalId('MonERP', uniqid('T-')),
     'Martin',
     'Sophie',
     'sophie.martin@example.com',
@@ -27,7 +29,7 @@ $trainerInput = new TrainerEmployeeInput(
     'https://www.agora-learning.com/apiAgoraLearning/ressources/femme.jpg',
     new \DateTimeImmutable('1990-03-20'),
     'Formatrice senior',
-    'soc_01XXXXXXXXXXXXXXXXXXXXXXXXX',
+    null,
     'https://www.agora-learning.com/apiAgoraLearning/ressources/a-pdf-test.pdf',
     'https://www.agora-learning.com/apiAgoraLearning/ressources/a-pdf-test.pdf',
     'https://www.agora-learning.com/apiAgoraLearning/ressources/a-pdf-test.pdf',
@@ -35,8 +37,9 @@ $trainerInput = new TrainerEmployeeInput(
 );
 
 try {
-    $trainer = $client->createTrainerEmployee($trainerInput);
-    var_dump($trainer);
+    $created = $client->createTrainerEmployee($trainerInput);
+    var_dump($created);
+    var_dump($client->getTrainer($created->agoraId));
 } catch (\Exception $e) {
     echo 'Erreur : ' . $e->getMessage() . PHP_EOL;
     exit(1);

@@ -6,6 +6,7 @@ namespace AgoraLearningPhp\DTO\Output\Trainer;
 
 use AgoraLearningPhp\DTO\Output\Society\SocietyOutput;
 use AgoraLearningPhp\Enum\Gender;
+use AgoraLearningPhp\Identifier\ExternalId;
 
 final class TrainerFreeOutput extends TrainerOutput
 {
@@ -35,6 +36,7 @@ final class TrainerFreeOutput extends TrainerOutput
     public ?string $billingAddressPostcode;
     public ?string $billingAddressLocality;
     public ?string $billingAddressCountry;
+    public ?ExternalId $externalIdentifier;
 
     /**
      * @param array<int, mixed> $educationalManagerSessions
@@ -64,7 +66,8 @@ final class TrainerFreeOutput extends TrainerOutput
         ?string $billingAddressStreet = null,
         ?string $billingAddressPostcode = null,
         ?string $billingAddressLocality = null,
-        ?string $billingAddressCountry = null
+        ?string $billingAddressCountry = null,
+        ?ExternalId $externalIdentifier = null
     ) {
         $this->uuid = $uuid;
         $this->familyName = $familyName;
@@ -90,6 +93,7 @@ final class TrainerFreeOutput extends TrainerOutput
         $this->billingAddressPostcode = $billingAddressPostcode;
         $this->billingAddressLocality = $billingAddressLocality;
         $this->billingAddressCountry = $billingAddressCountry;
+        $this->externalIdentifier = $externalIdentifier;
         $this->educationalManagerSessions = $educationalManagerSessions;
     }
 }
