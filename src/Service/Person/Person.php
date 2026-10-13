@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AgoraLearningPhp\Service\Person;
 
 use AgoraLearningPhp\DTO\Input\Person\PersonInput;
+use AgoraLearningPhp\DTO\Input\Person\PersonPatchInput;
 use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Person\PersonOutput;
 use AgoraLearningPhp\Enum\Gender;
@@ -39,25 +40,52 @@ class Person extends ApiService
 
     public function postPerson(PersonInput $personInput): CreatedOutput
     {
-        $body = JsonHandler::jsonEncode(
-            [
-                "externalIdentifier" => $personInput->externalIdentifier->toArray(),
-                "familyName" => $personInput->familyName,
-                "givenName" => $personInput->givenName,
-                "email" => $personInput->email,
-                "gender" => $personInput->gender,
-                "birthDate" => $personInput->birthDate ? $personInput->birthDate->format(self::DATETIME_FORMAT) : null,
-                "jobTitle" => $personInput->jobTitle,
-                "addressStreet" => $personInput->addressStreet,
-                "addressPostcode" => $personInput->addressPostcode,
-                "addressLocality" => $personInput->addressLocality,
-                "addressCountry" => $personInput->addressCountry,
-                "telephone" => $personInput->telephone,
-                "image" => $personInput->image
-            ]
-        );
+        $body = JsonHandler::jsonEncode($this->buildBody($personInput));
         $response = $this->httpClient->request(RequestMethod::POST, ApiUrls::getCreatePerson(), $body);
         return $this->convertResponsePostToDTO($response);
+    }
+
+    /**
+     * Remplace le contact (PUT) : un champ facultatif non renseigné est vidé.
+     */
+    public function putPerson(ApiObjectIdentifier $identifier, PersonInput $personInput): CreatedOutput
+    {
+        $body = JsonHandler::jsonEncode($this->buildBody($personInput));
+        $response = $this->httpClient->request(RequestMethod::PUT, ApiUrls::getUpdatePerson($identifier->getId()), $body);
+        return $this->convertResponsePostToDTO($response);
+    }
+
+    /**
+     * Modifie partiellement le contact (PATCH) : seuls les champs renseignés sont modifiés.
+     */
+    public function patchPerson(ApiObjectIdentifier $identifier, PersonPatchInput $personPatchInput): CreatedOutput
+    {
+        return $this->sendPatch(ApiUrls::getUpdatePerson($identifier->getId()), $personPatchInput);
+    }
+
+    /**
+     * Corps commun à la création (POST) et au remplacement (PUT).
+     *
+     * @return array<string, mixed>
+     */
+    private function buildBody(PersonInput $personInput): array
+    {
+        return [
+            "externalIdentifier" => $personInput->externalIdentifier->toArray(),
+            "familyName" => $personInput->familyName,
+            "givenName" => $personInput->givenName,
+            "email" => $personInput->email,
+            "gender" => $personInput->gender,
+            "birthDate" => $personInput->birthDate ? $personInput->birthDate->format(self::DATETIME_FORMAT) : null,
+            "jobTitle" => $personInput->jobTitle,
+            "addressStreet" => $personInput->addressStreet,
+            "addressPostcode" => $personInput->addressPostcode,
+            "addressLocality" => $personInput->addressLocality,
+            "addressCountry" => $personInput->addressCountry,
+            "telephone" => $personInput->telephone,
+            "mobileNumber" => $personInput->mobileNumber,
+            "image" => $personInput->image
+        ];
     }
 
     /**

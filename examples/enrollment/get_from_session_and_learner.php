@@ -10,8 +10,8 @@ use AgoraLearningPhp\Identifier\AgoraId;
 
 $client = new AgoraLearningClient($config['url'], $config['api_key']);
 
-$sessionUuid = 'ses_01XXXXXXXXXXXXXXXXXXXXXXXXX';
-$learnerUuid = 'per_01XXXXXXXXXXXXXXXXXXXXXXXXX';
+$sessionUuid = 'ses_01M4R73VMPFMPS3SX4YTP17XRJ';
+$learnerUuid = 'per_01M4R6GRADFF59XSF523S4GVY8';
 
 try {
     $enrollment = $client->getEnrollmentFromSessionAndLearner(new AgoraId($sessionUuid), new AgoraId($learnerUuid));

@@ -141,4 +141,47 @@ class HttpClientTest extends ServiceTestCase
         // Assert
         $this->assertFalse($result);
     }
+
+    public function testRequestUsesMergePatchContentTypeForPatch(): void
+    {
+        // Arrange
+        $this->injectCachedToken('tok');
+        $tokenHandler   = new TokenHandler($this->createMock(HttpClientInterface::class));
+        $mockResponse   = $this->createMock(ResponseInterface::class);
+        $mockHttpClient = $this->createMock(HttpClientInterface::class);
+        $mockHttpClient->expects($this->once())
+            ->method('request')
+            ->with(
+                'PATCH',
+                $this->anything(),
+                $this->callback(function (array $options) {
+                    return $options['headers']['Content-Type'] === 'application/merge-patch+json'
+                        && $options['headers']['Accept'] === 'application/json';
+                })
+            )
+            ->willReturn($mockResponse);
+
+        // Act
+        (new HttpClient($mockHttpClient, $tokenHandler))->request('PATCH', 'http://x', '{}');
+
+        // Assert — verified via mock expectation above
+    }
+
+    public function testGetContentTypeReturnsJsonForPut(): void
+    {
+        // Act
+        $result = HttpClient::getContentType('PUT');
+
+        // Assert
+        $this->assertSame('application/json', $result);
+    }
+
+    public function testGetContentTypeReturnsMergePatchForPatch(): void
+    {
+        // Act
+        $result = HttpClient::getContentType('PATCH');
+
+        // Assert
+        $this->assertSame('application/merge-patch+json', $result);
+    }
 }

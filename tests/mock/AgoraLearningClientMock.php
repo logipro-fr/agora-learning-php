@@ -7,11 +7,17 @@ namespace AgoraLearningPhp\Tests\mock;
 use AgoraLearningPhp\AgoraLearningClient;
 use AgoraLearningPhp\DTO\Input\Enrollment\EnrollmentInput;
 use AgoraLearningPhp\DTO\Input\Learner\LearnerInput;
+use AgoraLearningPhp\DTO\Input\Learner\LearnerPatchInput;
 use AgoraLearningPhp\DTO\Input\Person\PersonInput;
+use AgoraLearningPhp\DTO\Input\Person\PersonPatchInput;
+use AgoraLearningPhp\DTO\Input\Session\AbstractSessionPatchInput;
 use AgoraLearningPhp\DTO\Input\Session\SessionInput;
 use AgoraLearningPhp\DTO\Input\Society\SocietyInput;
+use AgoraLearningPhp\DTO\Input\Society\SocietyPatchInput;
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerEmployeeInput;
+use AgoraLearningPhp\DTO\Input\Trainer\TrainerEmployeePatchInput;
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerFreeInput;
+use AgoraLearningPhp\DTO\Input\Trainer\TrainerFreePatchInput;
 use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Enrollment\EnrollmentOutput;
 use AgoraLearningPhp\DTO\Output\Learner\LearnerOutput;
@@ -28,6 +34,7 @@ use AgoraLearningPhp\Enum\SessionMode;
 use AgoraLearningPhp\Enum\SessionType;
 use AgoraLearningPhp\Identifier\AgoraId;
 use AgoraLearningPhp\Identifier\ApiObjectIdentifier;
+use AgoraLearningPhp\Identifier\ExternalId;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -107,6 +114,16 @@ class AgoraLearningClientMock extends AgoraLearningClient
             new AgoraId('per_01XXXXXXXXXXXXXXXXXXXXXXXXX'),
             $personInput->externalIdentifier
         );
+    }
+
+    public function replacePerson(ApiObjectIdentifier $identifier, PersonInput $personInput): CreatedOutput
+    {
+        return $this->makeUpdatedOutput($identifier, 'per_01XXXXXXXXXXXXXXXXXXXXXXXXX', $personInput->externalIdentifier);
+    }
+
+    public function patchPerson(ApiObjectIdentifier $identifier, PersonPatchInput $personPatchInput): CreatedOutput
+    {
+        return $this->makeUpdatedOutput($identifier, 'per_01XXXXXXXXXXXXXXXXXXXXXXXXX');
     }
 
     // Trainer
@@ -203,12 +220,32 @@ class AgoraLearningClientMock extends AgoraLearningClient
         );
     }
 
+    public function replaceTrainerEmployee(ApiObjectIdentifier $identifier, TrainerEmployeeInput $trainerEmployeeInput): CreatedOutput
+    {
+        return $this->makeUpdatedOutput($identifier, 'per_01XXXXXXXXXXXXXXXXXXXXXXXXX', $trainerEmployeeInput->externalIdentifier);
+    }
+
+    public function patchTrainerEmployee(ApiObjectIdentifier $identifier, TrainerEmployeePatchInput $trainerEmployeePatchInput): CreatedOutput
+    {
+        return $this->makeUpdatedOutput($identifier, 'per_01XXXXXXXXXXXXXXXXXXXXXXXXX');
+    }
+
     public function createTrainerFree(TrainerFreeInput $trainerFreeInput): CreatedOutput
     {
         return new CreatedOutput(
             new AgoraId('per_01XXXXXXXXXXXXXXXXXXXXXXXXX'),
             $trainerFreeInput->externalIdentifier
         );
+    }
+
+    public function replaceTrainerFree(ApiObjectIdentifier $identifier, TrainerFreeInput $trainerFreeInput): CreatedOutput
+    {
+        return $this->makeUpdatedOutput($identifier, 'per_01XXXXXXXXXXXXXXXXXXXXXXXXX', $trainerFreeInput->externalIdentifier);
+    }
+
+    public function patchTrainerFree(ApiObjectIdentifier $identifier, TrainerFreePatchInput $trainerFreePatchInput): CreatedOutput
+    {
+        return $this->makeUpdatedOutput($identifier, 'per_01XXXXXXXXXXXXXXXXXXXXXXXXX');
     }
 
     // Learner
@@ -271,6 +308,16 @@ class AgoraLearningClientMock extends AgoraLearningClient
             new AgoraId('per_01XXXXXXXXXXXXXXXXXXXXXXXXX'),
             $learnerInput->externalIdentifier
         );
+    }
+
+    public function replaceLearner(ApiObjectIdentifier $identifier, LearnerInput $learnerInput): CreatedOutput
+    {
+        return $this->makeUpdatedOutput($identifier, 'per_01XXXXXXXXXXXXXXXXXXXXXXXXX', $learnerInput->externalIdentifier);
+    }
+
+    public function patchLearner(ApiObjectIdentifier $identifier, LearnerPatchInput $learnerPatchInput): CreatedOutput
+    {
+        return $this->makeUpdatedOutput($identifier, 'per_01XXXXXXXXXXXXXXXXXXXXXXXXX');
     }
 
     // Society
@@ -371,6 +418,16 @@ class AgoraLearningClientMock extends AgoraLearningClient
             new AgoraId('soc_01XXXXXXXXXXXXXXXXXXXXXXXXX'),
             $societyInput->externalIdentifier
         );
+    }
+
+    public function replaceSociety(ApiObjectIdentifier $identifier, SocietyInput $societyInput): CreatedOutput
+    {
+        return $this->makeUpdatedOutput($identifier, 'soc_01XXXXXXXXXXXXXXXXXXXXXXXXX', $societyInput->externalIdentifier);
+    }
+
+    public function patchSociety(ApiObjectIdentifier $identifier, SocietyPatchInput $societyPatchInput): CreatedOutput
+    {
+        return $this->makeUpdatedOutput($identifier, 'soc_01XXXXXXXXXXXXXXXXXXXXXXXXX');
     }
 
     // Session
@@ -496,6 +553,16 @@ class AgoraLearningClientMock extends AgoraLearningClient
             new AgoraId('ses_01XXXXXXXXXXXXXXXXXXXXXXXXX'),
             $sessionInput->externalIdentifier
         );
+    }
+
+    public function replaceSession(ApiObjectIdentifier $identifier, SessionInput $sessionInput): CreatedOutput
+    {
+        return $this->makeUpdatedOutput($identifier, 'ses_01XXXXXXXXXXXXXXXXXXXXXXXXX', $sessionInput->externalIdentifier);
+    }
+
+    public function patchSession(ApiObjectIdentifier $identifier, AbstractSessionPatchInput $sessionPatchInput): CreatedOutput
+    {
+        return $this->makeUpdatedOutput($identifier, 'ses_01XXXXXXXXXXXXXXXXXXXXXXXXX');
     }
 
     // Enrollment
@@ -863,6 +930,24 @@ class AgoraLearningClientMock extends AgoraLearningClient
         return new CreatedOutput(
             new AgoraId('enr_01XXXXXXXXXXXXXXXXXXXXXXXXX'),
             $enrollmentInput->externalIdentifier
+        );
+    }
+
+    /**
+     * Réponse factice d'une modification : reprend l'identifiant de l'URL s'il est du bon type.
+     */
+    private function makeUpdatedOutput(
+        ApiObjectIdentifier $identifier,
+        string $defaultAgoraId,
+        ?ExternalId $externalId = null
+    ): CreatedOutput {
+        if ($externalId === null && $identifier instanceof ExternalId) {
+            $externalId = $identifier;
+        }
+
+        return new CreatedOutput(
+            $identifier instanceof AgoraId ? $identifier : new AgoraId($defaultAgoraId),
+            $externalId
         );
     }
 }

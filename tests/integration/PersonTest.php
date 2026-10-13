@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AgoraLearningPhp\Tests\integration;
 
 use AgoraLearningPhp\DTO\Input\Person\PersonInput;
+use AgoraLearningPhp\DTO\Input\Person\PersonPatchInput;
 use AgoraLearningPhp\Enum\Gender;
 use AgoraLearningPhp\Identifier\AgoraId;
 
@@ -188,5 +189,64 @@ class PersonTest extends AbstractAgoraLearningTest
                 $this->assertNull($personOutput->jobTitle);
             }
         }
+    }
+
+    public function testReplacePerson(): void
+    {
+        //Arrange
+        $externalId = $this->newExternalId('P');
+        $this->client->createPerson(new PersonInput(
+            $externalId,
+            'Avant',
+            'Jean',
+            'jean.avant@example.com',
+            Gender::GENDER_MALE,
+            '0123456789'
+        ));
+
+        //Act
+        $this->client->replacePerson(
+            $externalId,
+            new PersonInput($externalId, 'Apres', 'Jeanne', 'jeanne.apres@example.com', Gender::GENDER_FEMALE)
+        );
+        $personOutput = $this->client->getPerson($externalId);
+
+        // Assert
+        $this->assertEquals('Apres', $personOutput->familyName);
+        $this->assertEquals('Jeanne', $personOutput->givenName);
+        $this->assertEquals(Gender::GENDER_FEMALE, $personOutput->gender);
+        $this->assertEmpty($personOutput->telephone);
+    }
+
+    public function testPatchPerson(): void
+    {
+        //Arrange
+        $created = $this->client->createPerson(new PersonInput(
+            $this->newExternalId('P'),
+            'Patch',
+            'Jean',
+            'jean.patch@example.com',
+            Gender::GENDER_MALE,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            'Développeur'
+        ));
+
+        //Act
+        $this->client->patchPerson(
+            $created->agoraId,
+            (new PersonPatchInput())->setTelephone('0102030405')->setJobTitle(null)
+        );
+        $personOutput = $this->client->getPerson($created->agoraId);
+
+        // Assert
+        $this->assertEquals('Patch', $personOutput->familyName);
+        $this->assertEquals('0102030405', $personOutput->telephone);
+        $this->assertEmpty($personOutput->jobTitle);
     }
 }

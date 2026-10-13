@@ -25,8 +25,8 @@ class EnrollmentTest extends AbstractAgoraLearningTest
             $this->newExternalId('S'),
             'Session Enrollment Test',
             new FixedSessionInput(
-                new \DateTimeImmutable('2026-09-01'),
-                new \DateTimeImmutable('2026-09-05'),
+                new \DateTimeImmutable('+30 days'),
+                new \DateTimeImmutable('+34 days'),
                 SessionType::SESSION_TYPE_INTER,
                 SessionMode::SESSION_MODE_FACE_TO_FACE
             )
@@ -59,8 +59,8 @@ class EnrollmentTest extends AbstractAgoraLearningTest
             $this->newExternalId('S'),
             'Session Get Enrollment Test',
             new FixedSessionInput(
-                new \DateTimeImmutable('2026-09-10'),
-                new \DateTimeImmutable('2026-09-12'),
+                new \DateTimeImmutable('+40 days'),
+                new \DateTimeImmutable('+42 days'),
                 SessionType::SESSION_TYPE_INTER,
                 SessionMode::SESSION_MODE_FACE_TO_FACE
             )
@@ -86,8 +86,8 @@ class EnrollmentTest extends AbstractAgoraLearningTest
             $this->newExternalId('S'),
             'Session For Enrollment Collection Test',
             new FixedSessionInput(
-                new \DateTimeImmutable('2026-09-15'),
-                new \DateTimeImmutable('2026-09-19'),
+                new \DateTimeImmutable('+45 days'),
+                new \DateTimeImmutable('+49 days'),
                 SessionType::SESSION_TYPE_INTER,
                 SessionMode::SESSION_MODE_FACE_TO_FACE
             )
@@ -135,8 +135,8 @@ class EnrollmentTest extends AbstractAgoraLearningTest
             $this->newExternalId('S'),
             'Session FIXED Learner Collection Test 1',
             new FixedSessionInput(
-                new \DateTimeImmutable('2026-10-01'),
-                new \DateTimeImmutable('2026-10-03'),
+                new \DateTimeImmutable('+60 days'),
+                new \DateTimeImmutable('+62 days'),
                 SessionType::SESSION_TYPE_INTER,
                 SessionMode::SESSION_MODE_FACE_TO_FACE
             )
@@ -145,8 +145,8 @@ class EnrollmentTest extends AbstractAgoraLearningTest
             $this->newExternalId('S'),
             'Session OPENED Learner Collection Test 2',
             new OpenedSessionInput(
-                new \DateTimeImmutable('2026-11-01'),
-                new \DateTimeImmutable('2026-11-30'),
+                new \DateTimeImmutable('+90 days'),
+                new \DateTimeImmutable('+119 days'),
                 30
             )
         ));
@@ -185,8 +185,8 @@ class EnrollmentTest extends AbstractAgoraLearningTest
             $this->newExternalId('S'),
             'Session For Enrollment By Session And Learner Test',
             new FixedSessionInput(
-                new \DateTimeImmutable('2026-09-22'),
-                new \DateTimeImmutable('2026-09-26'),
+                new \DateTimeImmutable('+52 days'),
+                new \DateTimeImmutable('+56 days'),
                 SessionType::SESSION_TYPE_INTRA,
                 SessionMode::SESSION_MODE_DISTANCE
             )

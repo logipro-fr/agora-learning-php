@@ -22,28 +22,35 @@ class ApiUrls
     public const CREATE_PERSON = self::PREFIX_API . self::API_VERSION . '/persons';
     public const GET_PERSON = self::PREFIX_API . self::API_VERSION . '/persons/';
     public const GET_COLLECTION_PERSON = self::PREFIX_API . self::API_VERSION . '/persons';
+    public const UPDATE_PERSON = self::PREFIX_API . self::API_VERSION . '/persons/';
 
     // TRAINER
     public const CREATE_TRAINER_EMPLOYEE = self::PREFIX_API . self::API_VERSION . '/trainers/employee';
     public const CREATE_TRAINER_FREE = self::PREFIX_API . self::API_VERSION . '/trainers/free';
     public const GET_TRAINER = self::PREFIX_API . self::API_VERSION . '/trainers/';
     public const GET_COLLECTION_TRAINER = self::PREFIX_API . self::API_VERSION . '/trainers';
+    public const UPDATE_TRAINER_EMPLOYEE = self::PREFIX_API . self::API_VERSION . '/trainers/employee/';
+    public const UPDATE_TRAINER_FREE = self::PREFIX_API . self::API_VERSION . '/trainers/free/';
 
     // LEARNER
     public const CREATE_LEARNER = self::PREFIX_API . self::API_VERSION . '/learners';
     public const GET_LEARNER = self::PREFIX_API . self::API_VERSION . '/learners/';
     public const GET_COLLECTION_LEARNER = self::PREFIX_API . self::API_VERSION . '/learners';
+    public const UPDATE_LEARNER = self::PREFIX_API . self::API_VERSION . '/learners/';
 
     // SESSION
     public const CREATE_FIXED_SESSION = self::PREFIX_API . self::API_VERSION . '/sessions/fixed';
     public const CREATE_OPEN_SESSION = self::PREFIX_API . self::API_VERSION . '/sessions/opened';
     public const GET_SESSION = self::PREFIX_API . self::API_VERSION . '/sessions/';
     public const GET_COLLECTION_SESSION = self::PREFIX_API . self::API_VERSION . '/sessions';
+    public const UPDATE_FIXED_SESSION = self::PREFIX_API . self::API_VERSION . '/sessions/fixed/';
+    public const UPDATE_OPEN_SESSION = self::PREFIX_API . self::API_VERSION . '/sessions/opened/';
 
     // SOCIETY
     public const CREATE_SOCIETY = self::PREFIX_API . self::API_VERSION . '/societies';
     public const GET_SOCIETY = self::PREFIX_API . self::API_VERSION . '/societies/';
     public const GET_COLLECTION_SOCIETY = self::PREFIX_API . self::API_VERSION . '/societies';
+    public const UPDATE_SOCIETY = self::PREFIX_API . self::API_VERSION . '/societies/';
 
     // ENROLLMENT
     public const CREATE_ENROLLMENT = self::PREFIX_API . self::API_VERSION . '/enrollments';
@@ -100,6 +107,16 @@ class ApiUrls
         return self::getBaseUrl() . self::GET_COLLECTION_PERSON;
     }
 
+    /**
+     * URL de modification (PUT / PATCH).
+     *
+     * @param string $identifier Identifiant brut (uuid Agora ou "source:id"), encodé ici
+     */
+    public static function getUpdatePerson(string $identifier): string
+    {
+        return self::getBaseUrl() . self::UPDATE_PERSON . rawurlencode($identifier);
+    }
+
     // TRAINER
     public static function getCreateTrainerEmployee(): string
     {
@@ -124,6 +141,26 @@ class ApiUrls
         return self::getBaseUrl() . self::GET_COLLECTION_TRAINER;
     }
 
+    /**
+     * URL de modification (PUT / PATCH).
+     *
+     * @param string $identifier Identifiant brut (uuid Agora ou "source:id"), encodé ici
+     */
+    public static function getUpdateTrainerEmployee(string $identifier): string
+    {
+        return self::getBaseUrl() . self::UPDATE_TRAINER_EMPLOYEE . rawurlencode($identifier);
+    }
+
+    /**
+     * URL de modification (PUT / PATCH).
+     *
+     * @param string $identifier Identifiant brut (uuid Agora ou "source:id"), encodé ici
+     */
+    public static function getUpdateTrainerFree(string $identifier): string
+    {
+        return self::getBaseUrl() . self::UPDATE_TRAINER_FREE . rawurlencode($identifier);
+    }
+
     // LEARNER
     public static function getCreateLearner(): string
     {
@@ -141,6 +178,16 @@ class ApiUrls
     public static function getGetCollectionLearner(): string
     {
         return self::getBaseUrl() . self::GET_COLLECTION_LEARNER;
+    }
+
+    /**
+     * URL de modification (PUT / PATCH).
+     *
+     * @param string $identifier Identifiant brut (uuid Agora ou "source:id"), encodé ici
+     */
+    public static function getUpdateLearner(string $identifier): string
+    {
+        return self::getBaseUrl() . self::UPDATE_LEARNER . rawurlencode($identifier);
     }
 
     // SESSION
@@ -167,6 +214,26 @@ class ApiUrls
         return self::getBaseUrl() . self::GET_COLLECTION_SESSION;
     }
 
+    /**
+     * URL de modification (PUT / PATCH).
+     *
+     * @param string $identifier Identifiant brut (uuid Agora ou "source:id"), encodé ici
+     */
+    public static function getUpdateFixedSession(string $identifier): string
+    {
+        return self::getBaseUrl() . self::UPDATE_FIXED_SESSION . rawurlencode($identifier);
+    }
+
+    /**
+     * URL de modification (PUT / PATCH).
+     *
+     * @param string $identifier Identifiant brut (uuid Agora ou "source:id"), encodé ici
+     */
+    public static function getUpdateOpenedSession(string $identifier): string
+    {
+        return self::getBaseUrl() . self::UPDATE_OPEN_SESSION . rawurlencode($identifier);
+    }
+
     // SOCIETY
     public static function getCreateSociety(): string
     {
@@ -184,6 +251,16 @@ class ApiUrls
     public static function getGetCollectionSociety(): string
     {
         return self::getBaseUrl() . self::GET_COLLECTION_SOCIETY;
+    }
+
+    /**
+     * URL de modification (PUT / PATCH).
+     *
+     * @param string $identifier Identifiant brut (uuid Agora ou "source:id"), encodé ici
+     */
+    public static function getUpdateSociety(string $identifier): string
+    {
+        return self::getBaseUrl() . self::UPDATE_SOCIETY . rawurlencode($identifier);
     }
 
     // ENROLLMENT

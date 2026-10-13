@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AgoraLearningPhp\Tests\integration;
 
 use AgoraLearningPhp\DTO\Input\Learner\LearnerInput;
+use AgoraLearningPhp\DTO\Input\Learner\LearnerPatchInput;
 use AgoraLearningPhp\Enum\Gender;
 use AgoraLearningPhp\Identifier\AgoraId;
 
@@ -155,5 +156,49 @@ class LearnerTest extends AbstractAgoraLearningTest
                 $this->assertEquals($recoverEmail2, $learnerOutput->email);
             }
         }
+    }
+
+    public function testReplaceLearner(): void
+    {
+        //Arrange
+        $externalId = $this->newExternalId('L');
+        $this->client->createLearner(new LearnerInput(
+            $externalId,
+            'Avant',
+            'Matt',
+            'matt.avant@example.com',
+            'matt.avant@example.com'
+        ));
+
+        //Act
+        $this->client->replaceLearner(
+            $externalId,
+            new LearnerInput($externalId, 'Apres', 'Matt', 'matt.apres@example.com', 'matt.apres@example.com')
+        );
+        $learnerOutput = $this->client->getLearner($externalId);
+
+        // Assert
+        $this->assertEquals('Apres', $learnerOutput->familyName);
+        $this->assertEquals('matt.apres@example.com', $learnerOutput->recoverEmail);
+    }
+
+    public function testPatchLearner(): void
+    {
+        //Arrange
+        $created = $this->client->createLearner(new LearnerInput(
+            $this->newExternalId('L'),
+            'Patch',
+            'Matt',
+            'matt.patch@example.com',
+            'matt.patch@example.com'
+        ));
+
+        //Act
+        $this->client->patchLearner($created->agoraId, (new LearnerPatchInput())->setAddressLocality('Lyon'));
+        $learnerOutput = $this->client->getLearner($created->agoraId);
+
+        // Assert
+        $this->assertEquals('Patch', $learnerOutput->familyName);
+        $this->assertEquals('Lyon', $learnerOutput->addressLocality);
     }
 }

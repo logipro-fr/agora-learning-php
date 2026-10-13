@@ -481,4 +481,100 @@ class ApiUrlsTest extends TestCase
         // Assert
         $this->assertSame(self::BASE . '/api/external/v1/sessions/Src%3AS-1/learners/Src%3Aa%2Fb/enrollments', $url);
     }
+
+    public function testGetUpdatePersonEncodesIdentifier(): void
+    {
+        // Arrange
+        ApiUrls::initBaseUrl(self::BASE);
+
+        // Act
+        $url = ApiUrls::getUpdatePerson('Src:X 1');
+
+        // Assert
+        $this->assertSame(self::BASE . ApiUrls::UPDATE_PERSON . 'Src%3AX%201', $url);
+    }
+
+    public function testGetUpdateTrainerEmployeeEncodesIdentifier(): void
+    {
+        // Arrange
+        ApiUrls::initBaseUrl(self::BASE);
+
+        // Act
+        $url = ApiUrls::getUpdateTrainerEmployee('Src:X 1');
+
+        // Assert
+        $this->assertSame(self::BASE . ApiUrls::UPDATE_TRAINER_EMPLOYEE . 'Src%3AX%201', $url);
+    }
+
+    public function testGetUpdateTrainerFreeEncodesIdentifier(): void
+    {
+        // Arrange
+        ApiUrls::initBaseUrl(self::BASE);
+
+        // Act
+        $url = ApiUrls::getUpdateTrainerFree('Src:X 1');
+
+        // Assert
+        $this->assertSame(self::BASE . ApiUrls::UPDATE_TRAINER_FREE . 'Src%3AX%201', $url);
+    }
+
+    public function testGetUpdateLearnerEncodesIdentifier(): void
+    {
+        // Arrange
+        ApiUrls::initBaseUrl(self::BASE);
+
+        // Act
+        $url = ApiUrls::getUpdateLearner('Src:X 1');
+
+        // Assert
+        $this->assertSame(self::BASE . ApiUrls::UPDATE_LEARNER . 'Src%3AX%201', $url);
+    }
+
+    public function testGetUpdateFixedSessionEncodesIdentifier(): void
+    {
+        // Arrange
+        ApiUrls::initBaseUrl(self::BASE);
+
+        // Act
+        $url = ApiUrls::getUpdateFixedSession('Src:X 1');
+
+        // Assert
+        $this->assertSame(self::BASE . ApiUrls::UPDATE_FIXED_SESSION . 'Src%3AX%201', $url);
+    }
+
+    public function testGetUpdateOpenedSessionEncodesIdentifier(): void
+    {
+        // Arrange
+        ApiUrls::initBaseUrl(self::BASE);
+
+        // Act
+        $url = ApiUrls::getUpdateOpenedSession('Src:X 1');
+
+        // Assert
+        $this->assertSame(self::BASE . ApiUrls::UPDATE_OPEN_SESSION . 'Src%3AX%201', $url);
+    }
+
+    public function testGetUpdateSocietyEncodesIdentifier(): void
+    {
+        // Arrange
+        ApiUrls::initBaseUrl(self::BASE);
+
+        // Act
+        $url = ApiUrls::getUpdateSociety('Src:X 1');
+
+        // Assert
+        $this->assertSame(self::BASE . ApiUrls::UPDATE_SOCIETY . 'Src%3AX%201', $url);
+    }
+
+    public function testUpdateUrlsMatchApiRoutes(): void
+    {
+        // Assert
+        $this->assertSame('/api/external/v1/persons/', ApiUrls::UPDATE_PERSON);
+        $this->assertSame('/api/external/v1/trainers/employee/', ApiUrls::UPDATE_TRAINER_EMPLOYEE);
+        $this->assertSame('/api/external/v1/trainers/free/', ApiUrls::UPDATE_TRAINER_FREE);
+        $this->assertSame('/api/external/v1/learners/', ApiUrls::UPDATE_LEARNER);
+        $this->assertSame('/api/external/v1/sessions/fixed/', ApiUrls::UPDATE_FIXED_SESSION);
+        $this->assertSame('/api/external/v1/sessions/opened/', ApiUrls::UPDATE_OPEN_SESSION);
+        $this->assertSame('/api/external/v1/societies/', ApiUrls::UPDATE_SOCIETY);
+    }
 }

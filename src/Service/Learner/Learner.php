@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AgoraLearningPhp\Service\Learner;
 
 use AgoraLearningPhp\DTO\Input\Learner\LearnerInput;
+use AgoraLearningPhp\DTO\Input\Learner\LearnerPatchInput;
 use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Learner\LearnerOutput;
 use AgoraLearningPhp\Enum\Gender;
@@ -39,26 +40,54 @@ class Learner extends ApiService
 
     public function postLearner(LearnerInput $learnerInput): CreatedOutput
     {
-        $body = JsonHandler::jsonEncode(
-            [
-                "externalIdentifier" => $learnerInput->externalIdentifier->toArray(),
-                "familyName" => $learnerInput->familyName,
-                "givenName" => $learnerInput->givenName,
-                "gender" => $learnerInput->gender,
-                "recoverEmail" => $learnerInput->recoverEmail,
-                "email" => $learnerInput->email,
-                "birthDate" => $learnerInput->birthDate ? $learnerInput->birthDate->format(self::DATETIME_FORMAT) : null,
-                "jobTitle" => $learnerInput->jobTitle,
-                "addressStreet" => $learnerInput->addressStreet,
-                "addressPostcode" => $learnerInput->addressPostcode,
-                "addressLocality" => $learnerInput->addressLocality,
-                "addressCountry" => $learnerInput->addressCountry,
-                "telephone" => $learnerInput->telephone,
-                "image" => $learnerInput->image
-            ]
-        );
+        $body = JsonHandler::jsonEncode($this->buildBody($learnerInput));
         $response = $this->httpClient->request(RequestMethod::POST, ApiUrls::getCreateLearner(), $body);
         return $this->convertResponsePostToDTO($response);
+    }
+
+    /**
+     * Remplace l'apprenant (PUT) : un champ facultatif non renseigné est vidé.
+     * L'identifiant de connexion et le statut du compte sont conservés.
+     */
+    public function putLearner(ApiObjectIdentifier $identifier, LearnerInput $learnerInput): CreatedOutput
+    {
+        $body = JsonHandler::jsonEncode($this->buildBody($learnerInput));
+        $response = $this->httpClient->request(RequestMethod::PUT, ApiUrls::getUpdateLearner($identifier->getId()), $body);
+        return $this->convertResponsePostToDTO($response);
+    }
+
+    /**
+     * Modifie partiellement l'apprenant (PATCH) : seuls les champs renseignés sont modifiés.
+     */
+    public function patchLearner(ApiObjectIdentifier $identifier, LearnerPatchInput $learnerPatchInput): CreatedOutput
+    {
+        return $this->sendPatch(ApiUrls::getUpdateLearner($identifier->getId()), $learnerPatchInput);
+    }
+
+    /**
+     * Corps commun à la création (POST) et au remplacement (PUT).
+     *
+     * @return array<string, mixed>
+     */
+    private function buildBody(LearnerInput $learnerInput): array
+    {
+        return [
+            "externalIdentifier" => $learnerInput->externalIdentifier->toArray(),
+            "familyName" => $learnerInput->familyName,
+            "givenName" => $learnerInput->givenName,
+            "gender" => $learnerInput->gender,
+            "recoverEmail" => $learnerInput->recoverEmail,
+            "email" => $learnerInput->email,
+            "birthDate" => $learnerInput->birthDate ? $learnerInput->birthDate->format(self::DATETIME_FORMAT) : null,
+            "jobTitle" => $learnerInput->jobTitle,
+            "addressStreet" => $learnerInput->addressStreet,
+            "addressPostcode" => $learnerInput->addressPostcode,
+            "addressLocality" => $learnerInput->addressLocality,
+            "addressCountry" => $learnerInput->addressCountry,
+            "telephone" => $learnerInput->telephone,
+            "mobileNumber" => $learnerInput->mobileNumber,
+            "image" => $learnerInput->image
+        ];
     }
 
     /**

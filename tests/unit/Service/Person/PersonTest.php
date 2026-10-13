@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AgoraLearningPhp\Tests\unit\Service\Person;
 
 use AgoraLearningPhp\DTO\Input\Person\PersonInput;
+use AgoraLearningPhp\DTO\Input\Person\PersonPatchInput;
 use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Person\PersonOutput;
 use AgoraLearningPhp\Enum\Gender;
@@ -363,5 +364,128 @@ class PersonTest extends ServiceTestCase
         $this->assertSame('Nice', $body['addressLocality']);
         $this->assertSame('FR', $body['addressCountry']);
         $this->assertSame('http://img.example.com/claire.jpg', $body['image']);
+    }
+
+    // -------------------------------------------------------------------------
+    // PUT / PATCH
+    // -------------------------------------------------------------------------
+
+    public function testPutPersonSendsPutRequestToEncodedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $person = $this->makePerson($this->makeHttpClientInspectingRequest(200, json_encode(['agoraId' => 'per_001', 'sourceName' => 'Src', 'externalId' => 'X-42']), $method, $url));
+
+        // Act
+        $result = $person->putPerson(
+            new ExternalId('Src', 'X-42'),
+            new PersonInput(new ExternalId('Src', 'X-42'), 'Martin', 'Claire', 'claire@example.net')
+        );
+
+        // Assert
+        $this->assertSame('PUT', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/persons/Src%3AX-42', $url);
+        $this->assertInstanceOf(CreatedOutput::class, $result);
+        $this->assertSame('per_001', $result->agoraId->getId());
+        $this->assertSame('Src:X-42', $result->externalId->getId());
+    }
+
+    public function testPutPersonSendsAllFieldsIncludingNullOptionals(): void
+    {
+        // Arrange
+        $capturedBody = '';
+        $person = $this->makePerson($this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'per_001', 'sourceName' => 'Src', 'externalId' => 'X-42']), $capturedBody));
+        $input = new PersonInput(
+            new ExternalId('Src', 'X-42'),
+            'Martin',
+            'Claire',
+            'claire@example.net',
+            Gender::GENDER_FEMALE,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            '0601020304'
+        );
+
+        // Act
+        $person->putPerson(new AgoraId('per_001'), $input);
+
+        // Assert
+        $body = json_decode($capturedBody, true);
+        $this->assertSame(['sourceName' => 'Src', 'id' => 'X-42'], $body['externalIdentifier']);
+        $this->assertSame('Martin', $body['familyName']);
+        $this->assertSame(Gender::GENDER_FEMALE, $body['gender']);
+        $this->assertSame('0601020304', $body['mobileNumber']);
+        $this->assertArrayHasKey('telephone', $body);
+        $this->assertNull($body['telephone']);
+    }
+
+    public function testPatchPersonSendsPatchRequestWithOnlySetFields(): void
+    {
+        // Arrange
+        $capturedBody = '';
+        $person = $this->makePerson($this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'per_001', 'sourceName' => 'Src', 'externalId' => 'X-42']), $capturedBody));
+        $patch = (new PersonPatchInput())
+            ->setTelephone('0102030405')
+            ->setJobTitle(null)
+            ->setBirthDate(new \DateTimeImmutable('1990-05-20T00:00:00+00:00'));
+
+        // Act
+        $result = $person->patchPerson(new AgoraId('per_001'), $patch);
+
+        // Assert
+        $this->assertSame(
+            ['telephone' => '0102030405', 'jobTitle' => null, 'birthDate' => '1990-05-20T00:00:00+00:00'],
+            json_decode($capturedBody, true)
+        );
+        $this->assertSame('per_001', $result->agoraId->getId());
+    }
+
+    public function testPatchPersonSendsPatchMethodToPersonUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $person = $this->makePerson($this->makeHttpClientInspectingRequest(200, json_encode(['agoraId' => 'per_001', 'sourceName' => 'Src', 'externalId' => 'X-42']), $method, $url));
+
+        // Act
+        $person->patchPerson(new AgoraId('per_001'), (new PersonPatchInput())->setFamilyName('Dupont'));
+
+        // Assert
+        $this->assertSame('PATCH', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/persons/per_001', $url);
+    }
+
+    public function testPatchPersonWithEmptyPatchSendsEmptyJsonObject(): void
+    {
+        // Arrange
+        $capturedBody = '';
+        $person = $this->makePerson($this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'per_001', 'sourceName' => 'Src', 'externalId' => 'X-42']), $capturedBody));
+
+        // Act
+        $person->patchPerson(new AgoraId('per_001'), new PersonPatchInput());
+
+        // Assert
+        $this->assertSame('{}', $capturedBody);
+    }
+
+    public function testPatchPersonThrowsExceptionWhenApiReturns404(): void
+    {
+        // Arrange
+        $person = $this->makePerson($this->makeHttpClientWithResponse(404, json_encode(['detail' => 'Person not found'])));
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionMessage('Person not found');
+        $this->expectExceptionCode(404);
+
+        // Act
+        $person->patchPerson(new AgoraId('per_missing'), (new PersonPatchInput())->setFamilyName('Dupont'));
     }
 }

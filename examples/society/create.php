@@ -13,24 +13,16 @@ use AgoraLearningPhp\Identifier\ExternalId;
 
 $client = new AgoraLearningClient($config['url'], $config['api_key']);
 
-// $legalPerson = new PersonInput(
-//     new ExternalId('MonERP', uniqid('P-')),
-//     'Durand',
-//     'Paul',
-//     'paul.durand@example.com',
-//     Gender::GENDER_MALE,
-//     '0123456789'
-// );
-
-// $administrativePerson = new PersonInput(
-//     new ExternalId('MonERP', uniqid('P-')),
-//     'Girard',
-//     'Marie',
-//     'marie.girard@example.com',
-//     Gender::GENDER_FEMALE,
-//     '0987654321'
-// );
-$legalPerson = $administrativePerson = null;
+// Les responsables sont des contacts existants, désignés par leur identifiant (Agora ou "source:id")
+$legalPersonId = new ExternalId('MonERP', uniqid('P-'));
+$client->createPerson(new PersonInput(
+    $legalPersonId,
+    'Durand',
+    'Paul',
+    'paul.durand@example.com',
+    Gender::GENDER_MALE,
+    '0123456789'
+));
 
 $societyInput = new SocietyInput(
     new ExternalId('MonERP', uniqid('SOC-')),
@@ -47,9 +39,9 @@ $societyInput = new SocietyInput(
     '75008',
     'Paris',
     'France',
-    $legalPerson,
-    $administrativePerson,
-    null,
+    $legalPersonId->getId(),     // legalPersonId
+    null,                        // administrativePersonId
+    null,                        // rhPersonId
     'https://www.agora-learning.com/apiAgoraLearning/ressources/logo.png'
 );
 

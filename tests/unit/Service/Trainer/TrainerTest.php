@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace AgoraLearningPhp\Tests\unit\Service\Trainer;
 
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerEmployeeInput;
+use AgoraLearningPhp\DTO\Input\Trainer\TrainerEmployeePatchInput;
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerFreeInput;
+use AgoraLearningPhp\DTO\Input\Trainer\TrainerFreePatchInput;
 use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Trainer\TrainerEmployeeOutput;
 use AgoraLearningPhp\DTO\Output\Trainer\TrainerFreeOutput;
@@ -647,5 +649,89 @@ class TrainerTest extends ServiceTestCase
         $this->assertSame('69002', $body['billingAddressPostcode']);
         $this->assertSame('Lyon', $body['billingAddressLocality']);
         $this->assertSame('FR', $body['billingAddressCountry']);
+    }
+
+    // -------------------------------------------------------------------------
+    // PUT / PATCH
+    // -------------------------------------------------------------------------
+
+    public function testPutTrainerEmployeeSendsPutRequestToEmployeeUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $trainer = $this->makeTrainer($this->makeHttpClientInspectingRequest(200, json_encode(['agoraId' => 'per_001', 'sourceName' => 'Src', 'externalId' => 'X-42']), $method, $url));
+
+        // Act
+        $trainer->putTrainerEmployee(
+            new ExternalId('Src', 'X-42'),
+            new TrainerEmployeeInput(new ExternalId('Src', 'X-42'), 'Durand', 'Paul', 'paul@example.net')
+        );
+
+        // Assert
+        $this->assertSame('PUT', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/trainers/employee/Src%3AX-42', $url);
+    }
+
+    public function testPutTrainerFreeSendsFreeFieldsToFreeUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $capturedBody = '';
+        $trainer = $this->makeTrainer($this->makeHttpClientInspectingRequest(200, json_encode(['agoraId' => 'per_001', 'sourceName' => 'Src', 'externalId' => 'X-42']), $method, $url));
+        $trainerBody = $this->makeTrainer($this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'per_001', 'sourceName' => 'Src', 'externalId' => 'X-42']), $capturedBody));
+        $input = new TrainerFreeInput(new ExternalId('Src', 'X-42'), 'Durand', 'Paul', 'paul@example.net');
+
+        // Act
+        $trainer->putTrainerFree(new AgoraId('per_001'), $input);
+        $trainerBody->putTrainerFree(new AgoraId('per_001'), $input);
+
+        // Assert
+        $this->assertSame('PUT', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/trainers/free/per_001', $url);
+        $body = json_decode($capturedBody, true);
+        $this->assertArrayHasKey('hourlyCost', $body);
+        $this->assertArrayHasKey('billingAddressCountry', $body);
+    }
+
+    public function testPatchTrainerEmployeeSendsOnlySetFieldsToEmployeeUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $capturedBody = '';
+        $trainer = $this->makeTrainer($this->makeHttpClientInspectingRequest(200, json_encode(['agoraId' => 'per_001', 'sourceName' => 'Src', 'externalId' => 'X-42']), $method, $url));
+        $trainerBody = $this->makeTrainer($this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'per_001', 'sourceName' => 'Src', 'externalId' => 'X-42']), $capturedBody));
+        $patch = (new TrainerEmployeePatchInput())->setVisibleInformation(false)->setSocietyId(null);
+
+        // Act
+        $trainer->patchTrainerEmployee(new AgoraId('per_001'), $patch);
+        $trainerBody->patchTrainerEmployee(new AgoraId('per_001'), $patch);
+
+        // Assert
+        $this->assertSame('PATCH', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/trainers/employee/per_001', $url);
+        $this->assertSame(['visibleInformation' => false, 'societyId' => null], json_decode($capturedBody, true));
+    }
+
+    public function testPatchTrainerFreeSendsOnlySetFieldsToFreeUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $capturedBody = '';
+        $trainer = $this->makeTrainer($this->makeHttpClientInspectingRequest(200, json_encode(['agoraId' => 'per_001', 'sourceName' => 'Src', 'externalId' => 'X-42']), $method, $url));
+        $trainerBody = $this->makeTrainer($this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'per_001', 'sourceName' => 'Src', 'externalId' => 'X-42']), $capturedBody));
+        $patch = (new TrainerFreePatchInput())->setHourlyCost(55.5)->setEmail('paul@example.net');
+
+        // Act
+        $trainer->patchTrainerFree(new AgoraId('per_001'), $patch);
+        $trainerBody->patchTrainerFree(new AgoraId('per_001'), $patch);
+
+        // Assert
+        $this->assertSame('PATCH', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/trainers/free/per_001', $url);
+        $this->assertSame(['hourlyCost' => 55.5, 'email' => 'paul@example.net'], json_decode($capturedBody, true));
     }
 }

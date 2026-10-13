@@ -71,17 +71,20 @@ $learner = $client->getLearner($created->agoraId);
 
 ## Ressources disponibles
 
-| Ressource      | Méthodes disponibles                                                                                                                                            |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Auth**       | `ping()`                                                                                                                                                        |
-| **Person**     | `getPerson()`, `getCollectionPerson()`, `createPerson()`                                                                                                        |
-| **Trainer**    | `getTrainer()`, `getCollectionTrainer()`, `createTrainerEmployee()`, `createTrainerFree()`                                                                      |
-| **Learner**    | `getLearner()`, `getCollectionLearner()`, `createLearner()`                                                                                                     |
-| **Society**    | `getSociety()`, `getCollectionSociety()`, `createSociety()`                                                                                                     |
-| **Session**    | `getSession()`, `getCollectionSession()`, `createSession()`                                                                     |
-| **Enrollment** | `getEnrollment()`, `getCollectionEnrollmentFromSession()`, `getCollectionEnrollmentFromLearner()`, `getEnrollmentFromSessionAndLearner()`, `createEnrollment()` |
+| Ressource      | Lecture                                                                                                                         | Création                                         | Remplacement (PUT)                                   | Modification partielle (PATCH)                   |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ---------------------------------------------------- | ------------------------------------------------ |
+| **Auth**       | `ping()`                                                                                                                        |                                                  |                                                      |                                                  |
+| **Person**     | `getPerson()`, `getCollectionPerson()`                                                                                          | `createPerson()`                                 | `replacePerson()`                                    | `patchPerson()`                                  |
+| **Trainer**    | `getTrainer()`, `getCollectionTrainer()`                                                                                        | `createTrainerEmployee()`, `createTrainerFree()` | `replaceTrainerEmployee()`, `replaceTrainerFree()`   | `patchTrainerEmployee()`, `patchTrainerFree()`   |
+| **Learner**    | `getLearner()`, `getCollectionLearner()`                                                                                        | `createLearner()`                                | `replaceLearner()`                                   | `patchLearner()`                                 |
+| **Society**    | `getSociety()`, `getCollectionSociety()`                                                                                        | `createSociety()`                                | `replaceSociety()`                                   | `patchSociety()`                                 |
+| **Session**    | `getSession()`, `getCollectionSession()`                                                                                        | `createSession()`                                | `replaceSession()`                                   | `patchSession()`                                 |
+| **Enrollment** | `getEnrollment()`, `getCollectionEnrollmentFromSession()`, `getCollectionEnrollmentFromLearner()`, `getEnrollmentFromSessionAndLearner()` | `createEnrollment()`                    |                                                      |                                                  |
 
-Les lectures unitaires acceptent un `AgoraId` ou un `ExternalId` ; les créations prennent un `ExternalId` obligatoire et renvoient un `CreatedOutput` (`agoraId`, `externalId`).
+Les lectures et modifications acceptent un `AgoraId` ou un `ExternalId` ; les créations prennent un `ExternalId` obligatoire. Créations et modifications renvoient un `CreatedOutput` (`agoraId`, `externalId`).
+
+- `replace*()` (PUT) reprend le DTO de création et **remplace** l'objet : un champ facultatif non renseigné est vidé.
+- `patch*()` (PATCH, `application/merge-patch+json`) prend un DTO de patch (`PersonPatchInput`, `FixedSessionPatchInput`…) : seuls les champs renseignés par ses setters sont modifiés, `null` vide le champ.
 
 Consultez [docs/usage.md](docs/usage.md) pour un exemple complet par méthode.
 
@@ -138,27 +141,41 @@ examples/
 ├── person/
 │   ├── get_collection.php
 │   ├── get_one.php
-│   └── create.php
+│   ├── get_one_by_agora_id.php
+│   ├── create.php
+│   ├── replace.php
+│   └── patch.php
 ├── trainer/
 │   ├── get_collection.php
 │   ├── get_one.php
 │   ├── create_employee.php
-│   └── create_free.php
+│   ├── create_free.php
+│   ├── replace_employee.php
+│   ├── replace_free.php
+│   ├── patch_employee.php
+│   └── patch_free.php
 ├── learner/
 │   ├── get_collection.php
 │   ├── get_one.php
-│   └── create.php
+│   ├── create.php
+│   ├── replace.php
+│   └── patch.php
 ├── society/
 │   ├── get_collection.php
 │   ├── get_one.php
-│   └── create.php
+│   ├── create.php
+│   ├── replace.php
+│   └── patch.php
 ├── session/
 │   ├── get_collection.php
 │   ├── get_one.php
 │   ├── get_one_by_agora_id.php
 │   ├── get_one_by_external_id.php
 │   ├── create_fixed.php
-│   └── create_opened.php
+│   ├── create_opened.php
+│   ├── replace_fixed.php
+│   ├── patch_fixed.php
+│   └── patch_opened.php
 └── enrollment/
     ├── get_from_session.php
     ├── get_from_learner.php

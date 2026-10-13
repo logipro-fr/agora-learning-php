@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace AgoraLearningPhp\Service\ClientCore;
 
+use AgoraLearningPhp\DTO\Input\AbstractPatchInput;
 use AgoraLearningPhp\DTO\Output\ApiOutput;
 use AgoraLearningPhp\DTO\Output\CreatedOutput;
+use AgoraLearningPhp\Enum\RequestMethod;
 use AgoraLearningPhp\Exception\AgoraLearningClientException;
 use AgoraLearningPhp\Identifier\AgoraId;
 use AgoraLearningPhp\Identifier\ExternalId;
@@ -70,7 +72,19 @@ abstract class ApiService
     }
 
     /**
-     * Convertit la réponse d'une création (POST), qui ne contient que les identifiants de l'objet créé.
+     * Envoie une modification partielle (PATCH, application/merge-patch+json) : seuls les champs
+     * renseignés dans $patchInput sont transmis.
+     */
+    protected function sendPatch(string $url, AbstractPatchInput $patchInput): CreatedOutput
+    {
+        // Cast en objet : un patch vide doit être encodé "{}" et non "[]"
+        $body = JsonHandler::jsonEncode((object) $patchInput->toArray());
+        $response = $this->httpClient->request(RequestMethod::PATCH, $url, $body);
+        return $this->convertResponsePostToDTO($response);
+    }
+
+    /**
+     * Convertit la réponse d'une écriture (POST, PUT, PATCH), qui ne contient que les identifiants de l'objet.
      */
     protected function convertResponsePostToDTO(ResponseInterface $response): CreatedOutput
     {

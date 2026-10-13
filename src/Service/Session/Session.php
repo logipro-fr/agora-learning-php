@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace AgoraLearningPhp\Service\Session;
 
+use AgoraLearningPhp\DTO\Input\Session\AbstractSessionPatchInput;
 use AgoraLearningPhp\DTO\Input\Session\FixedSessionInput;
+use AgoraLearningPhp\DTO\Input\Session\FixedSessionPatchInput;
 use AgoraLearningPhp\DTO\Input\Session\OpenedSessionInput;
+use AgoraLearningPhp\DTO\Input\Session\OpenedSessionPatchInput;
 use AgoraLearningPhp\DTO\Input\Session\SessionInput;
 use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Session\FixedSessionOutput;
@@ -46,6 +49,53 @@ class Session extends ApiService
 
     public function postSession(SessionInput $sessionInput): CreatedOutput
     {
+        $url = $sessionInput->sessionData instanceof OpenedSessionInput
+            ? ApiUrls::getCreateOpenedSession()
+            : ApiUrls::getCreateFixedSession();
+        $body = JsonHandler::jsonEncode($this->buildBody($sessionInput));
+        $response = $this->httpClient->request(RequestMethod::POST, $url, $body);
+        return $this->convertResponsePostToDTO($response);
+    }
+
+    /**
+     * Remplace la session (PUT) : un champ facultatif non renseigné est vidé.
+     * La route dépend du type de $sessionInput->sessionData, qui doit correspondre au type
+     * de la session existante (sinon HTTP 404) : le type d'une session ne peut pas être changé.
+     */
+    public function putSession(ApiObjectIdentifier $identifier, SessionInput $sessionInput): CreatedOutput
+    {
+        $url = $sessionInput->sessionData instanceof OpenedSessionInput
+            ? ApiUrls::getUpdateOpenedSession($identifier->getId())
+            : ApiUrls::getUpdateFixedSession($identifier->getId());
+        $body = JsonHandler::jsonEncode($this->buildBody($sessionInput));
+        $response = $this->httpClient->request(RequestMethod::PUT, $url, $body);
+        return $this->convertResponsePostToDTO($response);
+    }
+
+    /**
+     * Modifie partiellement la session (PATCH) : seuls les champs renseignés sont modifiés.
+     * La route dépend du type de $sessionPatchInput (FixedSessionPatchInput ou OpenedSessionPatchInput).
+     */
+    public function patchSession(ApiObjectIdentifier $identifier, AbstractSessionPatchInput $sessionPatchInput): CreatedOutput
+    {
+        if ($sessionPatchInput instanceof FixedSessionPatchInput) {
+            $url = ApiUrls::getUpdateFixedSession($identifier->getId());
+        } elseif ($sessionPatchInput instanceof OpenedSessionPatchInput) {
+            $url = ApiUrls::getUpdateOpenedSession($identifier->getId());
+        } else {
+            throw new \InvalidArgumentException('Unsupported session patch type: ' . get_class($sessionPatchInput));
+        }
+
+        return $this->sendPatch($url, $sessionPatchInput);
+    }
+
+    /**
+     * Corps commun à la création (POST) et au remplacement (PUT).
+     *
+     * @return array<string, mixed>
+     */
+    private function buildBody(SessionInput $sessionInput): array
+    {
         $data = [
             'externalIdentifier' => $sessionInput->externalIdentifier->toArray(),
             'title' => $sessionInput->title,
@@ -65,7 +115,6 @@ class Session extends ApiService
         ];
 
         if ($sessionInput->sessionData instanceof FixedSessionInput) {
-            $url = ApiUrls::getCreateFixedSession();
             $specificData = [
                 'availabilityStartDate' => $sessionInput->sessionData->availabilityStartDate->format(self::DATETIME_FORMAT),
                 'availabilityEndDate' => $sessionInput->sessionData->availabilityEndDate->format(self::DATETIME_FORMAT),
@@ -73,7 +122,6 @@ class Session extends ApiService
                 'mode' => $sessionInput->sessionData->mode,
             ];
         } elseif ($sessionInput->sessionData instanceof OpenedSessionInput) {
-            $url = ApiUrls::getCreateOpenedSession();
             $specificData = [
                 'subscribeStartDate' => $sessionInput->sessionData->subscribeStartDate->format(self::DATETIME_FORMAT),
                 'subscribeEndDate' => $sessionInput->sessionData->subscribeEndDate->format(self::DATETIME_FORMAT),
@@ -85,10 +133,7 @@ class Session extends ApiService
             throw new \ErrorException('Unsupported session data type: ' . get_class($sessionInput->sessionData));
         }
 
-        $data = array_merge($data, $specificData);
-        $body = JsonHandler::jsonEncode($data);
-        $response = $this->httpClient->request(RequestMethod::POST, $url, $body);
-        return $this->convertResponsePostToDTO($response);
+        return array_merge($data, $specificData);
     }
 
     /**

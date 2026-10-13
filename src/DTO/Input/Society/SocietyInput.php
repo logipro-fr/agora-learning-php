@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace AgoraLearningPhp\DTO\Input\Society;
 
-use AgoraLearningPhp\DTO\Input\Person\PersonInput;
 use AgoraLearningPhp\Identifier\ExternalId;
 
+/**
+ * Les responsables (légal, administratif, RH) sont des contacts existants, désignés par leur identifiant
+ * (Agora ou "source:id"). En remplacement (PUT), un identifiant absent retire la relation.
+ */
 final class SocietyInput
 {
     public ExternalId $externalIdentifier;
@@ -23,9 +26,9 @@ final class SocietyInput
     public ?string $addressPostcodeInvoicing;
     public ?string $addressLocalityInvoicing;
     public ?string $addressCountryInvoicing;
-    public ?PersonInput $legalPerson;
-    public ?PersonInput $administrativePerson;
-    public ?PersonInput $rhPerson;
+    public ?string $legalPersonId;
+    public ?string $administrativePersonId;
+    public ?string $rhPersonId;
     public ?string $image;
 
     public function __construct(
@@ -43,9 +46,9 @@ final class SocietyInput
         ?string $addressPostcodeInvoicing = null,
         ?string $addressLocalityInvoicing = null,
         ?string $addressCountryInvoicing = null,
-        ?PersonInput $legalPerson = null,
-        ?PersonInput $administrativePerson = null,
-        ?PersonInput $rhPerson = null,
+        ?string $legalPersonId = null,
+        ?string $administrativePersonId = null,
+        ?string $rhPersonId = null,
         ?string $image = null
     ) {
         $this->externalIdentifier = $externalIdentifier;
@@ -62,9 +65,9 @@ final class SocietyInput
         $this->addressPostcodeInvoicing = $addressPostcodeInvoicing;
         $this->addressLocalityInvoicing = $addressLocalityInvoicing;
         $this->addressCountryInvoicing = $addressCountryInvoicing;
-        $this->legalPerson = $legalPerson;
-        $this->administrativePerson = $administrativePerson;
-        $this->rhPerson = $rhPerson;
+        $this->legalPersonId = $legalPersonId;
+        $this->administrativePersonId = $administrativePersonId;
+        $this->rhPersonId = $rhPersonId;
         $this->image = $image;
     }
 }

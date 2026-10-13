@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace AgoraLearningPhp\Tests\unit\Service\Society;
 
-use AgoraLearningPhp\DTO\Input\Person\PersonInput;
 use AgoraLearningPhp\DTO\Input\Society\SocietyInput;
+use AgoraLearningPhp\DTO\Input\Society\SocietyPatchInput;
 use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Person\PersonOutput;
 use AgoraLearningPhp\DTO\Output\Society\SocietyOutput;
-use AgoraLearningPhp\Enum\Gender;
 use AgoraLearningPhp\Exception\AgoraLearningClientException;
 use AgoraLearningPhp\Identifier\AgoraId;
 use AgoraLearningPhp\Identifier\ExternalId;
@@ -263,14 +262,14 @@ class SocietyTest extends ServiceTestCase
         $society->getSociety(new AgoraId('missing-uuid'));
     }
 
-    public function testPostSocietyWithPersonInputs(): void
+    public function testPostSocietySendsPersonIdentifiers(): void
     {
         // Arrange
-        $society     = $this->makeSociety(
-            $this->makeHttpClientWithResponse(200, json_encode(['agoraId' => 'soc_new_001', 'sourceName' => 'Test', 'externalId' => 'SOC-1']))
+        $capturedBody = '';
+        $society = $this->makeSociety(
+            $this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'soc_new_001', 'sourceName' => 'Test', 'externalId' => 'SOC-1']), $capturedBody)
         );
-        $legalPerson = new PersonInput(new ExternalId('Test', 'P-1'), 'Legal', 'Rep', 'legal.rep@example.com', Gender::GENDER_MALE);
-        $input       = new SocietyInput(
+        $input = new SocietyInput(
             new ExternalId('Test', 'SOC-1'),
             'NewCorp',
             null,
@@ -285,7 +284,9 @@ class SocietyTest extends ServiceTestCase
             null,
             null,
             null,
-            $legalPerson
+            'Test:P-1',
+            'per_admin',
+            null
         );
 
         // Act
@@ -293,6 +294,12 @@ class SocietyTest extends ServiceTestCase
 
         // Assert
         $this->assertInstanceOf(CreatedOutput::class, $result);
+        $body = json_decode($capturedBody, true);
+        $this->assertSame('Test:P-1', $body['legalPersonId']);
+        $this->assertSame('per_admin', $body['administrativePersonId']);
+        $this->assertArrayHasKey('rhPersonId', $body);
+        $this->assertNull($body['rhPersonId']);
+        $this->assertArrayNotHasKey('legalPerson', $body);
     }
 
     public function testPostSocietyWithNullPersonInputs(): void
@@ -386,5 +393,107 @@ class SocietyTest extends ServiceTestCase
 
         // Act
         $society->getCollectionSociety();
+    }
+
+    // -------------------------------------------------------------------------
+    // PUT / PATCH
+    // -------------------------------------------------------------------------
+
+    public function testPutSocietySendsPutRequestToEncodedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $society = $this->makeSociety($this->makeHttpClientInspectingRequest(
+            200,
+            json_encode(['agoraId' => 'soc_001', 'sourceName' => 'Src', 'externalId' => 'X-42']),
+            $method,
+            $url
+        ));
+
+        // Act
+        $result = $society->putSociety(new ExternalId('Src', 'X-42'), new SocietyInput(new ExternalId('Src', 'X-42'), 'Corp'));
+
+        // Assert
+        $this->assertSame('PUT', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/societies/Src%3AX-42', $url);
+        $this->assertSame('soc_001', $result->agoraId->getId());
+    }
+
+    public function testPutSocietySendsFullBodyWithExternalIdKey(): void
+    {
+        // Arrange
+        $capturedBody = '';
+        $society = $this->makeSociety(
+            $this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'soc_001']), $capturedBody)
+        );
+
+        // Act
+        $society->putSociety(new AgoraId('soc_001'), new SocietyInput(new ExternalId('Src', 'X-42'), 'Corp'));
+
+        // Assert
+        $body = json_decode($capturedBody, true);
+        $this->assertSame(['sourceName' => 'Src', 'id' => 'X-42'], $body['externalId']);
+        $this->assertSame('Corp', $body['name']);
+        $this->assertArrayHasKey('siret', $body);
+        $this->assertNull($body['siret']);
+        $this->assertArrayHasKey('legalPersonId', $body);
+    }
+
+    public function testPatchSocietySendsOnlySetFields(): void
+    {
+        // Arrange
+        $capturedBody = '';
+        $society = $this->makeSociety(
+            $this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'soc_001']), $capturedBody)
+        );
+        $patch = (new SocietyPatchInput())
+            ->setTelephone('0102030405')
+            ->setRhPersonId(null)
+            ->setExternalIdentifier(new ExternalId('Src', 'X-43'));
+
+        // Act
+        $society->patchSociety(new AgoraId('soc_001'), $patch);
+
+        // Assert
+        $this->assertSame(
+            ['telephone' => '0102030405', 'rhPersonId' => null, 'externalId' => ['sourceName' => 'Src', 'id' => 'X-43']],
+            json_decode($capturedBody, true)
+        );
+    }
+
+    public function testPatchSocietySendsPatchRequest(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $society = $this->makeSociety($this->makeHttpClientInspectingRequest(
+            200,
+            json_encode(['agoraId' => 'soc_001']),
+            $method,
+            $url
+        ));
+
+        // Act
+        $society->patchSociety(new AgoraId('soc_001'), (new SocietyPatchInput())->setName('Corp'));
+
+        // Assert
+        $this->assertSame('PATCH', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/societies/soc_001', $url);
+    }
+
+    public function testPatchSocietyThrowsExceptionWhenApiReturns422(): void
+    {
+        // Arrange
+        $society = $this->makeSociety(
+            $this->makeHttpClientWithResponse(422, json_encode(['detail' => 'name: Obligatoire']))
+        );
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionMessage('name: Obligatoire');
+
+        // Act
+        $society->patchSociety(new AgoraId('soc_001'), new SocietyPatchInput());
     }
 }

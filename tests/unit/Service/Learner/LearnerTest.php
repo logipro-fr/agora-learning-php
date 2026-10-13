@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AgoraLearningPhp\Tests\unit\Service\Learner;
 
 use AgoraLearningPhp\DTO\Input\Learner\LearnerInput;
+use AgoraLearningPhp\DTO\Input\Learner\LearnerPatchInput;
 use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Learner\LearnerOutput;
 use AgoraLearningPhp\Enum\Gender;
@@ -381,5 +382,51 @@ class LearnerTest extends ServiceTestCase
         $this->assertSame('75001', $body['addressPostcode']);
         $this->assertSame('Paris', $body['addressLocality']);
         $this->assertSame('FR', $body['addressCountry']);
+    }
+
+    // -------------------------------------------------------------------------
+    // PUT / PATCH
+    // -------------------------------------------------------------------------
+
+    public function testPutLearnerSendsPutRequestWithFullBody(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $capturedBody = '';
+        $learner = $this->makeLearner($this->makeHttpClientInspectingRequest(200, json_encode(['agoraId' => 'per_001', 'sourceName' => 'Src', 'externalId' => 'X-42']), $method, $url));
+        $learnerBody = $this->makeLearner($this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'per_001', 'sourceName' => 'Src', 'externalId' => 'X-42']), $capturedBody));
+        $input = new LearnerInput(new ExternalId('Src', 'X-42'), 'Martin', 'Claire', 'recover@example.net', 'claire@example.net');
+
+        // Act
+        $learner->putLearner(new ExternalId('Src', 'X-42'), $input);
+        $learnerBody->putLearner(new ExternalId('Src', 'X-42'), $input);
+
+        // Assert
+        $this->assertSame('PUT', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/learners/Src%3AX-42', $url);
+        $body = json_decode($capturedBody, true);
+        $this->assertSame('recover@example.net', $body['recoverEmail']);
+        $this->assertArrayHasKey('mobileNumber', $body);
+    }
+
+    public function testPatchLearnerSendsOnlySetFields(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $capturedBody = '';
+        $learner = $this->makeLearner($this->makeHttpClientInspectingRequest(200, json_encode(['agoraId' => 'per_001', 'sourceName' => 'Src', 'externalId' => 'X-42']), $method, $url));
+        $learnerBody = $this->makeLearner($this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'per_001', 'sourceName' => 'Src', 'externalId' => 'X-42']), $capturedBody));
+        $patch = (new LearnerPatchInput())->setRecoverEmail('new@example.net')->setMobileNumber(null);
+
+        // Act
+        $learner->patchLearner(new AgoraId('per_001'), $patch);
+        $learnerBody->patchLearner(new AgoraId('per_001'), $patch);
+
+        // Assert
+        $this->assertSame('PATCH', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/learners/per_001', $url);
+        $this->assertSame(['recoverEmail' => 'new@example.net', 'mobileNumber' => null], json_decode($capturedBody, true));
     }
 }

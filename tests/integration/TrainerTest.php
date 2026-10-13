@@ -6,7 +6,9 @@ namespace AgoraLearningPhp\Tests\integration;
 
 use AgoraLearningPhp\DTO\Input\Society\SocietyInput;
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerEmployeeInput;
+use AgoraLearningPhp\DTO\Input\Trainer\TrainerEmployeePatchInput;
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerFreeInput;
+use AgoraLearningPhp\DTO\Input\Trainer\TrainerFreePatchInput;
 use AgoraLearningPhp\DTO\Output\Trainer\TrainerFreeOutput;
 use AgoraLearningPhp\Enum\Gender;
 use AgoraLearningPhp\Identifier\AgoraId;
@@ -21,7 +23,7 @@ class TrainerTest extends AbstractAgoraLearningTest
 
         $familyName = 'Martin';
         $givenName = 'Sophie';
-        $email = 'sophie.martin.complet@example.com';
+        $email = $this->newEmail('sophie.martin.complet');
         $visibleInformation = true;
         $notifyUser = true;
         $gender = Gender::GENDER_FEMALE;
@@ -90,7 +92,7 @@ class TrainerTest extends AbstractAgoraLearningTest
         //Arrange
         $familyName = 'Durand';
         $givenName = 'Pierre';
-        $email = 'pierre.durand.min@example.com';
+        $email = $this->newEmail('pierre.durand.min');
         $trainerInput = new TrainerEmployeeInput(
             $this->newExternalId('T'),
             $familyName,
@@ -125,7 +127,7 @@ class TrainerTest extends AbstractAgoraLearningTest
 
         $familyName = 'Bernard';
         $givenName = 'Pierre';
-        $email = 'pierre.bernard.complet@example.com';
+        $email = $this->newEmail('pierre.bernard.complet');
         $gender = Gender::GENDER_MALE;
         $telephone = '0123456789';
         $mobileNumber = '0612345678';
@@ -222,7 +224,7 @@ class TrainerTest extends AbstractAgoraLearningTest
         //Arrange
         $familyName = 'Leroy';
         $givenName = 'Marc';
-        $email = 'marc.leroy.min@example.com';
+        $email = $this->newEmail('marc.leroy.min');
         $trainerInput = new TrainerFreeInput(
             $this->newExternalId('T'),
             $familyName,
@@ -265,7 +267,7 @@ class TrainerTest extends AbstractAgoraLearningTest
         //Arrange
         $familyName = 'Moreau';
         $givenName = 'Lucas';
-        $email = 'lucas.moreau.get@example.com';
+        $email = $this->newEmail('lucas.moreau.get');
         $trainerInput = new TrainerEmployeeInput(
             $this->newExternalId('T'),
             $familyName,
@@ -289,13 +291,13 @@ class TrainerTest extends AbstractAgoraLearningTest
         //Arrange
         $familyName1 = 'TrainerUn';
         $givenName1 = 'Jean';
-        $email1 = 'trainer.un.coll@example.com';
+        $email1 = $this->newEmail('trainer.un.coll');
         $trainerInput1 = new TrainerEmployeeInput($this->newExternalId('T'), $familyName1, $givenName1, $email1);
         $uuid1 = $this->client->createTrainerEmployee($trainerInput1)->agoraId->getId();
 
         $familyName2 = 'TrainerDeux';
         $givenName2 = 'Jean';
-        $email2 = 'trainer.deux.coll@example.com';
+        $email2 = $this->newEmail('trainer.deux.coll');
         $trainerInput2 = new TrainerEmployeeInput($this->newExternalId('T'), $familyName2, $givenName2, $email2);
         $uuid2 = $this->client->createTrainerEmployee($trainerInput2)->agoraId->getId();
 
@@ -316,5 +318,62 @@ class TrainerTest extends AbstractAgoraLearningTest
                 $this->assertEquals($email2, $trainerOutput->email);
             }
         }
+    }
+
+    public function testReplaceTrainerEmployee(): void
+    {
+        //Arrange
+        $externalId = $this->newExternalId('T');
+        $email = $this->newEmail('trainer.replace');
+        $this->client->createTrainerEmployee(new TrainerEmployeeInput($externalId, 'Avant', 'Pierre', $email));
+
+        //Act
+        $this->client->replaceTrainerEmployee(
+            $externalId,
+            new TrainerEmployeeInput($externalId, 'Apres', 'Pierre', $email, false)
+        );
+        $trainerOutput = $this->client->getTrainer($externalId);
+
+        // Assert
+        $this->assertEquals('Apres', $trainerOutput->familyName);
+        $this->assertFalse($trainerOutput->visibleInformation);
+    }
+
+    public function testPatchTrainerEmployee(): void
+    {
+        //Arrange
+        $created = $this->client->createTrainerEmployee(new TrainerEmployeeInput(
+            $this->newExternalId('T'),
+            'Patch',
+            'Pierre',
+            $this->newEmail('trainer.patch')
+        ));
+
+        //Act
+        $this->client->patchTrainerEmployee($created->agoraId, (new TrainerEmployeePatchInput())->setJobTitle('Formateur'));
+        $trainerOutput = $this->client->getTrainer($created->agoraId);
+
+        // Assert
+        $this->assertEquals('Patch', $trainerOutput->familyName);
+        $this->assertEquals('Formateur', $trainerOutput->jobTitle);
+    }
+
+    public function testPatchTrainerFree(): void
+    {
+        //Arrange
+        $created = $this->client->createTrainerFree(new TrainerFreeInput(
+            $this->newExternalId('T'),
+            'Patch',
+            'Sophie',
+            $this->newEmail('trainer.free.patch')
+        ));
+
+        //Act
+        $this->client->patchTrainerFree($created->agoraId, (new TrainerFreePatchInput())->setHourlyCost(55.0));
+        $trainerOutput = $this->client->getTrainer($created->agoraId);
+
+        // Assert
+        $this->assertInstanceOf(TrainerFreeOutput::class, $trainerOutput);
+        $this->assertEquals(55.0, $trainerOutput->hourlyCost);
     }
 }

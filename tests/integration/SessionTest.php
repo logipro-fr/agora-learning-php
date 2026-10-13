@@ -6,7 +6,9 @@ namespace AgoraLearningPhp\Tests\integration;
 
 use AgoraLearningPhp\DTO\Input\Person\PersonInput;
 use AgoraLearningPhp\DTO\Input\Session\FixedSessionInput;
+use AgoraLearningPhp\DTO\Input\Session\FixedSessionPatchInput;
 use AgoraLearningPhp\DTO\Input\Session\OpenedSessionInput;
+use AgoraLearningPhp\DTO\Input\Session\OpenedSessionPatchInput;
 use AgoraLearningPhp\DTO\Input\Session\SessionInput;
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerEmployeeInput;
 use AgoraLearningPhp\DTO\Output\Session\FixedSessionOutput;
@@ -24,7 +26,7 @@ class SessionTest extends AbstractAgoraLearningTest
     {
         //Arrange - créer les dépendances
         $trainerCreated = $this->client->createTrainerEmployee(
-            new TrainerEmployeeInput($this->newExternalId('T'), 'Formateur', 'Session', 'formateur.session.fixed@example.com')
+            new TrainerEmployeeInput($this->newExternalId('T'), 'Formateur', 'Session', $this->newEmail('formateur.session.fixed'))
         );
         $personCreated = $this->client->createPerson(
             new PersonInput($this->newExternalId('P'), 'Admin', 'Session', 'administrateur.session.fixed@example.com', Gender::GENDER_NA)
@@ -136,7 +138,7 @@ class SessionTest extends AbstractAgoraLearningTest
     {
         //Arrange - créer les dépendances
         $trainerCreated = $this->client->createTrainerEmployee(
-            new TrainerEmployeeInput($this->newExternalId('T'), 'Formateur', 'Opened', 'formateur.opened.complete@example.com')
+            new TrainerEmployeeInput($this->newExternalId('T'), 'Formateur', 'Opened', $this->newEmail('formateur.opened.complete'))
         );
         $personCreated = $this->client->createPerson(
             new PersonInput($this->newExternalId('P'), 'Admin', 'Opened', 'administrateur.session.fixed@example.com', Gender::GENDER_NA)
@@ -338,5 +340,115 @@ class SessionTest extends AbstractAgoraLearningTest
 
         // Assert
         $this->assertNotSame('', $sessionOutput->uuid);
+    }
+
+    public function testReplaceFixedSession(): void
+    {
+        //Arrange
+        $externalId = $this->newExternalId('S');
+        $this->client->createSession(new SessionInput(
+            $externalId,
+            'Session Avant Remplacement',
+            new FixedSessionInput(
+                new \DateTimeImmutable('2026-10-01'),
+                new \DateTimeImmutable('2026-10-05'),
+                SessionType::SESSION_TYPE_INTRA,
+                SessionMode::SESSION_MODE_BLENDED
+            ),
+            false,
+            true,
+            true,
+            0,
+            0,
+            'Description initiale'
+        ));
+
+        //Act
+        $this->client->replaceSession($externalId, new SessionInput(
+            $externalId,
+            'Session Remplacée',
+            new FixedSessionInput(
+                new \DateTimeImmutable('2026-11-01'),
+                new \DateTimeImmutable('2026-11-05'),
+                SessionType::SESSION_TYPE_INTER,
+                SessionMode::SESSION_MODE_DISTANCE
+            )
+        ));
+        $sessionOutput = $this->client->getSession($externalId);
+
+        // Assert
+        $this->assertEquals('Session Remplacée', $sessionOutput->title);
+        $this->assertEquals(SessionType::SESSION_TYPE_INTER, $sessionOutput->type);
+        $this->assertNull($sessionOutput->description);
+        /** @var FixedSessionOutput $sessionData */
+        $sessionData = $sessionOutput->sessionData;
+        $this->assertEquals('2026-11-01', $sessionData->availabilityStartDate->format('Y-m-d'));
+    }
+
+    public function testPatchFixedSession(): void
+    {
+        //Arrange
+        $created = $this->client->createSession(new SessionInput(
+            $this->newExternalId('S'),
+            'Session Patch',
+            new FixedSessionInput(
+                new \DateTimeImmutable('2026-10-01'),
+                new \DateTimeImmutable('2026-10-05'),
+                SessionType::SESSION_TYPE_INTRA,
+                SessionMode::SESSION_MODE_BLENDED
+            )
+        ));
+
+        //Act
+        $this->client->patchSession(
+            $created->agoraId,
+            (new FixedSessionPatchInput())->setAvailabilityEndDate(new \DateTimeImmutable('2026-10-10'))->setMaxPlaces(12)
+        );
+        $sessionOutput = $this->client->getSession($created->agoraId);
+
+        // Assert
+        $this->assertEquals('Session Patch', $sessionOutput->title);
+        $this->assertEquals(12, $sessionOutput->maxPlaces);
+        /** @var FixedSessionOutput $sessionData */
+        $sessionData = $sessionOutput->sessionData;
+        $this->assertEquals('2026-10-01', $sessionData->availabilityStartDate->format('Y-m-d'));
+        $this->assertEquals('2026-10-10', $sessionData->availabilityEndDate->format('Y-m-d'));
+    }
+
+    public function testPatchOpenedSession(): void
+    {
+        //Arrange
+        $created = $this->client->createSession(new SessionInput(
+            $this->newExternalId('S'),
+            'Session Ouverte Patch',
+            new OpenedSessionInput(new \DateTimeImmutable('2026-01-01'), new \DateTimeImmutable('2026-12-31'), 30)
+        ));
+
+        //Act
+        $this->client->patchSession($created->agoraId, (new OpenedSessionPatchInput())->setAccessDurationDays(45));
+        $sessionOutput = $this->client->getSession($created->agoraId);
+
+        // Assert
+        $this->assertInstanceOf(OpenedSessionOutput::class, $sessionOutput->sessionData);
+        /** @var OpenedSessionOutput $sessionData */
+        $sessionData = $sessionOutput->sessionData;
+        $this->assertEquals(45, $sessionData->accessDurationDays);
+    }
+
+    public function testPatchSessionWithWrongTypeThrowsNotFound(): void
+    {
+        //Arrange
+        $created = $this->client->createSession(new SessionInput(
+            $this->newExternalId('S'),
+            'Session Ouverte Mauvais Type',
+            new OpenedSessionInput(new \DateTimeImmutable('2026-01-01'), new \DateTimeImmutable('2026-12-31'), 30)
+        ));
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionCode(404);
+
+        //Act
+        $this->client->patchSession($created->agoraId, (new FixedSessionPatchInput())->setMaxPlaces(10));
     }
 }

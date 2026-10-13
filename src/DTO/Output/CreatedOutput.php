@@ -8,7 +8,8 @@ use AgoraLearningPhp\Identifier\AgoraId;
 use AgoraLearningPhp\Identifier\ExternalId;
 
 /**
- * Réponse de l'API à une requête de création (POST) : identifiants de l'objet créé.
+ * Réponse de l'API à une requête d'écriture (création POST, remplacement PUT, modification PATCH) :
+ * identifiants de l'objet créé ou modifié.
  */
 final class CreatedOutput
 {

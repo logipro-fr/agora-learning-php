@@ -50,6 +50,14 @@ abstract class AbstractAgoraLearningTest extends TestCase
     }
 
     /**
+     * E-mail unique : l'e-mail d'un formateur est son identifiant de compte, l'API répond 409 sur un doublon.
+     */
+    protected function newEmail(string $prefix): string
+    {
+        return uniqid($prefix . '.', false) . '@example.com';
+    }
+
+    /**
      * Ordre de priorité : variable d'environnement, puis .env.local, puis .env.
      */
     private static function getConfig(string $name): string

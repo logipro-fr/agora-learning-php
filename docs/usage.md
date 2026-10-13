@@ -68,6 +68,35 @@ $learner = $client->getLearner($created->agoraId); // relire l'objet complet si 
 
 En lecture, chaque DTO de sortie expose `uuid` (l'`agoraId`) et `externalIdentifier` (`?ExternalId`).
 
+### Modification : `replace*()` (PUT) et `patch*()` (PATCH)
+
+Chaque ressource modifiable (Person, Learner, Trainer, Society, Session) propose deux méthodes de modification. Elles prennent en premier argument l'identifiant de l'objet à modifier (`AgoraId` ou `ExternalId`) et renvoient, comme les créations, un `CreatedOutput` (identifiants de l'objet modifié). Les inscriptions (Enrollment) ne sont pas modifiables.
+
+| Méthode      | HTTP    | Argument                                     | Effet                                                                 |
+| ------------ | ------- | -------------------------------------------- | --------------------------------------------------------------------- |
+| `replace*()` | `PUT`   | le DTO de création (`PersonInput`, …)        | **Remplace** l'objet : un champ facultatif non renseigné est **vidé** |
+| `patch*()`   | `PATCH` | un DTO de patch (`PersonPatchInput`, …)      | **Modifie** uniquement les champs renseignés                          |
+
+Les DTO de patch se construisent vides puis se remplissent par des setters chaînables : un champ jamais renseigné n'est pas envoyé (donc inchangé), un champ renseigné à `null` est vidé. Les setters des champs obligatoires n'acceptent pas `null`. La requête est envoyée en `application/merge-patch+json`.
+
+```php
+use AgoraLearningPhp\DTO\Input\Person\PersonPatchInput;
+use AgoraLearningPhp\Identifier\ExternalId;
+
+$client->patchPerson(
+    new ExternalId('MonERP', 'P-41'),
+    (new PersonPatchInput())
+        ->setTelephone('0102030405') // modifié
+        ->setJobTitle(null)          // vidé
+);                                   // tous les autres champs sont inchangés
+```
+
+À savoir :
+
+- **Relations** (responsables d'une société, référent d'une session, société d'un formateur) : désignées par leur identifiant (`AgoraId::getId()` ou `ExternalId::getId()`). En `replace*()`, une relation non renseignée est retirée ; en `patch*()`, `null` la retire.
+- **Fichiers** (image, CV, diplôme…) : URL publique téléchargée par Agora. Une valeur vide ou `null` **ne supprime pas** le fichier existant.
+- **Sessions et formateurs** : la route dépend du type (`/sessions/fixed/{id}`, `/sessions/opened/{id}`, `/trainers/employee/{id}`, `/trainers/free/{id}`). Le type d'une session et le statut d'un formateur ne peuvent pas être changés : utiliser le DTO correspondant au type existant, sinon l'API répond `404`.
+
 ---
 
 ## Auth — Vérification de connexion
@@ -155,6 +184,7 @@ echo $person->familyName; // "Dupont"
 | `image`           | ?string             | Non         | URL d'avatar                   |
 | `birthDate`       | ?\DateTimeImmutable | Non         | Date de naissance              |
 | `jobTitle`        | ?string             | Non         | Intitulé du poste              |
+| `mobileNumber`    | ?string             | Non         | Téléphone portable (dernier argument) |
 
 **Champs de `PersonOutput` :**
 
@@ -174,6 +204,33 @@ echo $person->familyName; // "Dupont"
 | `gender`          | string              | `Gender::GENDER_NA` par défaut |
 | `birthDate`       | ?\DateTimeImmutable | Date de naissance              |
 | `jobTitle`        | ?string             | Intitulé du poste              |
+
+### `replacePerson(ApiObjectIdentifier $identifier, PersonInput $input) : CreatedOutput`
+
+Remplace la personne (`PUT /persons/{id}`). Le corps est le même que pour `createPerson()` : un champ facultatif non renseigné est vidé.
+
+```php
+$updated = $client->replacePerson(
+    new ExternalId('MonERP', 'P-41'),
+    new PersonInput(new ExternalId('MonERP', 'P-41'), 'Dupont', 'Jeanne', 'jeanne.dupont@example.com', Gender::GENDER_FEMALE)
+);
+echo $updated->agoraId->getId(); // "per_01KRXPMF8FET29Q0YV9CYQ3Z8C"
+```
+
+### `patchPerson(ApiObjectIdentifier $identifier, PersonPatchInput $patch) : CreatedOutput`
+
+Modifie uniquement les champs renseignés (`PATCH /persons/{id}`).
+
+```php
+use AgoraLearningPhp\DTO\Input\Person\PersonPatchInput;
+
+$client->patchPerson(
+    new AgoraId('per_01KRXPMF8FET29Q0YV9CYQ3Z8C'),
+    (new PersonPatchInput())->setTelephone('0102030405')->setJobTitle(null)
+);
+```
+
+**Setters de `PersonPatchInput` :** `setExternalIdentifier(ExternalId)`, `setFamilyName(string)`, `setGivenName(string)`, `setEmail(string)`, `setGender(string)`, `setTelephone(?string)`, `setMobileNumber(?string)`, `setAddressStreet(?string)`, `setAddressPostcode(?string)`, `setAddressLocality(?string)`, `setAddressCountry(?string)`, `setImage(?string)`, `setBirthDate(?\DateTimeInterface)`, `setJobTitle(?string)`.
 
 ### `getPerson(ApiObjectIdentifier $identifier) : PersonOutput`
 
@@ -411,6 +468,36 @@ $trainer = $client->getTrainer($created->agoraId);
 | `billingAddressLocality`     | ?string             | Ville - Adresse de facturation                      |
 | `billingAddressCountry`      | ?string             | Pays - Adresse de facturation                       |
 
+### `replaceTrainerEmployee(ApiObjectIdentifier $identifier, TrainerEmployeeInput $input) : CreatedOutput`
+### `replaceTrainerFree(ApiObjectIdentifier $identifier, TrainerFreeInput $input) : CreatedOutput`
+
+Remplace le formateur (`PUT /trainers/employee/{id}` ou `PUT /trainers/free/{id}`). Le corps est le même qu'à la création ; `notifyUser` est ignoré (pris en compte uniquement à la création). L'e-mail reste unique (`409` sinon).
+
+```php
+$client->replaceTrainerEmployee(
+    new ExternalId('MonERP', 'T-41'),
+    new TrainerEmployeeInput(new ExternalId('MonERP', 'T-41'), 'Martin', 'Sophie', 'sophie.martin@example.com', false)
+);
+```
+
+### `patchTrainerEmployee(ApiObjectIdentifier $identifier, TrainerEmployeePatchInput $patch) : CreatedOutput`
+### `patchTrainerFree(ApiObjectIdentifier $identifier, TrainerFreePatchInput $patch) : CreatedOutput`
+
+Modifie uniquement les champs renseignés (`PATCH /trainers/employee/{id}` ou `PATCH /trainers/free/{id}`).
+
+```php
+use AgoraLearningPhp\DTO\Input\Trainer\TrainerFreePatchInput;
+
+$client->patchTrainerFree(
+    new ExternalId('MonERP', 'T-42'),
+    (new TrainerFreePatchInput())->setHourlyCost(65.0)->setSocietyId(null)
+);
+```
+
+**Setters de `TrainerEmployeePatchInput` :** `setExternalIdentifier(ExternalId)`, `setFamilyName(string)`, `setGivenName(string)`, `setEmail(string)`, `setGender(string)`, `setTelephone(?string)`, `setMobileNumber(?string)`, `setAddressStreet(?string)`, `setAddressPostcode(?string)`, `setAddressLocality(?string)`, `setAddressCountry(?string)`, `setImage(?string)`, `setBirthDate(?\DateTimeInterface)`, `setJobTitle(?string)`, `setVisibleInformation(bool)`, `setSocietyId(?string)`, `setCv(?string)`, `setDegree(?string)`, `setContract(?string)`, `setJobDescription(?string)`.
+
+**Setters supplémentaires de `TrainerFreePatchInput` :** `setHourlyCost(?float)`, `setDaylyCost(?float)`, `setSiret(?string)`, `setTvaNumber(?string)`, `setUrssafNumber(?string)`, `setUrssafCertificate(?string)`, `setBillingAddressStreet(?string)`, `setBillingAddressPostcode(?string)`, `setBillingAddressLocality(?string)`, `setBillingAddressCountry(?string)`.
+
 ### `getTrainer(ApiObjectIdentifier $identifier) : TrainerOutput`
 
 ```php
@@ -491,6 +578,30 @@ $learner = $client->getLearner($created->agoraId);
 | `image`           | ?string             | Non         | URL d'une image                  |
 | `birthDate`       | ?\DateTimeImmutable | Non         | Date de naissance                |
 | `jobTitle`        | ?string             | Non         | Intitulé du poste                |
+| `mobileNumber`    | ?string             | Non         | Téléphone portable (dernier argument) |
+
+### `replaceLearner(ApiObjectIdentifier $identifier, LearnerInput $input) : CreatedOutput`
+
+Remplace l'apprenant (`PUT /learners/{id}`). L'identifiant de connexion et le statut du compte sont conservés.
+
+```php
+$client->replaceLearner(
+    new ExternalId('MonERP', 'L-41'),
+    new LearnerInput(new ExternalId('MonERP', 'L-41'), 'Lennon', 'John', 'john.recovery@example.com', 'john.lennon@example.com')
+);
+```
+
+### `patchLearner(ApiObjectIdentifier $identifier, LearnerPatchInput $patch) : CreatedOutput`
+
+Modifie uniquement les champs renseignés (`PATCH /learners/{id}`).
+
+```php
+use AgoraLearningPhp\DTO\Input\Learner\LearnerPatchInput;
+
+$client->patchLearner(new ExternalId('MonERP', 'L-41'), (new LearnerPatchInput())->setAddressLocality('Liverpool'));
+```
+
+**Setters de `LearnerPatchInput` :** ceux de `PersonPatchInput`, plus `setRecoverEmail(string)`.
 
 ### `getLearner(ApiObjectIdentifier $identifier) : LearnerOutput`
 
@@ -517,7 +628,7 @@ foreach ($learners as $learner) {
 
 ## Society — Gestion des sociétés
 
-Une **Society** représente une entreprise cliente ou partenaire. Elle peut embarquer jusqu'à trois contacts (référent légal, référent administratif, référent RH), chacun modélisé par un `PersonInput`.
+Une **Society** représente une entreprise cliente ou partenaire. Elle peut référencer jusqu'à trois contacts **existants** (référent légal, référent administratif, référent RH), désignés par leur identifiant (`AgoraId` ou `ExternalId`, sous forme de chaîne `getId()`). Créer d'abord les contacts avec `createPerson()`.
 
 ### `createSociety(SocietyInput $input) : CreatedOutput`
 
@@ -529,30 +640,9 @@ use AgoraLearningPhp\DTO\Input\Person\PersonInput;
 use AgoraLearningPhp\Enum\Gender;
 use AgoraLearningPhp\Identifier\ExternalId;
 
-// Contacts optionnels
-$legalPerson = new PersonInput(
-    new ExternalId('MonERP', 'P-42'),
-    'Legrand',
-    'Pierre',
-    'pierre.legrand@acme.example.com',
-    Gender::GENDER_MALE
-);
-
-$administrativePerson = new PersonInput(
-    new ExternalId('MonERP', 'P-43'),
-    'Legrand',
-    'Paul',
-    'paul.legrand@acme.example.com',
-    Gender::GENDER_MALE
-);
-
-$rhPerson = new PersonInput(
-    new ExternalId('MonERP', 'P-44'),
-    'Legrand',
-    'Jacques',
-    'jacques.legrand@acme.example.com',
-    Gender::GENDER_MALE
-);
+// Contacts optionnels : des personnes existantes, désignées par leur identifiant
+$legalPersonId = new ExternalId('MonERP', 'P-42');
+$client->createPerson(new PersonInput($legalPersonId, 'Legrand', 'Pierre', 'pierre.legrand@acme.example.com', Gender::GENDER_MALE));
 
 $input = new SocietyInput(
     new ExternalId('MonERP', 'SOC-41'), // externalIdentifier (obligatoire)
@@ -569,9 +659,9 @@ $input = new SocietyInput(
     '75002',                        // addressPostcodeInvoicing
     'Paris',                        // addressLocalityInvoicing
     'FR',                           // addressCountryInvoicing
-    $legalPerson,                   // legalPerson
-    $administrativePerson,          // administrativePerson
-    $rhPerson,                      // rhPerson
+    $legalPersonId->getId(),        // legalPersonId ("MonERP:P-42")
+    'per_01KRXPMF8GENX8HCB8QKECBGZC', // administrativePersonId (AgoraId d'un contact existant)
+    null,                           // rhPersonId
     'url/image.jpeg',               // image
 );
 
@@ -588,7 +678,7 @@ echo $society->name; // "ACME Corp"
 
 | Champ                       | Type         | Obligatoire | Description                      |
 | --------------------------- | ------------ | ----------- | -------------------------------- |
-| `externalIdentifier`        | ExternalId | Oui         | Identifiant dans le système externe |
+| `externalIdentifier`        | ExternalId | Oui         | Identifiant dans le système externe (envoyé sous la clé `externalId`) |
 | `name`                      | string       | Oui         | Raison sociale                   |
 | `siret`                     | ?string      | Non         | Numéro SIRET                     |
 | `legalStatus`               | ?string      | Non         | Forme juridique (ex : SAS, SARL) |
@@ -602,9 +692,9 @@ echo $society->name; // "ACME Corp"
 | `addressPostcodeInvoicing`  | ?string      | Non         | Code postale facturation         |
 | `addressLocalityInvoicing`  | ?string      | Non         | Ville facturation                |
 | `addressCountryInvoicing`   | ?string      | Non         | Pays facturation                 |
-| `legalPerson`               | ?PersonInput | Non         | Référent légal                   |
-| `administrativePerson`      | ?PersonInput | Non         | Référent administratif           |
-| `rhPerson`                  | ?PersonInput | Non         | Référent RH                      |
+| `legalPersonId`             | ?string      | Non         | Identifiant du référent légal    |
+| `administrativePersonId`    | ?string      | Non         | Identifiant du référent administratif |
+| `rhPersonId`                | ?string      | Non         | Identifiant du référent RH       |
 | `image`                     | ?string      | Non         | URL du logo de la société        |
 
 **Champs de `SocietyOutput` :**
@@ -630,6 +720,33 @@ echo $society->name; // "ACME Corp"
 | `administrativePerson`      | ?PersonOutput | Référent administratif           |
 | `rhPerson`                  | ?PersonOutput | Référent RH                      |
 | `image`                     | ?string       | URL du logo de la société        |
+
+### `replaceSociety(ApiObjectIdentifier $identifier, SocietyInput $input) : CreatedOutput`
+
+Remplace la société (`PUT /societies/{id}`) : un champ facultatif non renseigné est vidé et un référent non renseigné est retiré.
+
+```php
+$client->replaceSociety(
+    new ExternalId('MonERP', 'SOC-41'),
+    new SocietyInput(new ExternalId('MonERP', 'SOC-41'), 'ACME SA', '12345678901234', 'SA')
+);
+```
+
+### `patchSociety(ApiObjectIdentifier $identifier, SocietyPatchInput $patch) : CreatedOutput`
+
+Modifie uniquement les champs renseignés (`PATCH /societies/{id}`).
+
+```php
+use AgoraLearningPhp\DTO\Input\Society\SocietyPatchInput;
+
+// Retirer le référent RH et changer le téléphone
+$client->patchSociety(
+    new AgoraId('soc_01KRXPMF93F039K58SC9QEZZNY'),
+    (new SocietyPatchInput())->setRhPersonId(null)->setTelephone('0140506071')
+);
+```
+
+**Setters de `SocietyPatchInput` :** `setExternalIdentifier(ExternalId)`, `setName(string)`, `setSiret(?string)`, `setLegalStatus(?string)`, `setEmail(?string)`, `setTelephone(?string)`, `setAddressStreetHeadOffice(?string)`, `setAddressPostcodeHeadOffice(?string)`, `setAddressLocalityHeadOffice(?string)`, `setAddressCountryHeadOffice(?string)`, `setAddressStreetInvoicing(?string)`, `setAddressPostcodeInvoicing(?string)`, `setAddressLocalityInvoicing(?string)`, `setAddressCountryInvoicing(?string)`, `setLegalPersonId(?string)`, `setAdministrativePersonId(?string)`, `setRhPersonId(?string)`, `setImage(?string)`.
 
 ### `getSociety(ApiObjectIdentifier $identifier) : SocietyOutput`
 
@@ -815,6 +932,52 @@ if ($session->sessionData instanceof OpenedSessionOutput) {
 | `urlOnTheSpotSurvey`   | ?string                                   | URL questionnaire à chaud                             |
 | `urlDelayedSurvey`     | ?string                                   | URL questionnaire à froid                             |
 | `image`                | ?string                                   | URL de l'image d'illustration                         |
+
+### `replaceSession(ApiObjectIdentifier $identifier, SessionInput $input) : CreatedOutput`
+
+Remplace la session (`PUT /sessions/fixed/{id}` ou `PUT /sessions/opened/{id}`, selon le type de `$input->sessionData`). Le type doit être celui de la session existante (sinon `404`) ; un champ facultatif non renseigné est vidé.
+
+```php
+$client->replaceSession(
+    new ExternalId('MonERP', 'S-41'),
+    new SessionInput(
+        new ExternalId('MonERP', 'S-41'),
+        'Formation PHP avancée',
+        new FixedSessionInput(
+            new \DateTimeImmutable('2026-03-02T09:00:00+01:00'),
+            new \DateTimeImmutable('2026-03-04T17:00:00+01:00'),
+            SessionType::SESSION_TYPE_INTER,
+            SessionMode::SESSION_MODE_BLENDED
+        )
+    )
+);
+```
+
+### `patchSession(ApiObjectIdentifier $identifier, AbstractSessionPatchInput $patch) : CreatedOutput`
+
+Modifie uniquement les champs renseignés. La route dépend de la classe du patch : `FixedSessionPatchInput` → `PATCH /sessions/fixed/{id}`, `OpenedSessionPatchInput` → `PATCH /sessions/opened/{id}`. La cohérence des dates est vérifiée avec les valeurs déjà enregistrées (`422` si la fin précède le début).
+
+```php
+use AgoraLearningPhp\DTO\Input\Session\FixedSessionPatchInput;
+use AgoraLearningPhp\DTO\Input\Session\OpenedSessionPatchInput;
+
+// Décaler les dates d'une session à dates fixes
+$client->patchSession(
+    new ExternalId('MonERP', 'S-41'),
+    (new FixedSessionPatchInput())
+        ->setAvailabilityStartDate(new \DateTimeImmutable('2026-03-02T09:00:00+01:00'))
+        ->setAvailabilityEndDate(new \DateTimeImmutable('2026-03-04T17:00:00+01:00'))
+);
+
+// Allonger la durée d'accès d'une session ouverte
+$client->patchSession(new AgoraId('ses_01KRXPMF9AE5HBH7JY2N8Q2PQB'), (new OpenedSessionPatchInput())->setAccessDurationDays(60));
+```
+
+**Setters communs :** `setExternalIdentifier(ExternalId)`, `setTitle(string)`, `setDescription(?string)`, `setDurationInSeconds(int)`, `setManualDuration(bool)`, `setPrice(float)`, `setMaxPlaces(?int)` (`null` = illimité), `setHasForum(bool)`, `setNotifyMailForum(bool)`, `setPedagogicalTrainer(?string)`, `setAdministrativePerson(?string)`, `setUrlPreTrainingSurvey(?string)`, `setUrlOnTheSpotSurvey(?string)`, `setUrlDelayedSurvey(?string)`, `setImage(?string)`.
+
+**`FixedSessionPatchInput` :** `setType(string)`, `setMode(string)`, `setAvailabilityStartDate(\DateTimeInterface)`, `setAvailabilityEndDate(\DateTimeInterface)`.
+
+**`OpenedSessionPatchInput` :** `setSubscribeStartDate(\DateTimeInterface)`, `setSubscribeEndDate(\DateTimeInterface)`, `setAccessDurationDays(int)`.
 
 ### `getSession(ApiObjectIdentifier $identifier) : SessionOutput`
 

@@ -6,6 +6,7 @@ namespace AgoraLearningPhp\Tests\integration;
 
 use AgoraLearningPhp\DTO\Input\Person\PersonInput;
 use AgoraLearningPhp\DTO\Input\Society\SocietyInput;
+use AgoraLearningPhp\DTO\Input\Society\SocietyPatchInput;
 use AgoraLearningPhp\Enum\Gender;
 use AgoraLearningPhp\Identifier\AgoraId;
 
@@ -31,23 +32,24 @@ class SocietyTest extends AbstractAgoraLearningTest
 
         $legalPersonFamilyName = 'Durand';
         $legalPersonGivenName = 'Paul';
-        $legalPerson = new PersonInput(
+        $legalPersonId = $this->client->createPerson(new PersonInput(
             $this->newExternalId('P'),
             $legalPersonFamilyName,
             $legalPersonGivenName,
             'paul.durand@example.com',
             Gender::GENDER_MALE
-        );
+        ))->agoraId->getId();
 
         $adminPersonFamilyName = 'Girard';
         $adminPersonGivenName = 'Marie';
-        $adminPerson = new PersonInput(
-            $this->newExternalId('P'),
+        $adminPersonExternalId = $this->newExternalId('P');
+        $this->client->createPerson(new PersonInput(
+            $adminPersonExternalId,
             $adminPersonFamilyName,
             $adminPersonGivenName,
             'marie.girard@example.com',
             Gender::GENDER_FEMALE
-        );
+        ));
 
         $societyInput = new SocietyInput(
             $this->newExternalId('SOC'),
@@ -64,8 +66,8 @@ class SocietyTest extends AbstractAgoraLearningTest
             $addressPostcodeInvoicing,
             $addressLocalityInvoicing,
             $addressCountryInvoicing,
-            $legalPerson,
-            $adminPerson,
+            $legalPersonId,
+            $adminPersonExternalId->getId(),
             null,
             $image
         );
@@ -165,5 +167,52 @@ class SocietyTest extends AbstractAgoraLearningTest
                 $this->assertEquals($name2, $societyOutput->name);
             }
         }
+    }
+
+    public function testReplaceSociety(): void
+    {
+        //Arrange
+        $externalId = $this->newExternalId('SOC');
+        $this->client->createSociety(new SocietyInput($externalId, 'Société Avant Remplacement', '12345678901234'));
+
+        //Act
+        $updated = $this->client->replaceSociety($externalId, new SocietyInput($externalId, 'Société Remplacée'));
+        $societyOutput = $this->client->getSociety($externalId);
+
+        // Assert
+        $this->assertEquals($updated->agoraId->getId(), $societyOutput->uuid);
+        $this->assertEquals('Société Remplacée', $societyOutput->name);
+        $this->assertEmpty($societyOutput->siret);
+    }
+
+    public function testPatchSociety(): void
+    {
+        //Arrange
+        $rhPersonId = $this->client->createPerson(new PersonInput(
+            $this->newExternalId('P'),
+            'Bernard',
+            'Lucie',
+            'lucie.bernard@example.com',
+            Gender::GENDER_FEMALE
+        ))->agoraId->getId();
+        $created = $this->client->createSociety(new SocietyInput(
+            $this->newExternalId('SOC'),
+            'Société Patch',
+            '12345678901234'
+        ));
+
+        //Act
+        $this->client->patchSociety(
+            $created->agoraId,
+            (new SocietyPatchInput())->setTelephone('0102030405')->setRhPersonId($rhPersonId)
+        );
+        $societyOutput = $this->client->getSociety($created->agoraId);
+
+        // Assert
+        $this->assertEquals('Société Patch', $societyOutput->name);
+        $this->assertEquals('12345678901234', $societyOutput->siret);
+        $this->assertEquals('0102030405', $societyOutput->telephone);
+        $this->assertNotNull($societyOutput->rhPerson);
+        $this->assertEquals($rhPersonId, $societyOutput->rhPerson->uuid);
     }
 }

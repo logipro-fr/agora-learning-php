@@ -14,6 +14,7 @@ final class PersonInput
     public string $givenName;
     public string $email;
     public ?string $telephone;
+    public ?string $mobileNumber;
     public ?string $addressStreet;
     public ?string $addressPostcode;
     public ?string $addressLocality;
@@ -36,7 +37,8 @@ final class PersonInput
         ?string $addressCountry = null,
         ?string $image = null,
         ?\DateTimeImmutable $birthDate = null,
-        ?string $jobTitle = null
+        ?string $jobTitle = null,
+        ?string $mobileNumber = null
     ) {
         $this->externalIdentifier = $externalIdentifier;
         $this->familyName = $familyName;
@@ -51,5 +53,6 @@ final class PersonInput
         $this->gender = $gender;
         $this->birthDate = $birthDate;
         $this->jobTitle = $jobTitle;
+        $this->mobileNumber = $mobileNumber;
     }
 }

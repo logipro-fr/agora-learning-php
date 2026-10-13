@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace AgoraLearningPhp\Tests\unit\Service\Session;
 
+use AgoraLearningPhp\DTO\Input\Session\AbstractSessionPatchInput;
 use AgoraLearningPhp\DTO\Input\Session\FixedSessionInput;
+use AgoraLearningPhp\DTO\Input\Session\FixedSessionPatchInput;
 use AgoraLearningPhp\DTO\Input\Session\OpenedSessionInput;
+use AgoraLearningPhp\DTO\Input\Session\OpenedSessionPatchInput;
 use AgoraLearningPhp\DTO\Input\Session\SessionInput;
 use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Session\FixedSessionOutput;
@@ -505,5 +508,118 @@ class SessionTest extends ServiceTestCase
         $this->assertSame(90, $body['accessDurationDays']);
         $this->assertSame(SessionType::SESSION_TYPE_INTER, $body['type']);
         $this->assertSame(SessionMode::SESSION_MODE_E_LEARNING, $body['mode']);
+    }
+
+    // -------------------------------------------------------------------------
+    // PUT / PATCH
+    // -------------------------------------------------------------------------
+
+    public function testPutSessionWithFixedDataSendsPutRequestToFixedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $session = $this->makeSession($this->makeHttpClientInspectingRequest(200, json_encode(['agoraId' => 'ses_001', 'sourceName' => 'Src', 'externalId' => 'X-42']), $method, $url));
+        $fixedData = new FixedSessionInput(
+            new \DateTimeImmutable('2026-03-02T09:00:00+01:00'),
+            new \DateTimeImmutable('2026-03-04T17:00:00+01:00'),
+            SessionType::SESSION_TYPE_INTER,
+            SessionMode::SESSION_MODE_FACE_TO_FACE
+        );
+
+        // Act
+        $session->putSession(new ExternalId('Src', 'X-42'), new SessionInput(new ExternalId('Src', 'X-42'), 'Formation', $fixedData));
+
+        // Assert
+        $this->assertSame('PUT', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/sessions/fixed/Src%3AX-42', $url);
+    }
+
+    public function testPutSessionWithOpenedDataSendsOpenedBodyToOpenedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $capturedBody = '';
+        $session = $this->makeSession($this->makeHttpClientInspectingRequest(200, json_encode(['agoraId' => 'ses_001', 'sourceName' => 'Src', 'externalId' => 'X-42']), $method, $url));
+        $sessionBody = $this->makeSession($this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'ses_001', 'sourceName' => 'Src', 'externalId' => 'X-42']), $capturedBody));
+        $openedData = new OpenedSessionInput(
+            new \DateTimeImmutable('2026-01-01T00:00:00+00:00'),
+            new \DateTimeImmutable('2026-12-31T00:00:00+00:00'),
+            30
+        );
+        $input = new SessionInput(new ExternalId('Src', 'X-42'), 'Formation', $openedData);
+
+        // Act
+        $session->putSession(new AgoraId('ses_001'), $input);
+        $sessionBody->putSession(new AgoraId('ses_001'), $input);
+
+        // Assert
+        $this->assertSame('PUT', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/sessions/opened/ses_001', $url);
+        $body = json_decode($capturedBody, true);
+        $this->assertSame(30, $body['accessDurationDays']);
+        $this->assertSame(SessionType::SESSION_TYPE_INTER, $body['type']);
+        $this->assertSame(SessionMode::SESSION_MODE_E_LEARNING, $body['mode']);
+    }
+
+    public function testPatchSessionWithFixedPatchSendsOnlySetFieldsToFixedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $capturedBody = '';
+        $session = $this->makeSession($this->makeHttpClientInspectingRequest(200, json_encode(['agoraId' => 'ses_001', 'sourceName' => 'Src', 'externalId' => 'X-42']), $method, $url));
+        $sessionBody = $this->makeSession($this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'ses_001', 'sourceName' => 'Src', 'externalId' => 'X-42']), $capturedBody));
+        $patch = (new FixedSessionPatchInput())
+            ->setAvailabilityStartDate(new \DateTimeImmutable('2026-03-02T09:00:00+01:00'))
+            ->setMaxPlaces(null)
+            ->setPedagogicalTrainer(null);
+
+        // Act
+        $session->patchSession(new AgoraId('ses_001'), $patch);
+        $sessionBody->patchSession(new AgoraId('ses_001'), $patch);
+
+        // Assert
+        $this->assertSame('PATCH', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/sessions/fixed/ses_001', $url);
+        $this->assertSame(
+            ['availabilityStartDate' => '2026-03-02T09:00:00+01:00', 'maxPlaces' => null, 'pedagogicalTrainer' => null],
+            json_decode($capturedBody, true)
+        );
+    }
+
+    public function testPatchSessionWithOpenedPatchSendsToOpenedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $capturedBody = '';
+        $session = $this->makeSession($this->makeHttpClientInspectingRequest(200, json_encode(['agoraId' => 'ses_001', 'sourceName' => 'Src', 'externalId' => 'X-42']), $method, $url));
+        $sessionBody = $this->makeSession($this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'ses_001', 'sourceName' => 'Src', 'externalId' => 'X-42']), $capturedBody));
+        $patch = (new OpenedSessionPatchInput())->setAccessDurationDays(45)->setDurationInSeconds(3600);
+
+        // Act
+        $session->patchSession(new ExternalId('Src', 'X-42'), $patch);
+        $sessionBody->patchSession(new ExternalId('Src', 'X-42'), $patch);
+
+        // Assert
+        $this->assertSame('PATCH', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/sessions/opened/Src%3AX-42', $url);
+        $this->assertSame(['accessDurationDays' => 45, 'duration' => 3600], json_decode($capturedBody, true));
+    }
+
+    public function testPatchSessionThrowsExceptionForUnsupportedPatchType(): void
+    {
+        // Arrange
+        $session = $this->makeSession($this->makeHttpClientWithResponse(200, json_encode(['agoraId' => 'ses_001', 'sourceName' => 'Src', 'externalId' => 'X-42'])));
+        $patch = new class () extends AbstractSessionPatchInput {
+        };
+
+        // Assert
+        $this->expectException(\InvalidArgumentException::class);
+
+        // Act
+        $session->patchSession(new AgoraId('ses_001'), $patch);
     }
 }

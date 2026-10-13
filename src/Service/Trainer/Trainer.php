@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace AgoraLearningPhp\Service\Trainer;
 
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerEmployeeInput;
+use AgoraLearningPhp\DTO\Input\Trainer\TrainerEmployeePatchInput;
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerFreeInput;
+use AgoraLearningPhp\DTO\Input\Trainer\TrainerFreePatchInput;
 use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Trainer\TrainerEmployeeOutput;
 use AgoraLearningPhp\DTO\Output\Trainer\TrainerFreeOutput;
@@ -43,78 +45,136 @@ class Trainer extends ApiService
 
     public function postTrainerEmployee(TrainerEmployeeInput $trainerEmployeeInput): CreatedOutput
     {
-        $body = JsonHandler::jsonEncode(
-            [
-                "externalIdentifier" => $trainerEmployeeInput->externalIdentifier->toArray(),
-                "familyName" => $trainerEmployeeInput->familyName,
-                "givenName" => $trainerEmployeeInput->givenName,
-                "email" => $trainerEmployeeInput->email,
-                "visibleInformation" => $trainerEmployeeInput->visibleInformation,
-                "notifyUser" => $trainerEmployeeInput->notifyUser,
-                "gender" => $trainerEmployeeInput->gender,
-                "telephone" => $trainerEmployeeInput->telephone,
-                "mobileNumber" => $trainerEmployeeInput->mobileNumber,
-                "addressStreet" => $trainerEmployeeInput->addressStreet,
-                "addressPostcode" => $trainerEmployeeInput->addressPostcode,
-                "addressLocality" => $trainerEmployeeInput->addressLocality,
-                "addressCountry" => $trainerEmployeeInput->addressCountry,
-                "image" => $trainerEmployeeInput->image,
-                "birthDate" => $trainerEmployeeInput->birthDate
-                    ? $trainerEmployeeInput->birthDate->format(self::DATETIME_FORMAT)
-                    : null,
-                "jobTitle" => $trainerEmployeeInput->jobTitle,
-                "societyId" => $trainerEmployeeInput->societyId,
-                "cv" => $trainerEmployeeInput->cv,
-                "degree" => $trainerEmployeeInput->degree,
-                "contract" => $trainerEmployeeInput->contract,
-                "jobDescription" => $trainerEmployeeInput->jobDescription
-            ]
-        );
+        $body = JsonHandler::jsonEncode($this->buildEmployeeBody($trainerEmployeeInput));
         $response = $this->httpClient->request(RequestMethod::POST, ApiUrls::getCreateTrainerEmployee(), $body);
         return $this->convertResponsePostToDTO($response);
     }
 
+    /**
+     * Remplace le formateur employé (PUT) : un champ facultatif non renseigné est vidé.
+     * notifyUser est ignoré par l'API (pris en compte uniquement à la création).
+     */
+    public function putTrainerEmployee(ApiObjectIdentifier $identifier, TrainerEmployeeInput $trainerEmployeeInput): CreatedOutput
+    {
+        $body = JsonHandler::jsonEncode($this->buildEmployeeBody($trainerEmployeeInput));
+        $response = $this->httpClient->request(
+            RequestMethod::PUT,
+            ApiUrls::getUpdateTrainerEmployee($identifier->getId()),
+            $body
+        );
+        return $this->convertResponsePostToDTO($response);
+    }
+
+    /**
+     * Modifie partiellement le formateur employé (PATCH) : seuls les champs renseignés sont modifiés.
+     */
+    public function patchTrainerEmployee(ApiObjectIdentifier $identifier, TrainerEmployeePatchInput $patchInput): CreatedOutput
+    {
+        return $this->sendPatch(ApiUrls::getUpdateTrainerEmployee($identifier->getId()), $patchInput);
+    }
+
     public function postTrainerFree(TrainerFreeInput $trainerFreeInput): CreatedOutput
     {
-        $body = JsonHandler::jsonEncode(
-            [
-                "externalIdentifier" => $trainerFreeInput->externalIdentifier->toArray(),
-                "familyName" => $trainerFreeInput->familyName,
-                "givenName" => $trainerFreeInput->givenName,
-                "email" => $trainerFreeInput->email,
-                "visibleInformation" => $trainerFreeInput->visibleInformation,
-                "notifyUser" => $trainerFreeInput->notifyUser,
-                "gender" => $trainerFreeInput->gender,
-                "telephone" => $trainerFreeInput->telephone,
-                "mobileNumber" => $trainerFreeInput->mobileNumber,
-                "addressStreet" => $trainerFreeInput->addressStreet,
-                "addressPostcode" => $trainerFreeInput->addressPostcode,
-                "addressLocality" => $trainerFreeInput->addressLocality,
-                "addressCountry" => $trainerFreeInput->addressCountry,
-                "image" => $trainerFreeInput->image,
-                "birthDate" => $trainerFreeInput->birthDate
-                    ? $trainerFreeInput->birthDate->format(self::DATETIME_FORMAT)
-                    : null,
-                "jobTitle" => $trainerFreeInput->jobTitle,
-                "societyId" => $trainerFreeInput->societyId,
-                "cv" => $trainerFreeInput->cv,
-                "degree" => $trainerFreeInput->degree,
-                "contract" => $trainerFreeInput->contract,
-                "jobDescription" => $trainerFreeInput->jobDescription,
-                "hourlyCost" => $trainerFreeInput->hourlyCost,
-                "daylyCost" => $trainerFreeInput->daylyCost,
-                "siret" => $trainerFreeInput->siret,
-                "tvaNumber" => $trainerFreeInput->tvaNumber,
-                "urssafNumber" => $trainerFreeInput->urssafNumber,
-                "urssafCertificate" => $trainerFreeInput->urssafCertificate,
-                "billingAddressStreet" => $trainerFreeInput->billingAddressStreet,
-                "billingAddressPostcode" => $trainerFreeInput->billingAddressPostcode,
-                "billingAddressLocality" => $trainerFreeInput->billingAddressLocality,
-                "billingAddressCountry" => $trainerFreeInput->billingAddressCountry
-            ]
-        );
+        $body = JsonHandler::jsonEncode($this->buildFreeBody($trainerFreeInput));
         $response = $this->httpClient->request(RequestMethod::POST, ApiUrls::getCreateTrainerFree(), $body);
         return $this->convertResponsePostToDTO($response);
+    }
+
+    /**
+     * Remplace le formateur indépendant (PUT) : un champ facultatif non renseigné est vidé.
+     * notifyUser est ignoré par l'API (pris en compte uniquement à la création).
+     */
+    public function putTrainerFree(ApiObjectIdentifier $identifier, TrainerFreeInput $trainerFreeInput): CreatedOutput
+    {
+        $body = JsonHandler::jsonEncode($this->buildFreeBody($trainerFreeInput));
+        $response = $this->httpClient->request(RequestMethod::PUT, ApiUrls::getUpdateTrainerFree($identifier->getId()), $body);
+        return $this->convertResponsePostToDTO($response);
+    }
+
+    /**
+     * Modifie partiellement le formateur indépendant (PATCH) : seuls les champs renseignés sont modifiés.
+     */
+    public function patchTrainerFree(ApiObjectIdentifier $identifier, TrainerFreePatchInput $patchInput): CreatedOutput
+    {
+        return $this->sendPatch(ApiUrls::getUpdateTrainerFree($identifier->getId()), $patchInput);
+    }
+
+    /**
+     * Corps commun à la création (POST) et au remplacement (PUT) d'un formateur employé.
+     *
+     * @return array<string, mixed>
+     */
+    private function buildEmployeeBody(TrainerEmployeeInput $input): array
+    {
+        return [
+            "externalIdentifier" => $input->externalIdentifier->toArray(),
+            "familyName" => $input->familyName,
+            "givenName" => $input->givenName,
+            "email" => $input->email,
+            "visibleInformation" => $input->visibleInformation,
+            "notifyUser" => $input->notifyUser,
+            "gender" => $input->gender,
+            "telephone" => $input->telephone,
+            "mobileNumber" => $input->mobileNumber,
+            "addressStreet" => $input->addressStreet,
+            "addressPostcode" => $input->addressPostcode,
+            "addressLocality" => $input->addressLocality,
+            "addressCountry" => $input->addressCountry,
+            "image" => $input->image,
+            "birthDate" => $input->birthDate
+                ? $input->birthDate->format(self::DATETIME_FORMAT)
+                : null,
+            "jobTitle" => $input->jobTitle,
+            "societyId" => $input->societyId,
+            "cv" => $input->cv,
+            "degree" => $input->degree,
+            "contract" => $input->contract,
+            "jobDescription" => $input->jobDescription
+        ];
+    }
+
+    /**
+     * Corps commun à la création (POST) et au remplacement (PUT) d'un formateur indépendant.
+     *
+     * @return array<string, mixed>
+     */
+    private function buildFreeBody(TrainerFreeInput $input): array
+    {
+        return [
+            "externalIdentifier" => $input->externalIdentifier->toArray(),
+            "familyName" => $input->familyName,
+            "givenName" => $input->givenName,
+            "email" => $input->email,
+            "visibleInformation" => $input->visibleInformation,
+            "notifyUser" => $input->notifyUser,
+            "gender" => $input->gender,
+            "telephone" => $input->telephone,
+            "mobileNumber" => $input->mobileNumber,
+            "addressStreet" => $input->addressStreet,
+            "addressPostcode" => $input->addressPostcode,
+            "addressLocality" => $input->addressLocality,
+            "addressCountry" => $input->addressCountry,
+            "image" => $input->image,
+            "birthDate" => $input->birthDate
+                ? $input->birthDate->format(self::DATETIME_FORMAT)
+                : null,
+            "jobTitle" => $input->jobTitle,
+            "societyId" => $input->societyId,
+            "cv" => $input->cv,
+            "degree" => $input->degree,
+            "contract" => $input->contract,
+            "jobDescription" => $input->jobDescription,
+            "hourlyCost" => $input->hourlyCost,
+            "daylyCost" => $input->daylyCost,
+            "siret" => $input->siret,
+            "tvaNumber" => $input->tvaNumber,
+            "urssafNumber" => $input->urssafNumber,
+            "urssafCertificate" => $input->urssafCertificate,
+            "billingAddressStreet" => $input->billingAddressStreet,
+            "billingAddressPostcode" => $input->billingAddressPostcode,
+            "billingAddressLocality" => $input->billingAddressLocality,
+            "billingAddressCountry" => $input->billingAddressCountry
+        ];
     }
 
     /**

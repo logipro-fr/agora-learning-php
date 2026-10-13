@@ -7,11 +7,17 @@ namespace AgoraLearningPhp\Tests\unit;
 use AgoraLearningPhp\AgoraLearningClient;
 use AgoraLearningPhp\DTO\Input\Enrollment\EnrollmentInput;
 use AgoraLearningPhp\DTO\Input\Learner\LearnerInput;
+use AgoraLearningPhp\DTO\Input\Learner\LearnerPatchInput;
 use AgoraLearningPhp\DTO\Input\Person\PersonInput;
+use AgoraLearningPhp\DTO\Input\Person\PersonPatchInput;
+use AgoraLearningPhp\DTO\Input\Session\FixedSessionPatchInput;
 use AgoraLearningPhp\DTO\Input\Session\SessionInput;
 use AgoraLearningPhp\DTO\Input\Society\SocietyInput;
+use AgoraLearningPhp\DTO\Input\Society\SocietyPatchInput;
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerEmployeeInput;
+use AgoraLearningPhp\DTO\Input\Trainer\TrainerEmployeePatchInput;
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerFreeInput;
+use AgoraLearningPhp\DTO\Input\Trainer\TrainerFreePatchInput;
 use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Enrollment\EnrollmentOutput;
 use AgoraLearningPhp\DTO\Output\Learner\LearnerOutput;
@@ -252,6 +258,36 @@ class AgoraLearningClientTest extends TestCase
         $this->assertSame($output, $result);
     }
 
+    public function testReplacePerson(): void
+    {
+        // Arrange
+        $identifier = new ExternalId('Src', 'X-1');
+        $input = $this->createFinalDtoInstance(PersonInput::class);
+        $output = new CreatedOutput(new AgoraId('agora_1'));
+        $this->personMock->expects($this->once())->method('putPerson')->with($identifier, $input)->willReturn($output);
+
+        // Act
+        $result = $this->client->replacePerson($identifier, $input);
+
+        // Assert
+        $this->assertSame($output, $result);
+    }
+
+    public function testPatchPerson(): void
+    {
+        // Arrange
+        $identifier = new AgoraId('agora_1');
+        $patch = new PersonPatchInput();
+        $output = new CreatedOutput(new AgoraId('agora_1'));
+        $this->personMock->expects($this->once())->method('patchPerson')->with($identifier, $patch)->willReturn($output);
+
+        // Act
+        $result = $this->client->patchPerson($identifier, $patch);
+
+        // Assert
+        $this->assertSame($output, $result);
+    }
+
     // ─── TRAINER TESTS ───────────────────────────────────────────────────────
 
     public function testGetCollectionTrainer(): void
@@ -309,6 +345,36 @@ class AgoraLearningClientTest extends TestCase
         $this->assertSame($output, $result);
     }
 
+    public function testReplaceTrainerEmployee(): void
+    {
+        // Arrange
+        $identifier = new ExternalId('Src', 'X-1');
+        $input = $this->createFinalDtoInstance(TrainerEmployeeInput::class);
+        $output = new CreatedOutput(new AgoraId('agora_1'));
+        $this->trainerMock->expects($this->once())->method('putTrainerEmployee')->with($identifier, $input)->willReturn($output);
+
+        // Act
+        $result = $this->client->replaceTrainerEmployee($identifier, $input);
+
+        // Assert
+        $this->assertSame($output, $result);
+    }
+
+    public function testPatchTrainerEmployee(): void
+    {
+        // Arrange
+        $identifier = new AgoraId('agora_1');
+        $patch = new TrainerEmployeePatchInput();
+        $output = new CreatedOutput(new AgoraId('agora_1'));
+        $this->trainerMock->expects($this->once())->method('patchTrainerEmployee')->with($identifier, $patch)->willReturn($output);
+
+        // Act
+        $result = $this->client->patchTrainerEmployee($identifier, $patch);
+
+        // Assert
+        $this->assertSame($output, $result);
+    }
+
     public function testCreateTrainerFree(): void
     {
         // Arrange
@@ -318,6 +384,36 @@ class AgoraLearningClientTest extends TestCase
 
         // Act
         $result = $this->client->createTrainerFree($input);
+
+        // Assert
+        $this->assertSame($output, $result);
+    }
+
+    public function testReplaceTrainerFree(): void
+    {
+        // Arrange
+        $identifier = new ExternalId('Src', 'X-1');
+        $input = $this->createFinalDtoInstance(TrainerFreeInput::class);
+        $output = new CreatedOutput(new AgoraId('agora_1'));
+        $this->trainerMock->expects($this->once())->method('putTrainerFree')->with($identifier, $input)->willReturn($output);
+
+        // Act
+        $result = $this->client->replaceTrainerFree($identifier, $input);
+
+        // Assert
+        $this->assertSame($output, $result);
+    }
+
+    public function testPatchTrainerFree(): void
+    {
+        // Arrange
+        $identifier = new AgoraId('agora_1');
+        $patch = new TrainerFreePatchInput();
+        $output = new CreatedOutput(new AgoraId('agora_1'));
+        $this->trainerMock->expects($this->once())->method('patchTrainerFree')->with($identifier, $patch)->willReturn($output);
+
+        // Act
+        $result = $this->client->patchTrainerFree($identifier, $patch);
 
         // Assert
         $this->assertSame($output, $result);
@@ -380,6 +476,36 @@ class AgoraLearningClientTest extends TestCase
         $this->assertSame($output, $result);
     }
 
+    public function testReplaceLearner(): void
+    {
+        // Arrange
+        $identifier = new ExternalId('Src', 'X-1');
+        $input = $this->createFinalDtoInstance(LearnerInput::class);
+        $output = new CreatedOutput(new AgoraId('agora_1'));
+        $this->learnerMock->expects($this->once())->method('putLearner')->with($identifier, $input)->willReturn($output);
+
+        // Act
+        $result = $this->client->replaceLearner($identifier, $input);
+
+        // Assert
+        $this->assertSame($output, $result);
+    }
+
+    public function testPatchLearner(): void
+    {
+        // Arrange
+        $identifier = new AgoraId('agora_1');
+        $patch = new LearnerPatchInput();
+        $output = new CreatedOutput(new AgoraId('agora_1'));
+        $this->learnerMock->expects($this->once())->method('patchLearner')->with($identifier, $patch)->willReturn($output);
+
+        // Act
+        $result = $this->client->patchLearner($identifier, $patch);
+
+        // Assert
+        $this->assertSame($output, $result);
+    }
+
     // ─── SOCIETY TESTS ───────────────────────────────────────────────────────
 
     public function testGetCollectionSociety(): void
@@ -437,6 +563,36 @@ class AgoraLearningClientTest extends TestCase
         $this->assertSame($output, $result);
     }
 
+    public function testReplaceSociety(): void
+    {
+        // Arrange
+        $identifier = new ExternalId('Src', 'X-1');
+        $input = $this->createFinalDtoInstance(SocietyInput::class);
+        $output = new CreatedOutput(new AgoraId('agora_1'));
+        $this->societyMock->expects($this->once())->method('putSociety')->with($identifier, $input)->willReturn($output);
+
+        // Act
+        $result = $this->client->replaceSociety($identifier, $input);
+
+        // Assert
+        $this->assertSame($output, $result);
+    }
+
+    public function testPatchSociety(): void
+    {
+        // Arrange
+        $identifier = new AgoraId('agora_1');
+        $patch = new SocietyPatchInput();
+        $output = new CreatedOutput(new AgoraId('agora_1'));
+        $this->societyMock->expects($this->once())->method('patchSociety')->with($identifier, $patch)->willReturn($output);
+
+        // Act
+        $result = $this->client->patchSociety($identifier, $patch);
+
+        // Assert
+        $this->assertSame($output, $result);
+    }
+
     // ─── SESSION TESTS ───────────────────────────────────────────────────────
 
     public function testGetCollectionSession(): void
@@ -489,6 +645,36 @@ class AgoraLearningClientTest extends TestCase
 
         // Act
         $result = $this->client->createSession($input);
+
+        // Assert
+        $this->assertSame($output, $result);
+    }
+
+    public function testReplaceSession(): void
+    {
+        // Arrange
+        $identifier = new ExternalId('Src', 'X-1');
+        $input = $this->createFinalDtoInstance(SessionInput::class);
+        $output = new CreatedOutput(new AgoraId('agora_1'));
+        $this->sessionMock->expects($this->once())->method('putSession')->with($identifier, $input)->willReturn($output);
+
+        // Act
+        $result = $this->client->replaceSession($identifier, $input);
+
+        // Assert
+        $this->assertSame($output, $result);
+    }
+
+    public function testPatchSession(): void
+    {
+        // Arrange
+        $identifier = new AgoraId('agora_1');
+        $patch = new FixedSessionPatchInput();
+        $output = new CreatedOutput(new AgoraId('agora_1'));
+        $this->sessionMock->expects($this->once())->method('patchSession')->with($identifier, $patch)->willReturn($output);
+
+        // Act
+        $result = $this->client->patchSession($identifier, $patch);
 
         // Assert
         $this->assertSame($output, $result);

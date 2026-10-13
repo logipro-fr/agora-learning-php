@@ -6,11 +6,17 @@ namespace AgoraLearningPhp;
 
 use AgoraLearningPhp\DTO\Input\Enrollment\EnrollmentInput;
 use AgoraLearningPhp\DTO\Input\Learner\LearnerInput;
+use AgoraLearningPhp\DTO\Input\Learner\LearnerPatchInput;
 use AgoraLearningPhp\DTO\Input\Person\PersonInput;
+use AgoraLearningPhp\DTO\Input\Person\PersonPatchInput;
+use AgoraLearningPhp\DTO\Input\Session\AbstractSessionPatchInput;
 use AgoraLearningPhp\DTO\Input\Session\SessionInput;
 use AgoraLearningPhp\DTO\Input\Society\SocietyInput;
+use AgoraLearningPhp\DTO\Input\Society\SocietyPatchInput;
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerEmployeeInput;
+use AgoraLearningPhp\DTO\Input\Trainer\TrainerEmployeePatchInput;
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerFreeInput;
+use AgoraLearningPhp\DTO\Input\Trainer\TrainerFreePatchInput;
 use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Enrollment\EnrollmentOutput;
 use AgoraLearningPhp\DTO\Output\Learner\LearnerOutput;
@@ -65,6 +71,22 @@ class AgoraLearningClient
         return $this->makePerson()->postPerson($personInput);
     }
 
+    /**
+     * Remplace le contact (PUT) : un champ facultatif non renseigné est vidé.
+     */
+    public function replacePerson(ApiObjectIdentifier $identifier, PersonInput $personInput): CreatedOutput
+    {
+        return $this->makePerson()->putPerson($identifier, $personInput);
+    }
+
+    /**
+     * Modifie partiellement le contact (PATCH) : seuls les champs renseignés sont modifiés.
+     */
+    public function patchPerson(ApiObjectIdentifier $identifier, PersonPatchInput $personPatchInput): CreatedOutput
+    {
+        return $this->makePerson()->patchPerson($identifier, $personPatchInput);
+    }
+
     // Trainer
     /**
      * @return array<int, TrainerOutput>
@@ -84,9 +106,41 @@ class AgoraLearningClient
         return $this->makeTrainer()->postTrainerEmployee($trainerEmployeeInput);
     }
 
+    /**
+     * Remplace le formateur employé (PUT) : un champ facultatif non renseigné est vidé.
+     */
+    public function replaceTrainerEmployee(ApiObjectIdentifier $identifier, TrainerEmployeeInput $trainerEmployeeInput): CreatedOutput
+    {
+        return $this->makeTrainer()->putTrainerEmployee($identifier, $trainerEmployeeInput);
+    }
+
+    /**
+     * Modifie partiellement le formateur employé (PATCH) : seuls les champs renseignés sont modifiés.
+     */
+    public function patchTrainerEmployee(ApiObjectIdentifier $identifier, TrainerEmployeePatchInput $trainerEmployeePatchInput): CreatedOutput
+    {
+        return $this->makeTrainer()->patchTrainerEmployee($identifier, $trainerEmployeePatchInput);
+    }
+
     public function createTrainerFree(TrainerFreeInput $trainerFreeInput): CreatedOutput
     {
         return $this->makeTrainer()->postTrainerFree($trainerFreeInput);
+    }
+
+    /**
+     * Remplace le formateur indépendant (PUT) : un champ facultatif non renseigné est vidé.
+     */
+    public function replaceTrainerFree(ApiObjectIdentifier $identifier, TrainerFreeInput $trainerFreeInput): CreatedOutput
+    {
+        return $this->makeTrainer()->putTrainerFree($identifier, $trainerFreeInput);
+    }
+
+    /**
+     * Modifie partiellement le formateur indépendant (PATCH) : seuls les champs renseignés sont modifiés.
+     */
+    public function patchTrainerFree(ApiObjectIdentifier $identifier, TrainerFreePatchInput $trainerFreePatchInput): CreatedOutput
+    {
+        return $this->makeTrainer()->patchTrainerFree($identifier, $trainerFreePatchInput);
     }
 
     // Learner
@@ -108,6 +162,22 @@ class AgoraLearningClient
         return $this->makeLearner()->postLearner($learnerInput);
     }
 
+    /**
+     * Remplace l'apprenant (PUT) : un champ facultatif non renseigné est vidé.
+     */
+    public function replaceLearner(ApiObjectIdentifier $identifier, LearnerInput $learnerInput): CreatedOutput
+    {
+        return $this->makeLearner()->putLearner($identifier, $learnerInput);
+    }
+
+    /**
+     * Modifie partiellement l'apprenant (PATCH) : seuls les champs renseignés sont modifiés.
+     */
+    public function patchLearner(ApiObjectIdentifier $identifier, LearnerPatchInput $learnerPatchInput): CreatedOutput
+    {
+        return $this->makeLearner()->patchLearner($identifier, $learnerPatchInput);
+    }
+
     // Society
     /**
      * @return array<int, SocietyOutput>
@@ -127,6 +197,22 @@ class AgoraLearningClient
         return $this->makeSociety()->postSociety($societyInput);
     }
 
+    /**
+     * Remplace la société (PUT) : un champ facultatif non renseigné est vidé.
+     */
+    public function replaceSociety(ApiObjectIdentifier $identifier, SocietyInput $societyInput): CreatedOutput
+    {
+        return $this->makeSociety()->putSociety($identifier, $societyInput);
+    }
+
+    /**
+     * Modifie partiellement la société (PATCH) : seuls les champs renseignés sont modifiés.
+     */
+    public function patchSociety(ApiObjectIdentifier $identifier, SocietyPatchInput $societyPatchInput): CreatedOutput
+    {
+        return $this->makeSociety()->patchSociety($identifier, $societyPatchInput);
+    }
+
     // Session
     /**
      * @return array<int, SessionOutput>
@@ -144,6 +230,25 @@ class AgoraLearningClient
     public function createSession(SessionInput $sessionInput): CreatedOutput
     {
         return $this->makeSession()->postSession($sessionInput);
+    }
+
+    /**
+     * Remplace la session (PUT) : un champ facultatif non renseigné est vidé.
+     * Le type de $sessionInput->sessionData doit être celui de la session existante.
+     */
+    public function replaceSession(ApiObjectIdentifier $identifier, SessionInput $sessionInput): CreatedOutput
+    {
+        return $this->makeSession()->putSession($identifier, $sessionInput);
+    }
+
+    /**
+     * Modifie partiellement la session (PATCH) : seuls les champs renseignés sont modifiés.
+     *
+     * @param AbstractSessionPatchInput $sessionPatchInput FixedSessionPatchInput ou OpenedSessionPatchInput
+     */
+    public function patchSession(ApiObjectIdentifier $identifier, AbstractSessionPatchInput $sessionPatchInput): CreatedOutput
+    {
+        return $this->makeSession()->patchSession($identifier, $sessionPatchInput);
     }
 
     // Enrollment
