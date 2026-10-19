@@ -429,4 +429,37 @@ class LearnerTest extends ServiceTestCase
         $this->assertSame('https://api.test.local/api/external/v1/learners/per_001', $url);
         $this->assertSame(['recoverEmail' => 'new@example.net', 'mobileNumber' => null], json_decode($capturedBody, true));
     }
+
+    // -------------------------------------------------------------------------
+    // deleteLearner
+    // -------------------------------------------------------------------------
+
+    public function testDeleteLearnerWithExternalIdSendsDeleteToEncodedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $learner = $this->makeLearner($this->makeHttpClientInspectingRequest(204, '', $method, $url));
+
+        // Act
+        $learner->deleteLearner(new ExternalId('Src', 'X-42'));
+
+        // Assert
+        $this->assertSame('DELETE', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/learners/Src%3AX-42', $url);
+    }
+
+    public function testDeleteLearnerThrowsExceptionWithStatusCodeWhenApiReturns404(): void
+    {
+        // Arrange
+        $learner = $this->makeLearner($this->makeHttpClientWithResponse(404, json_encode(['detail' => 'Learner not found'])));
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionMessage('Learner not found');
+        $this->expectExceptionCode(404);
+
+        // Act
+        $learner->deleteLearner(new AgoraId('per_missing'));
+    }
 }

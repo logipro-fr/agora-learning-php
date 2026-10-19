@@ -14,6 +14,7 @@ use AgoraLearningPhp\DTO\Output\Trainer\TrainerFreeOutput;
 use AgoraLearningPhp\DTO\Output\Trainer\TrainerOutput;
 use AgoraLearningPhp\Enum\RequestMethod;
 use AgoraLearningPhp\Enum\TrainerStatut;
+use AgoraLearningPhp\Exception\AgoraLearningClientException;
 use AgoraLearningPhp\Identifier\ApiObjectIdentifier;
 use AgoraLearningPhp\Identifier\ExternalId;
 use AgoraLearningPhp\Service\ClientCore\ApiService;
@@ -97,6 +98,16 @@ class Trainer extends ApiService
     public function patchTrainerFree(ApiObjectIdentifier $identifier, TrainerFreePatchInput $patchInput): CreatedOutput
     {
         return $this->sendPatch(ApiUrls::getUpdateTrainerFree($identifier->getId()), $patchInput);
+    }
+
+    /**
+     * Supprime le formateur, employé ou indépendant (DELETE, réponse 204 sans contenu).
+     *
+     * @throws AgoraLearningClientException si le formateur n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deleteTrainer(ApiObjectIdentifier $identifier): void
+    {
+        $this->sendDelete(ApiUrls::getDeleteTrainer($identifier->getId()));
     }
 
     /**

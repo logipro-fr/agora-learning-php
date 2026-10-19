@@ -622,4 +622,37 @@ class SessionTest extends ServiceTestCase
         // Act
         $session->patchSession(new AgoraId('ses_001'), $patch);
     }
+
+    // -------------------------------------------------------------------------
+    // deleteSession
+    // -------------------------------------------------------------------------
+
+    public function testDeleteSessionWithExternalIdSendsDeleteToEncodedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $session = $this->makeSession($this->makeHttpClientInspectingRequest(204, '', $method, $url));
+
+        // Act
+        $session->deleteSession(new ExternalId('Src', 'X-42'));
+
+        // Assert
+        $this->assertSame('DELETE', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/sessions/Src%3AX-42', $url);
+    }
+
+    public function testDeleteSessionThrowsExceptionWithStatusCodeWhenApiReturns404(): void
+    {
+        // Arrange
+        $session = $this->makeSession($this->makeHttpClientWithResponse(404, json_encode(['detail' => 'Session not found'])));
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionMessage('Session not found');
+        $this->expectExceptionCode(404);
+
+        // Act
+        $session->deleteSession(new AgoraId('ses_missing'));
+    }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AgoraLearningPhp\Tests\integration;
 
 use AgoraLearningPhp\AgoraLearningClient;
+use AgoraLearningPhp\Exception\AgoraLearningClientException;
 use AgoraLearningPhp\Identifier\ExternalId;
 use PHPUnit\Framework\TestCase;
 
@@ -55,6 +56,19 @@ abstract class AbstractAgoraLearningTest extends TestCase
     protected function newEmail(string $prefix): string
     {
         return uniqid($prefix . '.', false) . '@example.com';
+    }
+
+    /**
+     * Vérifie que l'appel échoue en 404 (objet supprimé par exemple).
+     */
+    protected function assertNotFound(callable $call, string $message): void
+    {
+        try {
+            $call();
+            $this->fail($message);
+        } catch (AgoraLearningClientException $e) {
+            $this->assertSame(404, $e->getCode());
+        }
     }
 
     /**

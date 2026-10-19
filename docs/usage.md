@@ -265,6 +265,16 @@ foreach ($persons as $person) {
 
 **Retourne :** `PersonOutput[]`
 
+### `deletePerson(ApiObjectIdentifier $identifier) : void`
+
+Supprime le contact (`DELETE /persons/{id}`, réponse 204 sans contenu).
+
+```php
+$client->deletePerson(new ExternalId('MonERP', 'P-42'));
+```
+
+**Lève :** `AgoraLearningClientException` de code 404 si le contact n'existe pas.
+
 ---
 
 ## Trainer — Gestion des formateurs
@@ -520,6 +530,16 @@ foreach ($trainers as $trainer) {
 
 **Retourne :** `TrainerOutput[]`
 
+### `deleteTrainer(ApiObjectIdentifier $identifier) : void`
+
+Supprime le formateur (`DELETE /trainers/{id}`, réponse 204 sans contenu). Une seule méthode pour les deux statuts (employé et indépendant).
+
+```php
+$client->deleteTrainer(new ExternalId('MonERP', 'T-42'));
+```
+
+**Lève :** `AgoraLearningClientException` de code 404 si le formateur n'existe pas.
+
 ---
 
 ## Learner — Gestion des apprenants
@@ -623,6 +643,16 @@ foreach ($learners as $learner) {
 ```
 
 **Retourne :** `LearnerOutput[]`
+
+### `deleteLearner(ApiObjectIdentifier $identifier) : void`
+
+Supprime l'apprenant (`DELETE /learners/{id}`, réponse 204 sans contenu).
+
+```php
+$client->deleteLearner(new ExternalId('MonERP', 'L-42'));
+```
+
+**Lève :** `AgoraLearningClientException` de code 404 si l'apprenant n'existe pas.
 
 ---
 
@@ -771,6 +801,16 @@ foreach ($societies as $society) {
 ```
 
 **Retourne :** `SocietyOutput[]`
+
+### `deleteSociety(ApiObjectIdentifier $identifier) : void`
+
+Supprime la société (`DELETE /societies/{id}`, réponse 204 sans contenu).
+
+```php
+$client->deleteSociety(new ExternalId('MonERP', 'SOC-42'));
+```
+
+**Lève :** `AgoraLearningClientException` de code 404 si la société n'existe pas.
 
 ---
 
@@ -1010,6 +1050,16 @@ foreach ($sessions as $session) {
 
 **Retourne :** `SessionOutput[]`
 
+### `deleteSession(ApiObjectIdentifier $identifier) : void`
+
+Supprime la session (`DELETE /sessions/{id}`, réponse 204 sans contenu). Une seule méthode pour les deux types (fixe et ouverte).
+
+```php
+$client->deleteSession(new ExternalId('MonERP', 'S-42'));
+```
+
+**Lève :** `AgoraLearningClientException` de code 404 si la session n'existe pas.
+
 ---
 
 ## Enrollment — Gestion des inscriptions
@@ -1114,6 +1164,50 @@ foreach ($enrollments as $enrollment) {
 ```
 
 **Retourne :** `EnrollmentOutput[]`
+
+### `deleteEnrollment(ApiObjectIdentifier $identifier) : void`
+
+Désinscrit l'apprenant de la session (`DELETE /enrollments/{id}`, réponse 204 sans contenu). Agora applique
+les mêmes traitements qu'une désinscription depuis son back-office.
+
+```php
+$client->deleteEnrollment(new ExternalId('MonERP', 'E-42'));
+```
+
+**Lève :** `AgoraLearningClientException` de code 404 si l'inscription n'existe pas (déjà supprimée par exemple).
+
+### `deleteEnrollmentFromSessionAndLearner(ApiObjectIdentifier $sessionIdentifier, ApiObjectIdentifier $learnerIdentifier) : void`
+
+Désinscrit l'apprenant de la session à partir de leurs identifiants (`DELETE /sessions/{s}/learners/{l}/enrollments`, réponse 204).
+
+```php
+$client->deleteEnrollmentFromSessionAndLearner(
+    new ExternalId('MonERP', 'S-42'),
+    new ExternalId('MonERP', 'L-42')
+);
+```
+
+**Lève :** `AgoraLearningClientException` de code 404 si l'inscription n'existe pas.
+
+### `deleteCollectionEnrollmentFromSession(ApiObjectIdentifier $sessionIdentifier) : void`
+
+Supprime toutes les inscriptions de la session (`DELETE /sessions/{s}/enrollments`, réponse 204).
+
+```php
+$client->deleteCollectionEnrollmentFromSession(new ExternalId('MonERP', 'S-42'));
+```
+
+**Lève :** `AgoraLearningClientException` de code 404 si la session n'existe pas.
+
+### `deleteCollectionEnrollmentFromLearner(ApiObjectIdentifier $learnerIdentifier) : void`
+
+Supprime toutes les inscriptions de l'apprenant (`DELETE /learners/{l}/enrollments`, réponse 204).
+
+```php
+$client->deleteCollectionEnrollmentFromLearner(new ExternalId('MonERP', 'L-42'));
+```
+
+**Lève :** `AgoraLearningClientException` de code 404 si l'apprenant n'existe pas.
 
 ---
 

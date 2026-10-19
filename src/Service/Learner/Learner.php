@@ -10,6 +10,7 @@ use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Learner\LearnerOutput;
 use AgoraLearningPhp\Enum\Gender;
 use AgoraLearningPhp\Enum\RequestMethod;
+use AgoraLearningPhp\Exception\AgoraLearningClientException;
 use AgoraLearningPhp\Identifier\ApiObjectIdentifier;
 use AgoraLearningPhp\Identifier\ExternalId;
 use AgoraLearningPhp\Service\ClientCore\ApiService;
@@ -62,6 +63,16 @@ class Learner extends ApiService
     public function patchLearner(ApiObjectIdentifier $identifier, LearnerPatchInput $learnerPatchInput): CreatedOutput
     {
         return $this->sendPatch(ApiUrls::getUpdateLearner($identifier->getId()), $learnerPatchInput);
+    }
+
+    /**
+     * Supprime l'apprenant (DELETE, réponse 204 sans contenu).
+     *
+     * @throws AgoraLearningClientException si l'apprenant n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deleteLearner(ApiObjectIdentifier $identifier): void
+    {
+        $this->sendDelete(ApiUrls::getDeleteLearner($identifier->getId()));
     }
 
     /**

@@ -488,4 +488,37 @@ class PersonTest extends ServiceTestCase
         // Act
         $person->patchPerson(new AgoraId('per_missing'), (new PersonPatchInput())->setFamilyName('Dupont'));
     }
+
+    // -------------------------------------------------------------------------
+    // deletePerson
+    // -------------------------------------------------------------------------
+
+    public function testDeletePersonWithExternalIdSendsDeleteToEncodedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $person = $this->makePerson($this->makeHttpClientInspectingRequest(204, '', $method, $url));
+
+        // Act
+        $person->deletePerson(new ExternalId('Src', 'X-42'));
+
+        // Assert
+        $this->assertSame('DELETE', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/persons/Src%3AX-42', $url);
+    }
+
+    public function testDeletePersonThrowsExceptionWithStatusCodeWhenApiReturns404(): void
+    {
+        // Arrange
+        $person = $this->makePerson($this->makeHttpClientWithResponse(404, json_encode(['detail' => 'Person not found'])));
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionMessage('Person not found');
+        $this->expectExceptionCode(404);
+
+        // Act
+        $person->deletePerson(new AgoraId('per_missing'));
+    }
 }

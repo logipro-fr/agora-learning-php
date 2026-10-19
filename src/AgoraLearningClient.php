@@ -24,6 +24,7 @@ use AgoraLearningPhp\DTO\Output\Person\PersonOutput;
 use AgoraLearningPhp\DTO\Output\Session\SessionOutput;
 use AgoraLearningPhp\DTO\Output\Society\SocietyOutput;
 use AgoraLearningPhp\DTO\Output\Trainer\TrainerOutput;
+use AgoraLearningPhp\Exception\AgoraLearningClientException;
 use AgoraLearningPhp\Identifier\ApiObjectIdentifier;
 use AgoraLearningPhp\Service\Auth\Ping;
 use AgoraLearningPhp\Service\ClientCore\ApiUrls;
@@ -87,6 +88,16 @@ class AgoraLearningClient
         return $this->makePerson()->patchPerson($identifier, $personPatchInput);
     }
 
+    /**
+     * Supprime le contact.
+     *
+     * @throws AgoraLearningClientException si le contact n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deletePerson(ApiObjectIdentifier $identifier): void
+    {
+        $this->makePerson()->deletePerson($identifier);
+    }
+
     // Trainer
     /**
      * @return array<int, TrainerOutput>
@@ -143,6 +154,16 @@ class AgoraLearningClient
         return $this->makeTrainer()->patchTrainerFree($identifier, $trainerFreePatchInput);
     }
 
+    /**
+     * Supprime le formateur, employé ou indépendant.
+     *
+     * @throws AgoraLearningClientException si le formateur n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deleteTrainer(ApiObjectIdentifier $identifier): void
+    {
+        $this->makeTrainer()->deleteTrainer($identifier);
+    }
+
     // Learner
     /**
      * @return array<int, LearnerOutput>
@@ -178,6 +199,16 @@ class AgoraLearningClient
         return $this->makeLearner()->patchLearner($identifier, $learnerPatchInput);
     }
 
+    /**
+     * Supprime l'apprenant.
+     *
+     * @throws AgoraLearningClientException si l'apprenant n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deleteLearner(ApiObjectIdentifier $identifier): void
+    {
+        $this->makeLearner()->deleteLearner($identifier);
+    }
+
     // Society
     /**
      * @return array<int, SocietyOutput>
@@ -211,6 +242,16 @@ class AgoraLearningClient
     public function patchSociety(ApiObjectIdentifier $identifier, SocietyPatchInput $societyPatchInput): CreatedOutput
     {
         return $this->makeSociety()->patchSociety($identifier, $societyPatchInput);
+    }
+
+    /**
+     * Supprime la société.
+     *
+     * @throws AgoraLearningClientException si la société n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deleteSociety(ApiObjectIdentifier $identifier): void
+    {
+        $this->makeSociety()->deleteSociety($identifier);
     }
 
     // Session
@@ -251,6 +292,16 @@ class AgoraLearningClient
         return $this->makeSession()->patchSession($identifier, $sessionPatchInput);
     }
 
+    /**
+     * Supprime la session, fixe ou ouverte.
+     *
+     * @throws AgoraLearningClientException si la session n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deleteSession(ApiObjectIdentifier $identifier): void
+    {
+        $this->makeSession()->deleteSession($identifier);
+    }
+
     // Enrollment
     /**
      * @return array<int, EnrollmentOutput>
@@ -283,6 +334,48 @@ class AgoraLearningClient
     public function createEnrollment(EnrollmentInput $enrollmentInput): CreatedOutput
     {
         return $this->makeEnrollment()->postEnrollment($enrollmentInput);
+    }
+
+    /**
+     * Désinscrit l'apprenant de la session.
+     *
+     * @throws AgoraLearningClientException si l'inscription n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deleteEnrollment(ApiObjectIdentifier $identifier): void
+    {
+        $this->makeEnrollment()->deleteEnrollment($identifier);
+    }
+
+    /**
+     * Désinscrit l'apprenant de la session.
+     *
+     * @throws AgoraLearningClientException si l'inscription n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deleteEnrollmentFromSessionAndLearner(
+        ApiObjectIdentifier $sessionIdentifier,
+        ApiObjectIdentifier $learnerIdentifier
+    ): void {
+        $this->makeEnrollment()->deleteEnrollmentFromSessionAndLearner($sessionIdentifier, $learnerIdentifier);
+    }
+
+    /**
+     * Supprime toutes les inscriptions de la session.
+     *
+     * @throws AgoraLearningClientException si la session n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deleteCollectionEnrollmentFromSession(ApiObjectIdentifier $sessionIdentifier): void
+    {
+        $this->makeEnrollment()->deleteCollectionEnrollmentFromSession($sessionIdentifier);
+    }
+
+    /**
+     * Supprime toutes les inscriptions de l'apprenant.
+     *
+     * @throws AgoraLearningClientException si l'apprenant n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deleteCollectionEnrollmentFromLearner(ApiObjectIdentifier $learnerIdentifier): void
+    {
+        $this->makeEnrollment()->deleteCollectionEnrollmentFromLearner($learnerIdentifier);
     }
 
 

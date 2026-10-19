@@ -376,6 +376,112 @@ class EnrollmentTest extends ServiceTestCase
         $this->assertTrue($body['sendingInvite']);
     }
 
+    public function testDeleteEnrollmentWithExternalIdCallsEncodedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $enrollment = $this->makeEnrollment($this->makeHttpClientInspectingRequest(204, '', $method, $url));
+
+        // Act
+        $enrollment->deleteEnrollment(new ExternalId('Src', 'E-42'));
+
+        // Assert
+        $this->assertSame('DELETE', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/enrollments/Src%3AE-42', $url);
+    }
+
+    public function testDeleteEnrollmentThrowsExceptionWithStatusCodeWhenApiReturns404(): void
+    {
+        // Arrange
+        $enrollment = $this->makeEnrollment(
+            $this->makeHttpClientWithResponse(404, json_encode(['detail' => 'Enrollment not found']))
+        );
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionMessage('Enrollment not found');
+        $this->expectExceptionCode(404);
+
+        // Act
+        $enrollment->deleteEnrollment(new AgoraId('missing-uuid'));
+    }
+
+    public function testDeleteEnrollmentThrowsDefaultMessageWhenErrorBodyIsNotJson(): void
+    {
+        // Arrange
+        $enrollment = $this->makeEnrollment($this->makeHttpClientWithResponse(500, 'Internal Server Error'));
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionMessage('An unexpected error occured');
+        $this->expectExceptionCode(500);
+
+        // Act
+        $enrollment->deleteEnrollment(new AgoraId('any-uuid'));
+    }
+
+    public function testDeleteEnrollmentFromSessionAndLearnerSendsDeleteToEncodedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $enrollment = $this->makeEnrollment($this->makeHttpClientInspectingRequest(204, '', $method, $url));
+
+        // Act
+        $enrollment->deleteEnrollmentFromSessionAndLearner(new ExternalId('Src', 'S-1'), new AgoraId('per_001'));
+
+        // Assert
+        $this->assertSame('DELETE', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/sessions/Src%3AS-1/learners/per_001/enrollments', $url);
+    }
+
+    public function testDeleteCollectionEnrollmentFromSessionSendsDeleteToEncodedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $enrollment = $this->makeEnrollment($this->makeHttpClientInspectingRequest(204, '', $method, $url));
+
+        // Act
+        $enrollment->deleteCollectionEnrollmentFromSession(new ExternalId('Src', 'S-1'));
+
+        // Assert
+        $this->assertSame('DELETE', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/sessions/Src%3AS-1/enrollments', $url);
+    }
+
+    public function testDeleteCollectionEnrollmentFromLearnerSendsDeleteToEncodedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $enrollment = $this->makeEnrollment($this->makeHttpClientInspectingRequest(204, '', $method, $url));
+
+        // Act
+        $enrollment->deleteCollectionEnrollmentFromLearner(new ExternalId('Src', 'L-1'));
+
+        // Assert
+        $this->assertSame('DELETE', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/learners/Src%3AL-1/enrollments', $url);
+    }
+
+    public function testDeleteCollectionEnrollmentFromSessionThrowsExceptionWhenApiReturns404(): void
+    {
+        // Arrange
+        $enrollment = $this->makeEnrollment(
+            $this->makeHttpClientWithResponse(404, json_encode(['detail' => 'Session not found']))
+        );
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionMessage('Session not found');
+        $this->expectExceptionCode(404);
+
+        // Act
+        $enrollment->deleteCollectionEnrollmentFromSession(new AgoraId('ses_missing'));
+    }
+
     public function testGetCollectionEnrollmentFromSessionThrowsExceptionWithDetailOnError(): void
     {
         // Arrange

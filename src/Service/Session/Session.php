@@ -17,6 +17,7 @@ use AgoraLearningPhp\DTO\Output\Session\SessionOutput;
 use AgoraLearningPhp\Enum\RequestMethod;
 use AgoraLearningPhp\Enum\SessionMode;
 use AgoraLearningPhp\Enum\SessionType;
+use AgoraLearningPhp\Exception\AgoraLearningClientException;
 use AgoraLearningPhp\Identifier\ApiObjectIdentifier;
 use AgoraLearningPhp\Identifier\ExternalId;
 use AgoraLearningPhp\Service\ClientCore\ApiService;
@@ -87,6 +88,16 @@ class Session extends ApiService
         }
 
         return $this->sendPatch($url, $sessionPatchInput);
+    }
+
+    /**
+     * Supprime la session, fixe ou ouverte (DELETE, réponse 204 sans contenu).
+     *
+     * @throws AgoraLearningClientException si la session n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deleteSession(ApiObjectIdentifier $identifier): void
+    {
+        $this->sendDelete(ApiUrls::getDeleteSession($identifier->getId()));
     }
 
     /**

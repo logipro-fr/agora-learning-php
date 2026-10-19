@@ -201,4 +201,20 @@ class LearnerTest extends AbstractAgoraLearningTest
         $this->assertEquals('Patch', $learnerOutput->familyName);
         $this->assertEquals('Lyon', $learnerOutput->addressLocality);
     }
+
+    public function testDeleteLearner(): void
+    {
+        //Arrange
+        $externalId = $this->newExternalId('L');
+        $email = $this->newEmail('marie.supprime');
+        $this->client->createLearner(new LearnerInput($externalId, 'Supprime', 'Marie', $email, $email));
+
+        //Act
+        $this->client->deleteLearner($externalId);
+
+        // Assert
+        $this->assertNotFound(function () use ($externalId): void {
+            $this->client->getLearner($externalId);
+        }, 'L\'apprenant aurait dû être supprimé.');
+    }
 }

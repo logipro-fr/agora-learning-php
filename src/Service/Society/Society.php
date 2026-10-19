@@ -9,14 +9,13 @@ use AgoraLearningPhp\DTO\Input\Society\SocietyPatchInput;
 use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Society\SocietyOutput;
 use AgoraLearningPhp\Enum\RequestMethod;
+use AgoraLearningPhp\Exception\AgoraLearningClientException;
 use AgoraLearningPhp\Identifier\ApiObjectIdentifier;
 use AgoraLearningPhp\Identifier\ExternalId;
 use AgoraLearningPhp\Service\ClientCore\ApiService;
 use AgoraLearningPhp\Service\ClientCore\ApiUrls;
-use AgoraLearningPhp\Service\ClientCore\HttpClient;
 use AgoraLearningPhp\Service\Person\Person;
 use AgoraLearningPhp\Service\Tools\JsonHandler;
-use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
  * @extends ApiService<SocietyOutput>
@@ -66,38 +65,14 @@ class Society extends ApiService
         return $this->sendPatch(ApiUrls::getUpdateSociety($identifier->getId()), $societyPatchInput);
     }
 
-    protected function convertResponseToDTO(ResponseInterface $response): SocietyOutput
-    {
-        /** @var array<string, mixed> $responseData */
-        $responseData = JsonHandler::jsonDecode($response->getContent(false), true);
-        if (HttpClient::isHttpSuccess($response)) {
-            return self::convertDataToDTO($responseData);
-        }
-
-        $detail = $responseData['detail'] ?? null;
-        $message = is_string($detail) ? $detail : 'An unexpected error occured';
-        throw new \AgoraLearningPhp\Exception\AgoraLearningClientException($message);
-    }
-
     /**
-     * @return array<int, SocietyOutput>
+     * Supprime la société (DELETE, réponse 204 sans contenu).
+     *
+     * @throws AgoraLearningClientException si la société n'existe pas (404) ou en cas d'erreur de l'API
      */
-    protected function convertResponseToDTOarray(ResponseInterface $response): array
+    public function deleteSociety(ApiObjectIdentifier $identifier): void
     {
-        $result = [];
-        /** @var array<string, mixed> $responseData */
-        $responseData = JsonHandler::jsonDecode($response->getContent(false), true);
-        if (HttpClient::isHttpSuccess($response)) {
-            foreach ($responseData as $data) {
-                /** @var array<string, mixed> $data */
-                $result[] = self::convertDataToDTO($data);
-            }
-            return $result;
-        }
-
-        $detail = $responseData['detail'] ?? null;
-        $message = is_string($detail) ? $detail : 'An unexpected error occured';
-        throw new \AgoraLearningPhp\Exception\AgoraLearningClientException($message);
+        $this->sendDelete(ApiUrls::getDeleteSociety($identifier->getId()));
     }
 
     /**

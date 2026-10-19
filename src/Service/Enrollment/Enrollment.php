@@ -8,6 +8,7 @@ use AgoraLearningPhp\DTO\Input\Enrollment\EnrollmentInput;
 use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Enrollment\EnrollmentOutput;
 use AgoraLearningPhp\Enum\RequestMethod;
+use AgoraLearningPhp\Exception\AgoraLearningClientException;
 use AgoraLearningPhp\Identifier\ApiObjectIdentifier;
 use AgoraLearningPhp\Identifier\ExternalId;
 use AgoraLearningPhp\Service\ClientCore\ApiService;
@@ -80,6 +81,51 @@ class Enrollment extends ApiService
         $body = JsonHandler::jsonEncode($data);
         $response = $this->httpClient->request(RequestMethod::POST, ApiUrls::getCreateEnrollment(), $body);
         return $this->convertResponsePostToDTO($response);
+    }
+
+    /**
+     * Désinscrit l'apprenant de la session (DELETE, réponse 204 sans contenu).
+     *
+     * @throws AgoraLearningClientException si l'inscription n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deleteEnrollment(ApiObjectIdentifier $identifier): void
+    {
+        $this->sendDelete(ApiUrls::getDeleteEnrollment($identifier->getId()));
+    }
+
+    /**
+     * Désinscrit l'apprenant de la session (DELETE, réponse 204 sans contenu).
+     *
+     * @throws AgoraLearningClientException si l'inscription n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deleteEnrollmentFromSessionAndLearner(
+        ApiObjectIdentifier $sessionIdentifier,
+        ApiObjectIdentifier $learnerIdentifier
+    ): void {
+        $this->sendDelete(ApiUrls::getDeleteEnrollmentFromSessionAndLearner(
+            $sessionIdentifier->getId(),
+            $learnerIdentifier->getId()
+        ));
+    }
+
+    /**
+     * Supprime toutes les inscriptions de la session (DELETE, réponse 204 sans contenu).
+     *
+     * @throws AgoraLearningClientException si la session n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deleteCollectionEnrollmentFromSession(ApiObjectIdentifier $sessionIdentifier): void
+    {
+        $this->sendDelete(ApiUrls::getDeleteCollectionEnrollmentFromSession($sessionIdentifier->getId()));
+    }
+
+    /**
+     * Supprime toutes les inscriptions de l'apprenant (DELETE, réponse 204 sans contenu).
+     *
+     * @throws AgoraLearningClientException si l'apprenant n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deleteCollectionEnrollmentFromLearner(ApiObjectIdentifier $learnerIdentifier): void
+    {
+        $this->sendDelete(ApiUrls::getDeleteCollectionEnrollmentFromLearner($learnerIdentifier->getId()));
     }
 
     /**

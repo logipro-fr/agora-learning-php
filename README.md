@@ -71,17 +71,19 @@ $learner = $client->getLearner($created->agoraId);
 
 ## Ressources disponibles
 
-| Ressource      | Lecture                                                                                                                         | Création                                         | Remplacement (PUT)                                   | Modification partielle (PATCH)                   |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ---------------------------------------------------- | ------------------------------------------------ |
-| **Auth**       | `ping()`                                                                                                                        |                                                  |                                                      |                                                  |
-| **Person**     | `getPerson()`, `getCollectionPerson()`                                                                                          | `createPerson()`                                 | `replacePerson()`                                    | `patchPerson()`                                  |
-| **Trainer**    | `getTrainer()`, `getCollectionTrainer()`                                                                                        | `createTrainerEmployee()`, `createTrainerFree()` | `replaceTrainerEmployee()`, `replaceTrainerFree()`   | `patchTrainerEmployee()`, `patchTrainerFree()`   |
-| **Learner**    | `getLearner()`, `getCollectionLearner()`                                                                                        | `createLearner()`                                | `replaceLearner()`                                   | `patchLearner()`                                 |
-| **Society**    | `getSociety()`, `getCollectionSociety()`                                                                                        | `createSociety()`                                | `replaceSociety()`                                   | `patchSociety()`                                 |
-| **Session**    | `getSession()`, `getCollectionSession()`                                                                                        | `createSession()`                                | `replaceSession()`                                   | `patchSession()`                                 |
-| **Enrollment** | `getEnrollment()`, `getCollectionEnrollmentFromSession()`, `getCollectionEnrollmentFromLearner()`, `getEnrollmentFromSessionAndLearner()` | `createEnrollment()`                    |                                                      |                                                  |
+| Ressource      | Lecture                                                                                                                         | Création                                         | Remplacement (PUT)                                   | Modification partielle (PATCH)                   | Suppression (DELETE) |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ---------------------------------------------------- | ------------------------------------------------ | -------------------- |
+| **Auth**       | `ping()`                                                                                                                        |                                                  |                                                      |                                                  |                      |
+| **Person**     | `getPerson()`, `getCollectionPerson()`                                                                                          | `createPerson()`                                 | `replacePerson()`                                    | `patchPerson()`                                  | `deletePerson()`     |
+| **Trainer**    | `getTrainer()`, `getCollectionTrainer()`                                                                                        | `createTrainerEmployee()`, `createTrainerFree()` | `replaceTrainerEmployee()`, `replaceTrainerFree()`   | `patchTrainerEmployee()`, `patchTrainerFree()`   | `deleteTrainer()`    |
+| **Learner**    | `getLearner()`, `getCollectionLearner()`                                                                                        | `createLearner()`                                | `replaceLearner()`                                   | `patchLearner()`                                 | `deleteLearner()`    |
+| **Society**    | `getSociety()`, `getCollectionSociety()`                                                                                        | `createSociety()`                                | `replaceSociety()`                                   | `patchSociety()`                                 | `deleteSociety()`    |
+| **Session**    | `getSession()`, `getCollectionSession()`                                                                                        | `createSession()`                                | `replaceSession()`                                   | `patchSession()`                                 | `deleteSession()`    |
+| **Enrollment** | `getEnrollment()`, `getCollectionEnrollmentFromSession()`, `getCollectionEnrollmentFromLearner()`, `getEnrollmentFromSessionAndLearner()` | `createEnrollment()`                    |                                                      |                                                  | `deleteEnrollment()`, `deleteEnrollmentFromSessionAndLearner()`, `deleteCollectionEnrollmentFromSession()`, `deleteCollectionEnrollmentFromLearner()` |
 
-Les lectures et modifications acceptent un `AgoraId` ou un `ExternalId` ; les créations prennent un `ExternalId` obligatoire. Créations et modifications renvoient un `CreatedOutput` (`agoraId`, `externalId`).
+Les suppressions ne renvoient rien (réponse 204) et lèvent une `AgoraLearningClientException` de code 404 si l'objet n'existe pas.
+
+Les lectures, modifications et suppressions acceptent un `AgoraId` ou un `ExternalId` ; les créations prennent un `ExternalId` obligatoire. Créations et modifications renvoient un `CreatedOutput` (`agoraId`, `externalId`).
 
 - `replace*()` (PUT) reprend le DTO de création et **remplace** l'objet : un champ facultatif non renseigné est vidé.
 - `patch*()` (PATCH, `application/merge-patch+json`) prend un DTO de patch (`PersonPatchInput`, `FixedSessionPatchInput`…) : seuls les champs renseignés par ses setters sont modifiés, `null` vide le champ.
@@ -144,7 +146,8 @@ examples/
 │   ├── get_one_by_agora_id.php
 │   ├── create.php
 │   ├── replace.php
-│   └── patch.php
+│   ├── patch.php
+│   └── delete.php
 ├── trainer/
 │   ├── get_collection.php
 │   ├── get_one.php
@@ -153,19 +156,22 @@ examples/
 │   ├── replace_employee.php
 │   ├── replace_free.php
 │   ├── patch_employee.php
-│   └── patch_free.php
+│   ├── patch_free.php
+│   └── delete.php
 ├── learner/
 │   ├── get_collection.php
 │   ├── get_one.php
 │   ├── create.php
 │   ├── replace.php
-│   └── patch.php
+│   ├── patch.php
+│   └── delete.php
 ├── society/
 │   ├── get_collection.php
 │   ├── get_one.php
 │   ├── create.php
 │   ├── replace.php
-│   └── patch.php
+│   ├── patch.php
+│   └── delete.php
 ├── session/
 │   ├── get_collection.php
 │   ├── get_one.php
@@ -175,13 +181,18 @@ examples/
 │   ├── create_opened.php
 │   ├── replace_fixed.php
 │   ├── patch_fixed.php
-│   └── patch_opened.php
+│   ├── patch_opened.php
+│   └── delete.php
 └── enrollment/
     ├── get_from_session.php
     ├── get_from_learner.php
     ├── get_one.php
     ├── get_from_session_and_learner.php
-    └── create.php
+    ├── create.php
+    ├── delete.php
+    ├── delete_from_session_and_learner.php
+    ├── delete_from_session.php
+    └── delete_from_learner.php
 ```
 
 ---

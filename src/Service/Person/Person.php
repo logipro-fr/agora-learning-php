@@ -10,6 +10,7 @@ use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Person\PersonOutput;
 use AgoraLearningPhp\Enum\Gender;
 use AgoraLearningPhp\Enum\RequestMethod;
+use AgoraLearningPhp\Exception\AgoraLearningClientException;
 use AgoraLearningPhp\Identifier\ApiObjectIdentifier;
 use AgoraLearningPhp\Identifier\ExternalId;
 use AgoraLearningPhp\Service\ClientCore\ApiService;
@@ -61,6 +62,16 @@ class Person extends ApiService
     public function patchPerson(ApiObjectIdentifier $identifier, PersonPatchInput $personPatchInput): CreatedOutput
     {
         return $this->sendPatch(ApiUrls::getUpdatePerson($identifier->getId()), $personPatchInput);
+    }
+
+    /**
+     * Supprime le contact (DELETE, réponse 204 sans contenu).
+     *
+     * @throws AgoraLearningClientException si le contact n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deletePerson(ApiObjectIdentifier $identifier): void
+    {
+        $this->sendDelete(ApiUrls::getDeletePerson($identifier->getId()));
     }
 
     /**

@@ -100,6 +100,34 @@ abstract class ApiService
     }
 
     /**
+     * Envoie une suppression (DELETE, réponse 204 sans contenu) : lève une exception si elle a échoué.
+     *
+     * @throws AgoraLearningClientException si l'objet n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    protected function sendDelete(string $url): void
+    {
+        $body = '';
+        $response = $this->httpClient->request(RequestMethod::DELETE, $url, $body);
+        $this->assertResponseSuccess($response);
+    }
+
+    /**
+     * Vérifie la réponse d'une opération sans contenu (DELETE, 204) : lève une exception si elle a échoué.
+     */
+    protected function assertResponseSuccess(ResponseInterface $response): void
+    {
+        if (HttpClient::isHttpSuccess($response)) {
+            return;
+        }
+
+        // Le corps d'une erreur n'est pas forcément du JSON (erreur du serveur web)
+        $responseData = json_decode($response->getContent(false), true);
+        $detail = is_array($responseData) ? ($responseData['detail'] ?? null) : null;
+        $message = is_string($detail) ? $detail : 'An unexpected error occured';
+        throw new AgoraLearningClientException($message, $response->getStatusCode());
+    }
+
+    /**
      * @param array<string, mixed> $data
      */
     public static function convertPostDataToDTO(array $data): CreatedOutput

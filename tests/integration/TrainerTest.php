@@ -376,4 +376,21 @@ class TrainerTest extends AbstractAgoraLearningTest
         $this->assertInstanceOf(TrainerFreeOutput::class, $trainerOutput);
         $this->assertEquals(55.0, $trainerOutput->hourlyCost);
     }
+
+    public function testDeleteTrainer(): void
+    {
+        //Arrange
+        $externalId = $this->newExternalId('T');
+        $this->client->createTrainerEmployee(
+            new TrainerEmployeeInput($externalId, 'Supprime', 'Paul', $this->newEmail('paul.supprime'))
+        );
+
+        //Act
+        $this->client->deleteTrainer($externalId);
+
+        // Assert
+        $this->assertNotFound(function () use ($externalId): void {
+            $this->client->getTrainer($externalId);
+        }, 'Le formateur aurait dû être supprimé.');
+    }
 }

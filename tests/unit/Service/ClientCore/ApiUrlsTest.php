@@ -396,6 +396,18 @@ class ApiUrlsTest extends TestCase
         $this->assertSame(self::BASE . ApiUrls::GET_ENROLLMENT . $uuid, $url);
     }
 
+    public function testGetDeleteEnrollment(): void
+    {
+        // Arrange
+        ApiUrls::initBaseUrl(self::BASE);
+
+        // Act
+        $url = ApiUrls::getDeleteEnrollment('Src:E-42');
+
+        // Assert
+        $this->assertSame(self::BASE . ApiUrls::DELETE_ENROLLMENT . 'Src%3AE-42', $url);
+    }
+
     public function testGetGetEnrollmentFromSessionAndLearner(): void
     {
         // Arrange
@@ -576,5 +588,112 @@ class ApiUrlsTest extends TestCase
         $this->assertSame('/api/external/v1/sessions/fixed/', ApiUrls::UPDATE_FIXED_SESSION);
         $this->assertSame('/api/external/v1/sessions/opened/', ApiUrls::UPDATE_OPEN_SESSION);
         $this->assertSame('/api/external/v1/societies/', ApiUrls::UPDATE_SOCIETY);
+    }
+
+    public function testGetDeletePerson(): void
+    {
+        // Arrange
+        ApiUrls::initBaseUrl(self::BASE);
+
+        // Act
+        $url = ApiUrls::getDeletePerson('Src:X 1');
+
+        // Assert
+        $this->assertSame(self::BASE . ApiUrls::DELETE_PERSON . 'Src%3AX%201', $url);
+    }
+
+    public function testGetDeleteTrainer(): void
+    {
+        // Arrange
+        ApiUrls::initBaseUrl(self::BASE);
+
+        // Act
+        $url = ApiUrls::getDeleteTrainer('Src:X 1');
+
+        // Assert
+        $this->assertSame(self::BASE . ApiUrls::DELETE_TRAINER . 'Src%3AX%201', $url);
+    }
+
+    public function testGetDeleteLearner(): void
+    {
+        // Arrange
+        ApiUrls::initBaseUrl(self::BASE);
+
+        // Act
+        $url = ApiUrls::getDeleteLearner('Src:X 1');
+
+        // Assert
+        $this->assertSame(self::BASE . ApiUrls::DELETE_LEARNER . 'Src%3AX%201', $url);
+    }
+
+    public function testGetDeleteSession(): void
+    {
+        // Arrange
+        ApiUrls::initBaseUrl(self::BASE);
+
+        // Act
+        $url = ApiUrls::getDeleteSession('Src:X 1');
+
+        // Assert
+        $this->assertSame(self::BASE . ApiUrls::DELETE_SESSION . 'Src%3AX%201', $url);
+    }
+
+    public function testGetDeleteSociety(): void
+    {
+        // Arrange
+        ApiUrls::initBaseUrl(self::BASE);
+
+        // Act
+        $url = ApiUrls::getDeleteSociety('Src:X 1');
+
+        // Assert
+        $this->assertSame(self::BASE . ApiUrls::DELETE_SOCIETY . 'Src%3AX%201', $url);
+    }
+
+    public function testGetDeleteEnrollmentFromSessionAndLearner(): void
+    {
+        // Arrange
+        ApiUrls::initBaseUrl(self::BASE);
+
+        // Act
+        $url = ApiUrls::getDeleteEnrollmentFromSessionAndLearner('Src:S-1', 'per_001');
+
+        // Assert
+        $this->assertSame(self::BASE . '/api/external/v1/sessions/Src%3AS-1/learners/per_001/enrollments', $url);
+    }
+
+    public function testGetDeleteCollectionEnrollmentFromSession(): void
+    {
+        // Arrange
+        ApiUrls::initBaseUrl(self::BASE);
+
+        // Act
+        $url = ApiUrls::getDeleteCollectionEnrollmentFromSession('Src:S-1');
+
+        // Assert
+        $this->assertSame(self::BASE . '/api/external/v1/sessions/Src%3AS-1/enrollments', $url);
+    }
+
+    public function testGetDeleteCollectionEnrollmentFromLearner(): void
+    {
+        // Arrange
+        ApiUrls::initBaseUrl(self::BASE);
+
+        // Act
+        $url = ApiUrls::getDeleteCollectionEnrollmentFromLearner('Src:L-1');
+
+        // Assert
+        $this->assertSame(self::BASE . '/api/external/v1/learners/Src%3AL-1/enrollments', $url);
+    }
+
+    public function testDeleteUrlsMatchApiRoutes(): void
+    {
+        // Assert
+        $this->assertSame('/api/external/v1/persons/', ApiUrls::DELETE_PERSON);
+        $this->assertSame('/api/external/v1/trainers/', ApiUrls::DELETE_TRAINER);
+        $this->assertSame('/api/external/v1/learners/', ApiUrls::DELETE_LEARNER);
+        $this->assertSame('/api/external/v1/sessions/', ApiUrls::DELETE_SESSION);
+        $this->assertSame('/api/external/v1/societies/', ApiUrls::DELETE_SOCIETY);
+        $this->assertSame('/api/external/v1/enrollments/', ApiUrls::DELETE_ENROLLMENT);
     }
 }

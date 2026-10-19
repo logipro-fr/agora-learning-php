@@ -734,4 +734,37 @@ class TrainerTest extends ServiceTestCase
         $this->assertSame('https://api.test.local/api/external/v1/trainers/free/per_001', $url);
         $this->assertSame(['hourlyCost' => 55.5, 'email' => 'paul@example.net'], json_decode($capturedBody, true));
     }
+
+    // -------------------------------------------------------------------------
+    // deleteTrainer
+    // -------------------------------------------------------------------------
+
+    public function testDeleteTrainerWithExternalIdSendsDeleteToEncodedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $trainer = $this->makeTrainer($this->makeHttpClientInspectingRequest(204, '', $method, $url));
+
+        // Act
+        $trainer->deleteTrainer(new ExternalId('Src', 'X-42'));
+
+        // Assert
+        $this->assertSame('DELETE', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/trainers/Src%3AX-42', $url);
+    }
+
+    public function testDeleteTrainerThrowsExceptionWithStatusCodeWhenApiReturns404(): void
+    {
+        // Arrange
+        $trainer = $this->makeTrainer($this->makeHttpClientWithResponse(404, json_encode(['detail' => 'Trainer not found'])));
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionMessage('Trainer not found');
+        $this->expectExceptionCode(404);
+
+        // Act
+        $trainer->deleteTrainer(new AgoraId('per_missing'));
+    }
 }

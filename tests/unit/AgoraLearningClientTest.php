@@ -776,6 +776,99 @@ class AgoraLearningClientTest extends TestCase
         $this->assertSame($output, $result);
     }
 
+    public function testDeleteEnrollment(): void
+    {
+        // Arrange
+        $identifier = new AgoraId('enr_1');
+        $this->enrollmentMock->expects($this->once())->method('deleteEnrollment')->with($identifier);
+
+        // Act
+        $this->client->deleteEnrollment($identifier);
+    }
+
+    public function testDeletePerson(): void
+    {
+        // Arrange
+        $identifier = new AgoraId('per_1');
+        $this->personMock->expects($this->once())->method('deletePerson')->with($identifier);
+
+        // Act
+        $this->client->deletePerson($identifier);
+    }
+
+    public function testDeleteTrainer(): void
+    {
+        // Arrange
+        $identifier = new AgoraId('per_2');
+        $this->trainerMock->expects($this->once())->method('deleteTrainer')->with($identifier);
+
+        // Act
+        $this->client->deleteTrainer($identifier);
+    }
+
+    public function testDeleteLearner(): void
+    {
+        // Arrange
+        $identifier = new AgoraId('per_3');
+        $this->learnerMock->expects($this->once())->method('deleteLearner')->with($identifier);
+
+        // Act
+        $this->client->deleteLearner($identifier);
+    }
+
+    public function testDeleteSociety(): void
+    {
+        // Arrange
+        $identifier = new AgoraId('soc_1');
+        $this->societyMock->expects($this->once())->method('deleteSociety')->with($identifier);
+
+        // Act
+        $this->client->deleteSociety($identifier);
+    }
+
+    public function testDeleteSession(): void
+    {
+        // Arrange
+        $identifier = new AgoraId('ses_1');
+        $this->sessionMock->expects($this->once())->method('deleteSession')->with($identifier);
+
+        // Act
+        $this->client->deleteSession($identifier);
+    }
+
+    public function testDeleteEnrollmentFromSessionAndLearner(): void
+    {
+        // Arrange
+        $sessionIdentifier = new AgoraId('ses_1');
+        $learnerIdentifier = new ExternalId('Src', 'L-1');
+        $this->enrollmentMock->expects($this->once())
+            ->method('deleteEnrollmentFromSessionAndLearner')
+            ->with($sessionIdentifier, $learnerIdentifier);
+
+        // Act
+        $this->client->deleteEnrollmentFromSessionAndLearner($sessionIdentifier, $learnerIdentifier);
+    }
+
+    public function testDeleteCollectionEnrollmentFromSession(): void
+    {
+        // Arrange
+        $identifier = new AgoraId('ses_1');
+        $this->enrollmentMock->expects($this->once())->method('deleteCollectionEnrollmentFromSession')->with($identifier);
+
+        // Act
+        $this->client->deleteCollectionEnrollmentFromSession($identifier);
+    }
+
+    public function testDeleteCollectionEnrollmentFromLearner(): void
+    {
+        // Arrange
+        $identifier = new AgoraId('per_1');
+        $this->enrollmentMock->expects($this->once())->method('deleteCollectionEnrollmentFromLearner')->with($identifier);
+
+        // Act
+        $this->client->deleteCollectionEnrollmentFromLearner($identifier);
+    }
+
     private function createFinalDtoInstance(string $className)
     {
         $reflection = new \ReflectionClass($className);

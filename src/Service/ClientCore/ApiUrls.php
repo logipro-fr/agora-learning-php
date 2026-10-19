@@ -23,6 +23,7 @@ class ApiUrls
     public const GET_PERSON = self::PREFIX_API . self::API_VERSION . '/persons/';
     public const GET_COLLECTION_PERSON = self::PREFIX_API . self::API_VERSION . '/persons';
     public const UPDATE_PERSON = self::PREFIX_API . self::API_VERSION . '/persons/';
+    public const DELETE_PERSON = self::PREFIX_API . self::API_VERSION . '/persons/';
 
     // TRAINER
     public const CREATE_TRAINER_EMPLOYEE = self::PREFIX_API . self::API_VERSION . '/trainers/employee';
@@ -31,12 +32,14 @@ class ApiUrls
     public const GET_COLLECTION_TRAINER = self::PREFIX_API . self::API_VERSION . '/trainers';
     public const UPDATE_TRAINER_EMPLOYEE = self::PREFIX_API . self::API_VERSION . '/trainers/employee/';
     public const UPDATE_TRAINER_FREE = self::PREFIX_API . self::API_VERSION . '/trainers/free/';
+    public const DELETE_TRAINER = self::PREFIX_API . self::API_VERSION . '/trainers/';
 
     // LEARNER
     public const CREATE_LEARNER = self::PREFIX_API . self::API_VERSION . '/learners';
     public const GET_LEARNER = self::PREFIX_API . self::API_VERSION . '/learners/';
     public const GET_COLLECTION_LEARNER = self::PREFIX_API . self::API_VERSION . '/learners';
     public const UPDATE_LEARNER = self::PREFIX_API . self::API_VERSION . '/learners/';
+    public const DELETE_LEARNER = self::PREFIX_API . self::API_VERSION . '/learners/';
 
     // SESSION
     public const CREATE_FIXED_SESSION = self::PREFIX_API . self::API_VERSION . '/sessions/fixed';
@@ -45,19 +48,25 @@ class ApiUrls
     public const GET_COLLECTION_SESSION = self::PREFIX_API . self::API_VERSION . '/sessions';
     public const UPDATE_FIXED_SESSION = self::PREFIX_API . self::API_VERSION . '/sessions/fixed/';
     public const UPDATE_OPEN_SESSION = self::PREFIX_API . self::API_VERSION . '/sessions/opened/';
+    public const DELETE_SESSION = self::PREFIX_API . self::API_VERSION . '/sessions/';
 
     // SOCIETY
     public const CREATE_SOCIETY = self::PREFIX_API . self::API_VERSION . '/societies';
     public const GET_SOCIETY = self::PREFIX_API . self::API_VERSION . '/societies/';
     public const GET_COLLECTION_SOCIETY = self::PREFIX_API . self::API_VERSION . '/societies';
     public const UPDATE_SOCIETY = self::PREFIX_API . self::API_VERSION . '/societies/';
+    public const DELETE_SOCIETY = self::PREFIX_API . self::API_VERSION . '/societies/';
 
     // ENROLLMENT
     public const CREATE_ENROLLMENT = self::PREFIX_API . self::API_VERSION . '/enrollments';
     public const GET_ENROLLMENT = self::PREFIX_API . self::API_VERSION . '/enrollments/';
+    public const DELETE_ENROLLMENT = self::PREFIX_API . self::API_VERSION . '/enrollments/';
     public const GET_ENROLLMENT_FROM_SESSION_AND_LEARNER = self::PREFIX_API . self::API_VERSION . '/sessions/%s/learners/%s/enrollments';
     public const GET_COLLECTION_ENROLLMENT_FROM_SESSION = self::PREFIX_API . self::API_VERSION . '/sessions/%s/enrollments';
     public const GET_COLLECTION_ENROLLMENT_FROM_LEARNER = self::PREFIX_API . self::API_VERSION . '/learners/%s/enrollments';
+    public const DELETE_ENROLLMENT_FROM_SESSION_AND_LEARNER = self::PREFIX_API . self::API_VERSION . '/sessions/%s/learners/%s/enrollments';
+    public const DELETE_COLLECTION_ENROLLMENT_FROM_SESSION = self::PREFIX_API . self::API_VERSION . '/sessions/%s/enrollments';
+    public const DELETE_COLLECTION_ENROLLMENT_FROM_LEARNER = self::PREFIX_API . self::API_VERSION . '/learners/%s/enrollments';
 
     public static function initBaseUrl(string $baseUrl): void
     {
@@ -117,6 +126,14 @@ class ApiUrls
         return self::getBaseUrl() . self::UPDATE_PERSON . rawurlencode($identifier);
     }
 
+    /**
+     * @param string $identifier Identifiant brut (uuid Agora ou "source:id"), encodé ici
+     */
+    public static function getDeletePerson(string $identifier): string
+    {
+        return self::getBaseUrl() . self::DELETE_PERSON . rawurlencode($identifier);
+    }
+
     // TRAINER
     public static function getCreateTrainerEmployee(): string
     {
@@ -161,6 +178,14 @@ class ApiUrls
         return self::getBaseUrl() . self::UPDATE_TRAINER_FREE . rawurlencode($identifier);
     }
 
+    /**
+     * @param string $identifier Identifiant brut (uuid Agora ou "source:id"), encodé ici
+     */
+    public static function getDeleteTrainer(string $identifier): string
+    {
+        return self::getBaseUrl() . self::DELETE_TRAINER . rawurlencode($identifier);
+    }
+
     // LEARNER
     public static function getCreateLearner(): string
     {
@@ -188,6 +213,14 @@ class ApiUrls
     public static function getUpdateLearner(string $identifier): string
     {
         return self::getBaseUrl() . self::UPDATE_LEARNER . rawurlencode($identifier);
+    }
+
+    /**
+     * @param string $identifier Identifiant brut (uuid Agora ou "source:id"), encodé ici
+     */
+    public static function getDeleteLearner(string $identifier): string
+    {
+        return self::getBaseUrl() . self::DELETE_LEARNER . rawurlencode($identifier);
     }
 
     // SESSION
@@ -234,6 +267,14 @@ class ApiUrls
         return self::getBaseUrl() . self::UPDATE_OPEN_SESSION . rawurlencode($identifier);
     }
 
+    /**
+     * @param string $identifier Identifiant brut (uuid Agora ou "source:id"), encodé ici
+     */
+    public static function getDeleteSession(string $identifier): string
+    {
+        return self::getBaseUrl() . self::DELETE_SESSION . rawurlencode($identifier);
+    }
+
     // SOCIETY
     public static function getCreateSociety(): string
     {
@@ -263,6 +304,14 @@ class ApiUrls
         return self::getBaseUrl() . self::UPDATE_SOCIETY . rawurlencode($identifier);
     }
 
+    /**
+     * @param string $identifier Identifiant brut (uuid Agora ou "source:id"), encodé ici
+     */
+    public static function getDeleteSociety(string $identifier): string
+    {
+        return self::getBaseUrl() . self::DELETE_SOCIETY . rawurlencode($identifier);
+    }
+
     // ENROLLMENT
     public static function getCreateEnrollment(): string
     {
@@ -275,6 +324,14 @@ class ApiUrls
     public static function getGetEnrollment(string $identifier): string
     {
         return self::getBaseUrl() . self::GET_ENROLLMENT . rawurlencode($identifier);
+    }
+
+    /**
+     * @param string $identifier Identifiant brut (uuid Agora ou "source:id"), encodé ici
+     */
+    public static function getDeleteEnrollment(string $identifier): string
+    {
+        return self::getBaseUrl() . self::DELETE_ENROLLMENT . rawurlencode($identifier);
     }
 
     /**
@@ -304,5 +361,34 @@ class ApiUrls
     public static function getGetCollectionEnrollmentFromLearner(string $learnerIdentifier): string
     {
         return self::getBaseUrl() . sprintf(self::GET_COLLECTION_ENROLLMENT_FROM_LEARNER, rawurlencode($learnerIdentifier));
+    }
+
+    /**
+     * @param string $sessionIdentifier Identifiant brut de la session, encodé ici
+     * @param string $learnerIdentifier Identifiant brut de l'apprenant, encodé ici
+     */
+    public static function getDeleteEnrollmentFromSessionAndLearner(string $sessionIdentifier, string $learnerIdentifier): string
+    {
+        return self::getBaseUrl() . sprintf(
+            self::DELETE_ENROLLMENT_FROM_SESSION_AND_LEARNER,
+            rawurlencode($sessionIdentifier),
+            rawurlencode($learnerIdentifier)
+        );
+    }
+
+    /**
+     * @param string $sessionIdentifier Identifiant brut de la session, encodé ici
+     */
+    public static function getDeleteCollectionEnrollmentFromSession(string $sessionIdentifier): string
+    {
+        return self::getBaseUrl() . sprintf(self::DELETE_COLLECTION_ENROLLMENT_FROM_SESSION, rawurlencode($sessionIdentifier));
+    }
+
+    /**
+     * @param string $learnerIdentifier Identifiant brut de l'apprenant, encodé ici
+     */
+    public static function getDeleteCollectionEnrollmentFromLearner(string $learnerIdentifier): string
+    {
+        return self::getBaseUrl() . sprintf(self::DELETE_COLLECTION_ENROLLMENT_FROM_LEARNER, rawurlencode($learnerIdentifier));
     }
 }

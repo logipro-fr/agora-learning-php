@@ -451,4 +451,28 @@ class SessionTest extends AbstractAgoraLearningTest
         //Act
         $this->client->patchSession($created->agoraId, (new FixedSessionPatchInput())->setMaxPlaces(10));
     }
+
+    public function testDeleteSession(): void
+    {
+        //Arrange
+        $externalId = $this->newExternalId('S');
+        $this->client->createSession(new SessionInput(
+            $externalId,
+            'Session Supprimée',
+            new FixedSessionInput(
+                new \DateTimeImmutable('+30 days'),
+                new \DateTimeImmutable('+34 days'),
+                SessionType::SESSION_TYPE_INTER,
+                SessionMode::SESSION_MODE_FACE_TO_FACE
+            )
+        ));
+
+        //Act
+        $this->client->deleteSession($externalId);
+
+        // Assert
+        $this->assertNotFound(function () use ($externalId): void {
+            $this->client->getSession($externalId);
+        }, 'La session aurait dû être supprimée.');
+    }
 }

@@ -496,4 +496,51 @@ class SocietyTest extends ServiceTestCase
         // Act
         $society->patchSociety(new AgoraId('soc_001'), new SocietyPatchInput());
     }
+
+    // -------------------------------------------------------------------------
+    // deleteSociety
+    // -------------------------------------------------------------------------
+
+    public function testDeleteSocietyWithExternalIdSendsDeleteToEncodedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $society = $this->makeSociety($this->makeHttpClientInspectingRequest(204, '', $method, $url));
+
+        // Act
+        $society->deleteSociety(new ExternalId('Src', 'X-42'));
+
+        // Assert
+        $this->assertSame('DELETE', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/societies/Src%3AX-42', $url);
+    }
+
+    public function testDeleteSocietyThrowsExceptionWithStatusCodeWhenApiReturns404(): void
+    {
+        // Arrange
+        $society = $this->makeSociety($this->makeHttpClientWithResponse(404, json_encode(['detail' => 'Society not found'])));
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionMessage('Society not found');
+        $this->expectExceptionCode(404);
+
+        // Act
+        $society->deleteSociety(new AgoraId('soc_missing'));
+    }
+
+    public function testGetSocietyThrowsExceptionWithStatusCodeWhenApiReturns404(): void
+    {
+        // Arrange
+        $society = $this->makeSociety($this->makeHttpClientWithResponse(404, json_encode(['detail' => 'Society not found'])));
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionMessage('Society not found');
+        $this->expectExceptionCode(404);
+
+        // Act
+        $society->getSociety(new AgoraId('soc_missing'));
+    }
 }

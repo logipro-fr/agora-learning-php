@@ -249,4 +249,19 @@ class PersonTest extends AbstractAgoraLearningTest
         $this->assertEquals('0102030405', $personOutput->telephone);
         $this->assertEmpty($personOutput->jobTitle);
     }
+
+    public function testDeletePerson(): void
+    {
+        //Arrange
+        $externalId = $this->newExternalId('P');
+        $this->client->createPerson(new PersonInput($externalId, 'Supprime', 'Jean', 'jean.supprime@example.com'));
+
+        //Act
+        $this->client->deletePerson($externalId);
+
+        // Assert
+        $this->assertNotFound(function () use ($externalId): void {
+            $this->client->getPerson($externalId);
+        }, 'Le contact aurait dû être supprimé.');
+    }
 }

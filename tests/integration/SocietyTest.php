@@ -215,4 +215,19 @@ class SocietyTest extends AbstractAgoraLearningTest
         $this->assertNotNull($societyOutput->rhPerson);
         $this->assertEquals($rhPersonId, $societyOutput->rhPerson->uuid);
     }
+
+    public function testDeleteSociety(): void
+    {
+        //Arrange
+        $externalId = $this->newExternalId('SOC');
+        $this->client->createSociety(new SocietyInput($externalId, 'Société Supprimée'));
+
+        //Act
+        $this->client->deleteSociety($externalId);
+
+        // Assert
+        $this->assertNotFound(function () use ($externalId): void {
+            $this->client->getSociety($externalId);
+        }, 'La société aurait dû être supprimée.');
+    }
 }

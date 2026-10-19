@@ -126,6 +126,11 @@ class AgoraLearningClientMock extends AgoraLearningClient
         return $this->makeUpdatedOutput($identifier, 'per_01XXXXXXXXXXXXXXXXXXXXXXXXX');
     }
 
+    public function deletePerson(ApiObjectIdentifier $identifier): void
+    {
+        // Suppression factice du contact : rien à renvoyer
+    }
+
     // Trainer
     /**
      * @return array<int, TrainerOutput>
@@ -248,6 +253,11 @@ class AgoraLearningClientMock extends AgoraLearningClient
         return $this->makeUpdatedOutput($identifier, 'per_01XXXXXXXXXXXXXXXXXXXXXXXXX');
     }
 
+    public function deleteTrainer(ApiObjectIdentifier $identifier): void
+    {
+        // Suppression factice du formateur : rien à renvoyer
+    }
+
     // Learner
     /**
      * @return array<int, LearnerOutput>
@@ -318,6 +328,11 @@ class AgoraLearningClientMock extends AgoraLearningClient
     public function patchLearner(ApiObjectIdentifier $identifier, LearnerPatchInput $learnerPatchInput): CreatedOutput
     {
         return $this->makeUpdatedOutput($identifier, 'per_01XXXXXXXXXXXXXXXXXXXXXXXXX');
+    }
+
+    public function deleteLearner(ApiObjectIdentifier $identifier): void
+    {
+        // Suppression factice de l'apprenant : rien à renvoyer
     }
 
     // Society
@@ -428,6 +443,11 @@ class AgoraLearningClientMock extends AgoraLearningClient
     public function patchSociety(ApiObjectIdentifier $identifier, SocietyPatchInput $societyPatchInput): CreatedOutput
     {
         return $this->makeUpdatedOutput($identifier, 'soc_01XXXXXXXXXXXXXXXXXXXXXXXXX');
+    }
+
+    public function deleteSociety(ApiObjectIdentifier $identifier): void
+    {
+        // Suppression factice de la société : rien à renvoyer
     }
 
     // Session
@@ -563,6 +583,11 @@ class AgoraLearningClientMock extends AgoraLearningClient
     public function patchSession(ApiObjectIdentifier $identifier, AbstractSessionPatchInput $sessionPatchInput): CreatedOutput
     {
         return $this->makeUpdatedOutput($identifier, 'ses_01XXXXXXXXXXXXXXXXXXXXXXXXX');
+    }
+
+    public function deleteSession(ApiObjectIdentifier $identifier): void
+    {
+        // Suppression factice de la session : rien à renvoyer
     }
 
     // Enrollment
@@ -931,6 +956,28 @@ class AgoraLearningClientMock extends AgoraLearningClient
             new AgoraId('enr_01XXXXXXXXXXXXXXXXXXXXXXXXX'),
             $enrollmentInput->externalIdentifier
         );
+    }
+
+    public function deleteEnrollment(ApiObjectIdentifier $identifier): void
+    {
+        // Désinscription factice : rien à renvoyer
+    }
+
+    public function deleteEnrollmentFromSessionAndLearner(
+        ApiObjectIdentifier $sessionIdentifier,
+        ApiObjectIdentifier $learnerIdentifier
+    ): void {
+        // Désinscription factice : rien à renvoyer
+    }
+
+    public function deleteCollectionEnrollmentFromSession(ApiObjectIdentifier $sessionIdentifier): void
+    {
+        // Suppression factice des inscriptions de la session : rien à renvoyer
+    }
+
+    public function deleteCollectionEnrollmentFromLearner(ApiObjectIdentifier $learnerIdentifier): void
+    {
+        // Suppression factice des inscriptions de l'apprenant : rien à renvoyer
     }
 
     /**

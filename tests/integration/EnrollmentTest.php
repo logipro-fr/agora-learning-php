@@ -12,6 +12,7 @@ use AgoraLearningPhp\DTO\Input\Session\SessionInput;
 use AgoraLearningPhp\Enum\SessionMode;
 use AgoraLearningPhp\Enum\SessionType;
 use AgoraLearningPhp\Identifier\AgoraId;
+use AgoraLearningPhp\Identifier\ExternalId;
 
 class EnrollmentTest extends AbstractAgoraLearningTest
 {
@@ -47,6 +48,58 @@ class EnrollmentTest extends AbstractAgoraLearningTest
         $this->assertEquals($created->agoraId->getId(), $enrollmentOutput->uuid);
         $this->assertEquals($learnerCreated->agoraId->getId(), $enrollmentOutput->learner->uuid);
         $this->assertEquals($sessionOutput->agoraId->getId(), $enrollmentOutput->session->uuid);
+    }
+
+    public function testDeleteEnrollment(): void
+    {
+        //Arrange
+        [, , $enrollmentExternalId] = $this->createEnrollmentFixture('del');
+
+        //Act
+        $this->client->deleteEnrollment($enrollmentExternalId);
+
+        // Assert
+        $this->assertNotFound(function () use ($enrollmentExternalId): void {
+            $this->client->getEnrollment($enrollmentExternalId);
+        }, 'L\'inscription aurait dû être supprimée.');
+    }
+
+    public function testDeleteEnrollmentFromSessionAndLearner(): void
+    {
+        //Arrange
+        [$sessionId, $learnerId, $enrollmentExternalId] = $this->createEnrollmentFixture('del.sl');
+
+        //Act
+        $this->client->deleteEnrollmentFromSessionAndLearner($sessionId, $learnerId);
+
+        // Assert
+        $this->assertNotFound(function () use ($enrollmentExternalId): void {
+            $this->client->getEnrollment($enrollmentExternalId);
+        }, 'L\'inscription aurait dû être supprimée.');
+    }
+
+    public function testDeleteCollectionEnrollmentFromSession(): void
+    {
+        //Arrange
+        [$sessionId] = $this->createEnrollmentFixture('del.s');
+
+        //Act
+        $this->client->deleteCollectionEnrollmentFromSession($sessionId);
+
+        // Assert
+        $this->assertSame([], $this->client->getCollectionEnrollmentFromSession($sessionId));
+    }
+
+    public function testDeleteCollectionEnrollmentFromLearner(): void
+    {
+        //Arrange
+        [, $learnerId] = $this->createEnrollmentFixture('del.l');
+
+        //Act
+        $this->client->deleteCollectionEnrollmentFromLearner($learnerId);
+
+        // Assert
+        $this->assertSame([], $this->client->getCollectionEnrollmentFromLearner($learnerId));
     }
 
     public function testGetEnrollment(): void
@@ -205,5 +258,37 @@ class EnrollmentTest extends AbstractAgoraLearningTest
         $this->assertEquals($created->agoraId->getId(), $enrollmentOutput->uuid);
         $this->assertEquals($learnerCreated->agoraId->getId(), $enrollmentOutput->learner->uuid);
         $this->assertEquals($sessionOutput->agoraId->getId(), $enrollmentOutput->session->uuid);
+    }
+
+    /**
+     * Crée un apprenant, une session fixe et l'inscription de l'un à l'autre.
+     *
+     * @return array{0: AgoraId, 1: AgoraId, 2: ExternalId} session, apprenant, identifiant externe de l'inscription
+     */
+    private function createEnrollmentFixture(string $emailPrefix): array
+    {
+        $email = $this->newEmail('paul.bernard.' . $emailPrefix);
+        $learnerCreated = $this->client->createLearner(
+            new LearnerInput($this->newExternalId('L'), 'Bernard', 'Paul', $email, $email)
+        );
+        $sessionCreated = $this->client->createSession(new SessionInput(
+            $this->newExternalId('S'),
+            'Session Enrollment Delete Test',
+            new FixedSessionInput(
+                new \DateTimeImmutable('+30 days'),
+                new \DateTimeImmutable('+34 days'),
+                SessionType::SESSION_TYPE_INTER,
+                SessionMode::SESSION_MODE_FACE_TO_FACE
+            )
+        ));
+        $enrollmentExternalId = $this->newExternalId('E');
+        $this->client->createEnrollment(new EnrollmentInput(
+            $enrollmentExternalId,
+            $sessionCreated->agoraId->getId(),
+            $learnerCreated->agoraId->getId(),
+            false
+        ));
+
+        return [$sessionCreated->agoraId, $learnerCreated->agoraId, $enrollmentExternalId];
     }
 }
