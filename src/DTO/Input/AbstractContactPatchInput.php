@@ -126,4 +126,13 @@ abstract class AbstractContactPatchInput extends AbstractPatchInput
     {
         return $this->set('jobTitle', $jobTitle);
     }
+
+    /**
+     * @param string|null $societyId Identifiant de la société (Agora ou "source:id"), null pour retirer la relation
+     * @return static
+     */
+    public function setSocietyId(?string $societyId): self
+    {
+        return $this->set('societyId', $societyId);
+    }
 }

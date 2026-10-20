@@ -6,6 +6,7 @@ namespace AgoraLearningPhp\Tests\integration;
 
 use AgoraLearningPhp\DTO\Input\Learner\LearnerInput;
 use AgoraLearningPhp\DTO\Input\Learner\LearnerPatchInput;
+use AgoraLearningPhp\DTO\Input\Society\SocietyInput;
 use AgoraLearningPhp\Enum\Gender;
 use AgoraLearningPhp\Identifier\AgoraId;
 
@@ -216,5 +217,71 @@ class LearnerTest extends AbstractAgoraLearningTest
         $this->assertNotFound(function () use ($externalId): void {
             $this->client->getLearner($externalId);
         }, 'L\'apprenant aurait dû être supprimé.');
+    }
+
+    public function testCreateLearnerAttachedToSociety(): void
+    {
+        //Arrange
+        $societyExternalId = $this->newExternalId('SOC');
+        $this->client->createSociety(new SocietyInput($societyExternalId, 'Société de l\'apprenant'));
+        $email = $this->newEmail('lea.societe');
+
+        //Act
+        $created = $this->client->createLearner(new LearnerInput(
+            $this->newExternalId('L'),
+            'Societe',
+            'Lea',
+            $email,
+            $email,
+            Gender::GENDER_NA,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            $societyExternalId->getId()
+        ));
+        $learnerOutput = $this->client->getLearner($created->agoraId);
+
+        // Assert
+        $this->assertNotNull($learnerOutput->society);
+        $this->assertEquals($societyExternalId, $learnerOutput->society->externalIdentifier);
+    }
+
+    public function testPatchLearnerDetachesSociety(): void
+    {
+        //Arrange
+        $societyExternalId = $this->newExternalId('SOC');
+        $this->client->createSociety(new SocietyInput($societyExternalId, 'Société à retirer'));
+        $email = $this->newEmail('lea.retrait');
+        $created = $this->client->createLearner(new LearnerInput(
+            $this->newExternalId('L'),
+            'Retrait',
+            'Lea',
+            $email,
+            $email,
+            Gender::GENDER_NA,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            $societyExternalId->getId()
+        ));
+
+        //Act
+        $this->client->patchLearner($created->agoraId, (new LearnerPatchInput())->setSocietyId(null));
+        $learnerOutput = $this->client->getLearner($created->agoraId);
+
+        // Assert
+        $this->assertNull($learnerOutput->society);
     }
 }

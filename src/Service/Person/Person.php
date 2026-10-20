@@ -95,7 +95,8 @@ class Person extends ApiService
             "addressCountry" => $personInput->addressCountry,
             "telephone" => $personInput->telephone,
             "mobileNumber" => $personInput->mobileNumber,
-            "image" => $personInput->image
+            "image" => $personInput->image,
+            "societyId" => $personInput->societyId
         ];
     }
 
@@ -117,7 +118,8 @@ class Person extends ApiService
          *     addressCountry?: string|null,
          *     gender?: string,
          *     birthDate?: string|null,
-         *     jobTitle?: string|null
+         *     jobTitle?: string|null,
+         *     societyId?: string|null
          * } $data */
         $telephone = $data['telephone'] ?? null;
         $addressStreet = $data['addressStreet'] ?? null;
@@ -128,6 +130,7 @@ class Person extends ApiService
         $birthDate = !empty($data['birthDate']) ? new \DateTimeImmutable($data['birthDate']) : null;
         $jobTitle = $data['jobTitle'] ?? null;
         $externalIdentifier = !empty($data['externalIdentifier']) ? ExternalId::fromArray($data['externalIdentifier']) : null;
+        $societyId = $data['societyId'] ?? null;
 
         return new PersonOutput(
             $data['agoraId'],
@@ -143,6 +146,7 @@ class Person extends ApiService
             $birthDate,
             $jobTitle,
             $externalIdentifier,
+            $societyId,
         );
     }
 }

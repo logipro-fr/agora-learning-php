@@ -6,6 +6,7 @@ namespace AgoraLearningPhp\Tests\integration;
 
 use AgoraLearningPhp\DTO\Input\Person\PersonInput;
 use AgoraLearningPhp\DTO\Input\Person\PersonPatchInput;
+use AgoraLearningPhp\DTO\Input\Society\SocietyInput;
 use AgoraLearningPhp\Enum\Gender;
 use AgoraLearningPhp\Identifier\AgoraId;
 
@@ -263,5 +264,38 @@ class PersonTest extends AbstractAgoraLearningTest
         $this->assertNotFound(function () use ($externalId): void {
             $this->client->getPerson($externalId);
         }, 'Le contact aurait dû être supprimé.');
+    }
+
+    public function testCreatePersonAttachedToSocietyThenDetach(): void
+    {
+        //Arrange
+        $societyExternalId = $this->newExternalId('SOC');
+        $society = $this->client->createSociety(new SocietyInput($societyExternalId, 'Société du contact'));
+        $created = $this->client->createPerson(new PersonInput(
+            $this->newExternalId('P'),
+            'Societe',
+            'Paul',
+            $this->newEmail('paul.societe'),
+            Gender::GENDER_NA,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            $societyExternalId->getId()
+        ));
+
+        //Act
+        $attached = $this->client->getPerson($created->agoraId);
+        $this->client->patchPerson($created->agoraId, (new PersonPatchInput())->setSocietyId(null));
+        $detached = $this->client->getPerson($created->agoraId);
+
+        // Assert
+        $this->assertSame($society->agoraId->getId(), $attached->societyId);
+        $this->assertNull($detached->societyId);
     }
 }

@@ -184,7 +184,8 @@ echo $person->familyName; // "Dupont"
 | `image`           | ?string             | Non         | URL d'avatar                   |
 | `birthDate`       | ?\DateTimeImmutable | Non         | Date de naissance              |
 | `jobTitle`        | ?string             | Non         | Intitulé du poste              |
-| `mobileNumber`    | ?string             | Non         | Téléphone portable (dernier argument) |
+| `mobileNumber`    | ?string             | Non         | Téléphone portable               |
+| `societyId`       | ?string             | Non         | Société du contact : identifiant Agora ou `source:id` (dernier argument). En `replacePerson()`, `null` retire la relation |
 
 **Champs de `PersonOutput` :**
 
@@ -230,11 +231,13 @@ $client->patchPerson(
 );
 ```
 
-**Setters de `PersonPatchInput` :** `setExternalIdentifier(ExternalId)`, `setFamilyName(string)`, `setGivenName(string)`, `setEmail(string)`, `setGender(string)`, `setTelephone(?string)`, `setMobileNumber(?string)`, `setAddressStreet(?string)`, `setAddressPostcode(?string)`, `setAddressLocality(?string)`, `setAddressCountry(?string)`, `setImage(?string)`, `setBirthDate(?\DateTimeInterface)`, `setJobTitle(?string)`.
+**Setters de `PersonPatchInput` :** `setExternalIdentifier(ExternalId)`, `setFamilyName(string)`, `setGivenName(string)`, `setEmail(string)`, `setGender(string)`, `setTelephone(?string)`, `setMobileNumber(?string)`, `setAddressStreet(?string)`, `setAddressPostcode(?string)`, `setAddressLocality(?string)`, `setAddressCountry(?string)`, `setImage(?string)`, `setBirthDate(?\DateTimeInterface)`, `setJobTitle(?string)`, `setSocietyId(?string)` (`null` retire la relation).
 
 ### `getPerson(ApiObjectIdentifier $identifier) : PersonOutput`
 
 Récupère une personne par son identifiant unique, retourne en cas de succès un objet PersonOutput
+
+`$person->societyId` contient l'UUID Agora de la société du contact, ou `null`.
 
 L'identifiant est un `ApiObjectIdentifier` : `AgoraId` ou `ExternalId` (voir [Identifiants](#identifiants)).
 
@@ -598,7 +601,8 @@ $learner = $client->getLearner($created->agoraId);
 | `image`           | ?string             | Non         | URL d'une image                  |
 | `birthDate`       | ?\DateTimeImmutable | Non         | Date de naissance                |
 | `jobTitle`        | ?string             | Non         | Intitulé du poste                |
-| `mobileNumber`    | ?string             | Non         | Téléphone portable (dernier argument) |
+| `mobileNumber`    | ?string             | Non         | Téléphone portable               |
+| `societyId`       | ?string             | Non         | Société de l'apprenant : identifiant Agora ou `source:id` (dernier argument). En `replaceLearner()`, `null` retire la relation |
 
 ### `replaceLearner(ApiObjectIdentifier $identifier, LearnerInput $input) : CreatedOutput`
 
@@ -621,7 +625,7 @@ use AgoraLearningPhp\DTO\Input\Learner\LearnerPatchInput;
 $client->patchLearner(new ExternalId('MonERP', 'L-41'), (new LearnerPatchInput())->setAddressLocality('Liverpool'));
 ```
 
-**Setters de `LearnerPatchInput` :** ceux de `PersonPatchInput`, plus `setRecoverEmail(string)`.
+**Setters de `LearnerPatchInput` :** ceux de `PersonPatchInput`, plus `setRecoverEmail(string)` et `setSocietyId(?string)` (`null` retire la relation).
 
 ### `getLearner(ApiObjectIdentifier $identifier) : LearnerOutput`
 
@@ -630,6 +634,8 @@ $learner = $client->getLearner(new AgoraId('per_01KRXPMF8GENX8HCB8QKECBGZC'));
 
 echo $learner->uuid;
 ```
+
+`$learner->society` contient la société de l'apprenant (`SocietyOutput`), ou `null`.
 
 ### `getCollectionLearner() : array`
 

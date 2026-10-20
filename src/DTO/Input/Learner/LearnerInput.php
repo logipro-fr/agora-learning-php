@@ -24,6 +24,8 @@ final class LearnerInput
     public ?string $image;
     public ?\DateTimeImmutable $birthDate;
     public ?string $jobTitle;
+    /** Identifiant de la société de l'apprenant (Agora ou "source:id"), null si aucune */
+    public ?string $societyId;
 
     public function __construct(
         ExternalId $externalIdentifier,
@@ -40,7 +42,8 @@ final class LearnerInput
         ?string $image = null,
         ?\DateTimeImmutable $birthDate = null,
         ?string $jobTitle = null,
-        ?string $mobileNumber = null
+        ?string $mobileNumber = null,
+        ?string $societyId = null
     ) {
         $this->externalIdentifier = $externalIdentifier;
         $this->familyName = $familyName;
@@ -57,5 +60,6 @@ final class LearnerInput
         $this->birthDate = $birthDate;
         $this->jobTitle = $jobTitle;
         $this->mobileNumber = $mobileNumber;
+        $this->societyId = $societyId;
     }
 }

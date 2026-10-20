@@ -70,6 +70,45 @@ class LearnerTest extends ServiceTestCase
         $this->assertSame('jean@example.com', $dto->recoverEmail);
     }
 
+    public function testConvertDataToDTOMapsEmbeddedSociety(): void
+    {
+        // Arrange
+        $data = array_merge($this->makeMinimalData(), [
+            'society' => [
+                'agoraId' => 'soc-uuid-001',
+                'name'  => 'Société Test',
+            ],
+        ]);
+
+        // Act
+        $dto = Learner::convertDataToDTO($data);
+
+        // Assert
+        $this->assertNotNull($dto->society);
+        $this->assertSame('soc-uuid-001', $dto->society->uuid);
+    }
+
+    public function testConvertDataToDTOReturnsNullSocietyWhenSocietyIsNull(): void
+    {
+        // Arrange
+        $data = array_merge($this->makeMinimalData(), ['society' => null]);
+
+        // Act
+        $dto = Learner::convertDataToDTO($data);
+
+        // Assert
+        $this->assertNull($dto->society);
+    }
+
+    public function testConvertDataToDTOReturnsNullSocietyWhenSocietyKeyAbsent(): void
+    {
+        // Act
+        $dto = Learner::convertDataToDTO($this->makeMinimalData());
+
+        // Assert
+        $this->assertNull($dto->society);
+    }
+
     public function testConvertDataToDTOMapsExternalIdentifier(): void
     {
         // Arrange
@@ -384,6 +423,60 @@ class LearnerTest extends ServiceTestCase
         $this->assertSame('FR', $body['addressCountry']);
     }
 
+    public function testPostLearnerSendsSocietyId(): void
+    {
+        // Arrange
+        $capturedBody = '';
+        $responseData = ['agoraId' => 'per_new_004', 'sourceName' => 'Test', 'externalId' => 'L-4'];
+        $learner      = $this->makeLearner(
+            $this->makeHttpClientInspectingBody(200, json_encode($responseData), $capturedBody)
+        );
+        $input = new LearnerInput(
+            new ExternalId('Test', 'L-4'),
+            'Dupont',
+            'Jean',
+            'jean@example.com',
+            'jean@example.com',
+            Gender::GENDER_NA,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            'Test:S-1'
+        );
+
+        // Act
+        $learner->postLearner($input);
+
+        // Assert
+        $body = json_decode($capturedBody, true);
+        $this->assertSame('Test:S-1', $body['societyId']);
+    }
+
+    public function testPostLearnerSendsNullSocietyIdByDefault(): void
+    {
+        // Arrange
+        $capturedBody = '';
+        $responseData = ['agoraId' => 'per_new_005', 'sourceName' => 'Test', 'externalId' => 'L-5'];
+        $learner      = $this->makeLearner(
+            $this->makeHttpClientInspectingBody(200, json_encode($responseData), $capturedBody)
+        );
+        $input = new LearnerInput(new ExternalId('Test', 'L-5'), 'Dupont', 'Jean', 'jean@example.com', 'jean@example.com');
+
+        // Act
+        $learner->postLearner($input);
+
+        // Assert
+        $body = json_decode($capturedBody, true);
+        $this->assertArrayHasKey('societyId', $body);
+        $this->assertNull($body['societyId']);
+    }
+
     // -------------------------------------------------------------------------
     // PUT / PATCH
     // -------------------------------------------------------------------------
@@ -428,6 +521,20 @@ class LearnerTest extends ServiceTestCase
         $this->assertSame('PATCH', $method);
         $this->assertSame('https://api.test.local/api/external/v1/learners/per_001', $url);
         $this->assertSame(['recoverEmail' => 'new@example.net', 'mobileNumber' => null], json_decode($capturedBody, true));
+    }
+
+    public function testPatchLearnerSendsSocietyIdNullToRemoveRelation(): void
+    {
+        // Arrange
+        $capturedBody = '';
+        $learner = $this->makeLearner($this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'per_001', 'sourceName' => 'Src', 'externalId' => 'X-42']), $capturedBody));
+        $patch = (new LearnerPatchInput())->setSocietyId(null);
+
+        // Act
+        $learner->patchLearner(new AgoraId('per_001'), $patch);
+
+        // Assert
+        $this->assertSame(['societyId' => null], json_decode($capturedBody, true));
     }
 
     // -------------------------------------------------------------------------

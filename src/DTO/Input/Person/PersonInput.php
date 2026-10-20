@@ -23,6 +23,8 @@ final class PersonInput
     public string $gender;
     public ?\DateTimeImmutable $birthDate;
     public ?string $jobTitle;
+    /** Identifiant de la société du contact (Agora ou "source:id"), null si aucune */
+    public ?string $societyId;
 
     public function __construct(
         ExternalId $externalIdentifier,
@@ -38,7 +40,8 @@ final class PersonInput
         ?string $image = null,
         ?\DateTimeImmutable $birthDate = null,
         ?string $jobTitle = null,
-        ?string $mobileNumber = null
+        ?string $mobileNumber = null,
+        ?string $societyId = null
     ) {
         $this->externalIdentifier = $externalIdentifier;
         $this->familyName = $familyName;
@@ -54,5 +57,6 @@ final class PersonInput
         $this->birthDate = $birthDate;
         $this->jobTitle = $jobTitle;
         $this->mobileNumber = $mobileNumber;
+        $this->societyId = $societyId;
     }
 }

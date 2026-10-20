@@ -23,6 +23,8 @@ final class PersonOutput extends ApiOutput
     public ?\DateTimeImmutable $birthDate;
     public ?string $jobTitle;
     public ?ExternalId $externalIdentifier;
+    /** UUID Agora de la société du contact, null si aucune */
+    public ?string $societyId;
 
     public function __construct(
         string $uuid,
@@ -37,7 +39,8 @@ final class PersonOutput extends ApiOutput
         string $gender = Gender::GENDER_NA,
         ?\DateTimeImmutable $birthDate = null,
         ?string $jobTitle = null,
-        ?ExternalId $externalIdentifier = null
+        ?ExternalId $externalIdentifier = null,
+        ?string $societyId = null
     ) {
         $this->uuid = $uuid;
         $this->familyName = $familyName;
@@ -52,5 +55,6 @@ final class PersonOutput extends ApiOutput
         $this->birthDate = $birthDate;
         $this->jobTitle = $jobTitle;
         $this->externalIdentifier = $externalIdentifier;
+        $this->societyId = $societyId;
     }
 }

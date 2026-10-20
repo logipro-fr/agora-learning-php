@@ -15,6 +15,7 @@ use AgoraLearningPhp\Identifier\ApiObjectIdentifier;
 use AgoraLearningPhp\Identifier\ExternalId;
 use AgoraLearningPhp\Service\ClientCore\ApiService;
 use AgoraLearningPhp\Service\ClientCore\ApiUrls;
+use AgoraLearningPhp\Service\Society\Society;
 use AgoraLearningPhp\Service\Tools\JsonHandler;
 
 /**
@@ -97,7 +98,8 @@ class Learner extends ApiService
             "addressCountry" => $learnerInput->addressCountry,
             "telephone" => $learnerInput->telephone,
             "mobileNumber" => $learnerInput->mobileNumber,
-            "image" => $learnerInput->image
+            "image" => $learnerInput->image,
+            "societyId" => $learnerInput->societyId
         ];
     }
 
@@ -121,7 +123,8 @@ class Learner extends ApiService
          *     addressLocality?: string|null,
          *     addressCountry?: string|null,
          *     birthDate?: string|null,
-         *     jobTitle?: string|null
+         *     jobTitle?: string|null,
+         *     society?: array<string, mixed>|null
          * } $data */
         $telephone = $data['telephone'] ?? null;
         $addressStreet = $data['addressStreet'] ?? null;
@@ -132,6 +135,8 @@ class Learner extends ApiService
         $birthDate = !empty($data['birthDate']) ? new \DateTimeImmutable($data['birthDate']) : null;
         $jobTitle = $data['jobTitle'] ?? null;
         $externalIdentifier = !empty($data['externalIdentifier']) ? ExternalId::fromArray($data['externalIdentifier']) : null;
+        // L'API renvoie "society": null pour un apprenant sans société
+        $society = !empty($data['society']) ? Society::convertDataToDTO($data['society']) : null;
 
         return new LearnerOutput(
             $data['agoraId'],
@@ -149,6 +154,7 @@ class Learner extends ApiService
             $birthDate,
             $jobTitle,
             $externalIdentifier,
+            $society,
         );
     }
 }

@@ -99,6 +99,27 @@ class PersonTest extends ServiceTestCase
         $this->assertNull($dto->jobTitle);
     }
 
+    public function testConvertDataToDTOMapsSocietyId(): void
+    {
+        // Arrange
+        $data = array_merge($this->makeMinimalData(), ['societyId' => 'soc-uuid-001']);
+
+        // Act
+        $dto = Person::convertDataToDTO($data);
+
+        // Assert
+        $this->assertSame('soc-uuid-001', $dto->societyId);
+    }
+
+    public function testConvertDataToDTOSetsSocietyIdToNullWhenAbsent(): void
+    {
+        // Act
+        $dto = Person::convertDataToDTO($this->makeMinimalData());
+
+        // Assert
+        $this->assertNull($dto->societyId);
+    }
+
     public function testConvertDataToDTOMapsExternalIdentifier(): void
     {
         // Arrange
@@ -369,6 +390,65 @@ class PersonTest extends ServiceTestCase
     // -------------------------------------------------------------------------
     // PUT / PATCH
     // -------------------------------------------------------------------------
+
+    public function testPostPersonSendsSocietyId(): void
+    {
+        // Arrange
+        $capturedBody = '';
+        $person = $this->makePerson($this->makeHttpClientInspectingBody(200, json_encode($this->makeCreatedData('per_soc')), $capturedBody));
+        $input = new PersonInput(
+            new ExternalId('Src', 'P-1'),
+            'Dupont',
+            'Jean',
+            'jean@example.com',
+            Gender::GENDER_NA,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            'Src:S-1'
+        );
+
+        // Act
+        $person->postPerson($input);
+
+        // Assert
+        $body = json_decode($capturedBody, true);
+        $this->assertSame('Src:S-1', $body['societyId']);
+    }
+
+    public function testPostPersonSendsNullSocietyIdByDefault(): void
+    {
+        // Arrange
+        $capturedBody = '';
+        $person = $this->makePerson($this->makeHttpClientInspectingBody(200, json_encode($this->makeCreatedData('per_soc')), $capturedBody));
+
+        // Act
+        $person->postPerson(new PersonInput(new ExternalId('Src', 'P-2'), 'Dupont', 'Jean', 'jean@example.com'));
+
+        // Assert
+        $body = json_decode($capturedBody, true);
+        $this->assertArrayHasKey('societyId', $body);
+        $this->assertNull($body['societyId']);
+    }
+
+    public function testPatchPersonSendsSocietyIdNullToRemoveRelation(): void
+    {
+        // Arrange
+        $capturedBody = '';
+        $person = $this->makePerson($this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'per_001', 'sourceName' => 'Src', 'externalId' => 'X-42']), $capturedBody));
+
+        // Act
+        $person->patchPerson(new AgoraId('per_001'), (new PersonPatchInput())->setSocietyId(null));
+
+        // Assert
+        $this->assertSame(['societyId' => null], json_decode($capturedBody, true));
+    }
 
     public function testPutPersonSendsPutRequestToEncodedUrl(): void
     {

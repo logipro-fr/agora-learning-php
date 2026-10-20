@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AgoraLearningPhp\DTO\Output\Learner;
 
 use AgoraLearningPhp\DTO\Output\ApiOutput;
+use AgoraLearningPhp\DTO\Output\Society\SocietyOutput;
 use AgoraLearningPhp\Enum\Gender;
 use AgoraLearningPhp\Identifier\ExternalId;
 
@@ -25,6 +26,7 @@ final class LearnerOutput extends ApiOutput
     public ?\DateTimeImmutable $birthDate;
     public ?string $jobTitle;
     public ?ExternalId $externalIdentifier;
+    public ?SocietyOutput $society;
 
     public function __construct(
         string $uuid,
@@ -41,7 +43,8 @@ final class LearnerOutput extends ApiOutput
         ?string $addressCountry = null,
         ?\DateTimeImmutable $birthDate = null,
         ?string $jobTitle = null,
-        ?ExternalId $externalIdentifier = null
+        ?ExternalId $externalIdentifier = null,
+        ?SocietyOutput $society = null
     ) {
         $this->uuid = $uuid;
         $this->username = $username;
@@ -58,5 +61,6 @@ final class LearnerOutput extends ApiOutput
         $this->birthDate = $birthDate;
         $this->jobTitle = $jobTitle;
         $this->externalIdentifier = $externalIdentifier;
+        $this->society = $society;
     }
 }
