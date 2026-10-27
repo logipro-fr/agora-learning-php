@@ -570,6 +570,74 @@ class PersonTest extends ServiceTestCase
     }
 
     // -------------------------------------------------------------------------
+    // detachPerson
+    // -------------------------------------------------------------------------
+
+    public function testDetachPersonWithExternalIdSendsPatchToEncodedPersonUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $person = $this->makePerson($this->makeHttpClientInspectingRequest(
+            200,
+            json_encode(['agoraId' => 'per_001']),
+            $method,
+            $url
+        ));
+
+        // Act
+        $person->detachPerson(new ExternalId('Src', 'X-42'));
+
+        // Assert
+        $this->assertSame('PATCH', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/persons/Src%3AX-42', $url);
+    }
+
+    public function testDetachPersonSendsOnlyANullExternalIdentifier(): void
+    {
+        // Arrange
+        $capturedBody = '';
+        $person = $this->makePerson(
+            $this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'per_001']), $capturedBody)
+        );
+
+        // Act
+        $person->detachPerson(new AgoraId('per_001'));
+
+        // Assert
+        $this->assertSame(['externalIdentifier' => null], json_decode($capturedBody, true));
+    }
+
+    public function testPatchPersonCanClearExternalIdentifier(): void
+    {
+        // Arrange
+        $capturedBody = '';
+        $person = $this->makePerson(
+            $this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'per_001']), $capturedBody)
+        );
+
+        // Act
+        $person->patchPerson(new AgoraId('per_001'), (new PersonPatchInput())->clearExternalIdentifier());
+
+        // Assert
+        $this->assertSame(['externalIdentifier' => null], json_decode($capturedBody, true));
+    }
+
+    public function testDetachPersonThrowsExceptionWithStatusCodeWhenApiReturns404(): void
+    {
+        // Arrange
+        $person = $this->makePerson($this->makeHttpClientWithResponse(404, json_encode(['detail' => 'Person not found'])));
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionMessage('Person not found');
+        $this->expectExceptionCode(404);
+
+        // Act
+        $person->detachPerson(new AgoraId('per_missing'));
+    }
+
+    // -------------------------------------------------------------------------
     // deletePerson
     // -------------------------------------------------------------------------
 

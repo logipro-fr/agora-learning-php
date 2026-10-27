@@ -65,6 +65,17 @@ class Person extends ApiService
     }
 
     /**
+     * Détache la personne de l'application source en retirant son identifiant externe (PATCH
+     * {"externalIdentifier": null}) : elle reste sur Agora mais n'est plus liée à l'application qui l'a créée.
+     *
+     * @throws AgoraLearningClientException si la personne n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function detachPerson(ApiObjectIdentifier $identifier): void
+    {
+        $this->patchPerson($identifier, (new PersonPatchInput())->clearExternalIdentifier());
+    }
+
+    /**
      * Supprime le contact (DELETE, réponse 204 sans contenu).
      *
      * @throws AgoraLearningClientException si le contact n'existe pas (404) ou en cas d'erreur de l'API

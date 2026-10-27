@@ -796,6 +796,26 @@ class AgoraLearningClientTest extends TestCase
         $this->client->deletePerson($identifier);
     }
 
+    public function testDetachPerson(): void
+    {
+        // Arrange
+        $identifier = new AgoraId('per_1');
+        $this->personMock->expects($this->once())->method('detachPerson')->with($identifier);
+
+        // Act
+        $this->client->detachPerson($identifier);
+    }
+
+    public function testDetachTrainer(): void
+    {
+        // Arrange
+        $identifier = new AgoraId('per_2');
+        $this->trainerMock->expects($this->once())->method('detachTrainer')->with($identifier);
+
+        // Act
+        $this->client->detachTrainer($identifier);
+    }
+
     public function testDeleteTrainer(): void
     {
         // Arrange
@@ -824,6 +844,16 @@ class AgoraLearningClientTest extends TestCase
 
         // Act
         $this->client->deleteSociety($identifier);
+    }
+
+    public function testDetachSociety(): void
+    {
+        // Arrange
+        $identifier = new AgoraId('soc_1');
+        $this->societyMock->expects($this->once())->method('detachSociety')->with($identifier);
+
+        // Act
+        $this->client->detachSociety($identifier);
     }
 
     public function testDeleteSession(): void

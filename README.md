@@ -83,6 +83,8 @@ $learner = $client->getLearner($created->agoraId);
 
 Les suppressions ne renvoient rien (réponse 204) et lèvent une `AgoraLearningClientException` de code 404 si l'objet n'existe pas.
 
+Une personne, une société ou un formateur peut aussi être détaché de l'application source avec `detachPerson()` (`PATCH /persons/{id}` avec `{"externalIdentifier": null}`), `detachSociety()` (`PATCH /societies/{id}` avec `{"externalId": null}`) ou `detachTrainer()` (`GET /trainers/{id}` puis `PATCH /trainers/employee/{id}` ou `/trainers/free/{id}` selon son statut, avec `{"externalIdentifier": null}`) : il reste sur Agora mais n'y est plus lié.
+
 Les lectures, modifications et suppressions acceptent un `AgoraId` ou un `ExternalId` ; les créations prennent un `ExternalId` obligatoire. Créations et modifications renvoient un `CreatedOutput` (`agoraId`, `externalId`).
 
 - `replace*()` (PUT) reprend le DTO de création et **remplace** l'objet : un champ facultatif non renseigné est vidé.

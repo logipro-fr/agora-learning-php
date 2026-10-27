@@ -89,6 +89,16 @@ class AgoraLearningClient
     }
 
     /**
+     * Détache la personne de l'application source : elle reste sur Agora mais n'y est plus liée.
+     *
+     * @throws AgoraLearningClientException si la personne n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function detachPerson(ApiObjectIdentifier $identifier): void
+    {
+        $this->makePerson()->detachPerson($identifier);
+    }
+
+    /**
      * Supprime le contact.
      *
      * @throws AgoraLearningClientException si le contact n'existe pas (404) ou en cas d'erreur de l'API
@@ -152,6 +162,16 @@ class AgoraLearningClient
     public function patchTrainerFree(ApiObjectIdentifier $identifier, TrainerFreePatchInput $trainerFreePatchInput): CreatedOutput
     {
         return $this->makeTrainer()->patchTrainerFree($identifier, $trainerFreePatchInput);
+    }
+
+    /**
+     * Détache le formateur de l'application source : il reste sur Agora mais n'y est plus lié.
+     *
+     * @throws AgoraLearningClientException si le formateur n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function detachTrainer(ApiObjectIdentifier $identifier): void
+    {
+        $this->makeTrainer()->detachTrainer($identifier);
     }
 
     /**
@@ -242,6 +262,16 @@ class AgoraLearningClient
     public function patchSociety(ApiObjectIdentifier $identifier, SocietyPatchInput $societyPatchInput): CreatedOutput
     {
         return $this->makeSociety()->patchSociety($identifier, $societyPatchInput);
+    }
+
+    /**
+     * Détache la société de l'application source : elle reste sur Agora mais n'y est plus liée.
+     *
+     * @throws AgoraLearningClientException si la société n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function detachSociety(ApiObjectIdentifier $identifier): void
+    {
+        $this->makeSociety()->detachSociety($identifier);
     }
 
     /**

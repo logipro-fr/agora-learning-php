@@ -18,6 +18,14 @@ final class SocietyPatchInput extends AbstractPatchInput
         return $this->set('externalId', $externalIdentifier->toArray());
     }
 
+    /**
+     * Retire l'identifiant externe : la société n'est plus liée à l'application source.
+     */
+    public function clearExternalIdentifier(): self
+    {
+        return $this->set('externalId', null);
+    }
+
     public function setName(string $name): self
     {
         return $this->set('name', $name);

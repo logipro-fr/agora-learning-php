@@ -126,6 +126,11 @@ class AgoraLearningClientMock extends AgoraLearningClient
         return $this->makeUpdatedOutput($identifier, 'per_01XXXXXXXXXXXXXXXXXXXXXXXXX');
     }
 
+    public function detachPerson(ApiObjectIdentifier $identifier): void
+    {
+        // Détachement factice du contact : rien à renvoyer
+    }
+
     public function deletePerson(ApiObjectIdentifier $identifier): void
     {
         // Suppression factice du contact : rien à renvoyer
@@ -251,6 +256,11 @@ class AgoraLearningClientMock extends AgoraLearningClient
     public function patchTrainerFree(ApiObjectIdentifier $identifier, TrainerFreePatchInput $trainerFreePatchInput): CreatedOutput
     {
         return $this->makeUpdatedOutput($identifier, 'per_01XXXXXXXXXXXXXXXXXXXXXXXXX');
+    }
+
+    public function detachTrainer(ApiObjectIdentifier $identifier): void
+    {
+        // Détachement factice du formateur : rien à renvoyer
     }
 
     public function deleteTrainer(ApiObjectIdentifier $identifier): void
@@ -448,6 +458,11 @@ class AgoraLearningClientMock extends AgoraLearningClient
     public function deleteSociety(ApiObjectIdentifier $identifier): void
     {
         // Suppression factice de la société : rien à renvoyer
+    }
+
+    public function detachSociety(ApiObjectIdentifier $identifier): void
+    {
+        // Détachement factice de la société : rien à renvoyer
     }
 
     // Session

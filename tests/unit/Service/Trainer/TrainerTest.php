@@ -18,8 +18,11 @@ use AgoraLearningPhp\Exception\AgoraLearningClientException;
 use AgoraLearningPhp\Identifier\AgoraId;
 use AgoraLearningPhp\Identifier\ExternalId;
 use AgoraLearningPhp\Service\ClientCore\HttpClient;
+use AgoraLearningPhp\Service\ClientCore\TokenHandler;
 use AgoraLearningPhp\Service\Trainer\Trainer;
 use AgoraLearningPhp\Tests\unit\Service\ServiceTestCase;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 class TrainerTest extends ServiceTestCase
 {
@@ -53,6 +56,37 @@ class TrainerTest extends ServiceTestCase
             'educationalManagerSessions' => [],
             'statut'                    => TrainerStatut::STATUT_FREE,
         ];
+    }
+
+    /**
+     * Crée un HttpClient qui renvoie les réponses dans l'ordre des requêtes et capture chaque requête
+     * (méthode, URL, corps).
+     *
+     * @param array<int, array{int, string}> $responses couples [code HTTP, corps de la réponse]
+     * @param array<int, array{method: string, url: string, body: string}> $capturedRequests
+     */
+    private function makeHttpClientWithSequence(array $responses, array &$capturedRequests): HttpClient
+    {
+        $this->injectCachedToken('test-token');
+
+        $mockResponses = [];
+        foreach ($responses as [$statusCode, $body]) {
+            $mockResponse = $this->createMock(ResponseInterface::class);
+            $mockResponse->method('getStatusCode')->willReturn($statusCode);
+            $mockResponse->method('getContent')->with(false)->willReturn($body);
+            $mockResponses[] = $mockResponse;
+        }
+
+        $mockInner = $this->createMock(HttpClientInterface::class);
+        $mockInner->method('request')
+            ->willReturnCallback(
+                function (string $method, string $url, array $options) use (&$mockResponses, &$capturedRequests) {
+                    $capturedRequests[] = ['method' => $method, 'url' => $url, 'body' => $options['body'] ?? ''];
+                    return array_shift($mockResponses);
+                }
+            );
+
+        return new HttpClient($mockInner, new TokenHandler($mockInner));
     }
 
     private function makeTrainer(HttpClient $httpClient): Trainer
@@ -733,6 +767,78 @@ class TrainerTest extends ServiceTestCase
         $this->assertSame('PATCH', $method);
         $this->assertSame('https://api.test.local/api/external/v1/trainers/free/per_001', $url);
         $this->assertSame(['hourlyCost' => 55.5, 'email' => 'paul@example.net'], json_decode($capturedBody, true));
+    }
+
+    // -------------------------------------------------------------------------
+    // detachTrainer
+    // -------------------------------------------------------------------------
+
+    public function testDetachTrainerEmployeeSendsNullExternalIdentifierToEmployeeUrl(): void
+    {
+        // Arrange
+        $requests = [];
+        $trainer = $this->makeTrainer($this->makeHttpClientWithSequence([
+            [200, json_encode($this->makeMinimalEmployeeData())],
+            [200, json_encode(['agoraId' => 'trainer-emp-001'])],
+        ], $requests));
+
+        // Act
+        $trainer->detachTrainer(new ExternalId('Src', 'X-42'));
+
+        // Assert
+        $this->assertCount(2, $requests);
+        $this->assertSame('GET', $requests[0]['method']);
+        $this->assertSame('https://api.test.local/api/external/v1/trainers/Src%3AX-42', $requests[0]['url']);
+        $this->assertSame('PATCH', $requests[1]['method']);
+        $this->assertSame('https://api.test.local/api/external/v1/trainers/employee/Src%3AX-42', $requests[1]['url']);
+        $this->assertSame(['externalIdentifier' => null], json_decode($requests[1]['body'], true));
+    }
+
+    public function testDetachTrainerFreeSendsNullExternalIdentifierToFreeUrl(): void
+    {
+        // Arrange
+        $requests = [];
+        $trainer = $this->makeTrainer($this->makeHttpClientWithSequence([
+            [200, json_encode($this->makeMinimalFreeData())],
+            [200, json_encode(['agoraId' => 'trainer-free-001'])],
+        ], $requests));
+
+        // Act
+        $trainer->detachTrainer(new AgoraId('trainer-free-001'));
+
+        // Assert
+        $this->assertSame('PATCH', $requests[1]['method']);
+        $this->assertSame('https://api.test.local/api/external/v1/trainers/free/trainer-free-001', $requests[1]['url']);
+        $this->assertSame(['externalIdentifier' => null], json_decode($requests[1]['body'], true));
+    }
+
+    public function testPatchTrainerCanClearExternalIdentifier(): void
+    {
+        // Arrange
+        $capturedBody = '';
+        $trainer = $this->makeTrainer(
+            $this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'per_001']), $capturedBody)
+        );
+
+        // Act
+        $trainer->patchTrainerEmployee(new AgoraId('per_001'), (new TrainerEmployeePatchInput())->clearExternalIdentifier());
+
+        // Assert
+        $this->assertSame(['externalIdentifier' => null], json_decode($capturedBody, true));
+    }
+
+    public function testDetachTrainerThrowsExceptionWithStatusCodeWhenApiReturns404(): void
+    {
+        // Arrange
+        $trainer = $this->makeTrainer($this->makeHttpClientWithResponse(404, json_encode(['detail' => 'Trainer not found'])));
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionMessage('Trainer not found');
+        $this->expectExceptionCode(404);
+
+        // Act
+        $trainer->detachTrainer(new AgoraId('per_missing'));
     }
 
     // -------------------------------------------------------------------------

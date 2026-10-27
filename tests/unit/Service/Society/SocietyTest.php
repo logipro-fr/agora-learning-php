@@ -530,6 +530,74 @@ class SocietyTest extends ServiceTestCase
         $society->deleteSociety(new AgoraId('soc_missing'));
     }
 
+    // -------------------------------------------------------------------------
+    // detachSociety
+    // -------------------------------------------------------------------------
+
+    public function testDetachSocietyWithExternalIdSendsPatchToEncodedSocietyUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $society = $this->makeSociety($this->makeHttpClientInspectingRequest(
+            200,
+            json_encode(['agoraId' => 'soc_001']),
+            $method,
+            $url
+        ));
+
+        // Act
+        $society->detachSociety(new ExternalId('Src', 'X-42'));
+
+        // Assert
+        $this->assertSame('PATCH', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/societies/Src%3AX-42', $url);
+    }
+
+    public function testDetachSocietySendsOnlyANullExternalId(): void
+    {
+        // Arrange
+        $capturedBody = '';
+        $society = $this->makeSociety(
+            $this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'soc_001']), $capturedBody)
+        );
+
+        // Act
+        $society->detachSociety(new AgoraId('soc_001'));
+
+        // Assert
+        $this->assertSame(['externalId' => null], json_decode($capturedBody, true));
+    }
+
+    public function testPatchSocietyCanClearExternalIdentifier(): void
+    {
+        // Arrange
+        $capturedBody = '';
+        $society = $this->makeSociety(
+            $this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'soc_001']), $capturedBody)
+        );
+
+        // Act
+        $society->patchSociety(new AgoraId('soc_001'), (new SocietyPatchInput())->clearExternalIdentifier());
+
+        // Assert
+        $this->assertSame(['externalId' => null], json_decode($capturedBody, true));
+    }
+
+    public function testDetachSocietyThrowsExceptionWithStatusCodeWhenApiReturns404(): void
+    {
+        // Arrange
+        $society = $this->makeSociety($this->makeHttpClientWithResponse(404, json_encode(['detail' => 'Society not found'])));
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionMessage('Society not found');
+        $this->expectExceptionCode(404);
+
+        // Act
+        $society->detachSociety(new AgoraId('soc_missing'));
+    }
+
     public function testGetSocietyThrowsExceptionWithStatusCodeWhenApiReturns404(): void
     {
         // Arrange

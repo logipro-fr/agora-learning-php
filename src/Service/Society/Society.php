@@ -66,6 +66,17 @@ class Society extends ApiService
     }
 
     /**
+     * Détache la société de l'application source en retirant son identifiant externe (PATCH
+     * {"externalId": null}) : elle reste sur Agora mais n'est plus liée à l'application qui l'a créée.
+     *
+     * @throws AgoraLearningClientException si la société n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function detachSociety(ApiObjectIdentifier $identifier): void
+    {
+        $this->patchSociety($identifier, (new SocietyPatchInput())->clearExternalIdentifier());
+    }
+
+    /**
      * Supprime la société (DELETE, réponse 204 sans contenu).
      *
      * @throws AgoraLearningClientException si la société n'existe pas (404) ou en cas d'erreur de l'API
