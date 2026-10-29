@@ -534,54 +534,33 @@ class SocietyTest extends ServiceTestCase
     // detachSociety
     // -------------------------------------------------------------------------
 
-    public function testDetachSocietyWithExternalIdSendsPatchToEncodedSocietyUrl(): void
+    public function testDetachSocietySendsPatchToDetachUrl(): void
     {
         // Arrange
-        $method = '';
-        $url = '';
-        $society = $this->makeSociety($this->makeHttpClientInspectingRequest(
-            200,
-            json_encode(['agoraId' => 'soc_001']),
-            $method,
-            $url
-        ));
+        $requests = [];
+        $society = $this->makeSociety($this->makeHttpClientWithSequence([[204, '']], $requests));
 
         // Act
         $society->detachSociety(new ExternalId('Src', 'X-42'));
 
         // Assert
-        $this->assertSame('PATCH', $method);
-        $this->assertSame('https://api.test.local/api/external/v1/societies/Src%3AX-42', $url);
+        $this->assertCount(1, $requests);
+        $this->assertSame('PATCH', $requests[0]['method']);
+        $this->assertSame('https://api.test.local/api/external/v1/societies/Src%3AX-42/detach', $requests[0]['url']);
+        $this->assertSame('{}', $requests[0]['body']);
     }
 
-    public function testDetachSocietySendsOnlyANullExternalId(): void
+    public function testDetachSocietyThrowsExceptionWhenApiRefusesDetach(): void
     {
         // Arrange
-        $capturedBody = '';
-        $society = $this->makeSociety(
-            $this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'soc_001']), $capturedBody)
-        );
+        $society = $this->makeSociety($this->makeHttpClientWithResponse(500, ''));
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionCode(500);
 
         // Act
         $society->detachSociety(new AgoraId('soc_001'));
-
-        // Assert
-        $this->assertSame(['externalId' => null], json_decode($capturedBody, true));
-    }
-
-    public function testPatchSocietyCanClearExternalIdentifier(): void
-    {
-        // Arrange
-        $capturedBody = '';
-        $society = $this->makeSociety(
-            $this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'soc_001']), $capturedBody)
-        );
-
-        // Act
-        $society->patchSociety(new AgoraId('soc_001'), (new SocietyPatchInput())->clearExternalIdentifier());
-
-        // Assert
-        $this->assertSame(['externalId' => null], json_decode($capturedBody, true));
     }
 
     public function testDetachSocietyThrowsExceptionWithStatusCodeWhenApiReturns404(): void

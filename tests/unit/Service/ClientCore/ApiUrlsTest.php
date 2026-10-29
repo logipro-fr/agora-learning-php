@@ -638,6 +638,42 @@ class ApiUrlsTest extends TestCase
         $this->assertSame(self::BASE . ApiUrls::DELETE_SESSION . 'Src%3AX%201', $url);
     }
 
+    public function testGetDetachPerson(): void
+    {
+        // Arrange
+        ApiUrls::initBaseUrl(self::BASE);
+
+        // Act
+        $url = ApiUrls::getDetachPerson('Src:X 1');
+
+        // Assert
+        $this->assertSame(self::BASE . '/api/external/v1/persons/Src%3AX%201/detach', $url);
+    }
+
+    public function testGetDetachTrainer(): void
+    {
+        // Arrange
+        ApiUrls::initBaseUrl(self::BASE);
+
+        // Act
+        $url = ApiUrls::getDetachTrainer('Src:X 1');
+
+        // Assert
+        $this->assertSame(self::BASE . '/api/external/v1/trainers/Src%3AX%201/detach', $url);
+    }
+
+    public function testGetDetachSociety(): void
+    {
+        // Arrange
+        ApiUrls::initBaseUrl(self::BASE);
+
+        // Act
+        $url = ApiUrls::getDetachSociety('Src:X 1');
+
+        // Assert
+        $this->assertSame(self::BASE . '/api/external/v1/societies/Src%3AX%201/detach', $url);
+    }
+
     public function testGetDetachSession(): void
     {
         // Arrange

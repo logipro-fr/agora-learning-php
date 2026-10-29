@@ -11,11 +11,4 @@ use AgoraLearningPhp\DTO\Input\AbstractContactPatchInput;
  */
 final class PersonPatchInput extends AbstractContactPatchInput
 {
-    /**
-     * Retire l'identifiant externe : la personne n'est plus liée à l'application source.
-     */
-    public function clearExternalIdentifier(): self
-    {
-        return $this->set('externalIdentifier', null);
-    }
 }

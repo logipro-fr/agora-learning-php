@@ -24,6 +24,7 @@ class ApiUrls
     public const GET_COLLECTION_PERSON = self::PREFIX_API . self::API_VERSION . '/persons';
     public const UPDATE_PERSON = self::PREFIX_API . self::API_VERSION . '/persons/';
     public const DELETE_PERSON = self::PREFIX_API . self::API_VERSION . '/persons/';
+    public const DETACH_PERSON = self::PREFIX_API . self::API_VERSION . '/persons/%s/detach';
 
     // TRAINER
     public const CREATE_TRAINER_EMPLOYEE = self::PREFIX_API . self::API_VERSION . '/trainers/employee';
@@ -33,6 +34,7 @@ class ApiUrls
     public const UPDATE_TRAINER_EMPLOYEE = self::PREFIX_API . self::API_VERSION . '/trainers/employee/';
     public const UPDATE_TRAINER_FREE = self::PREFIX_API . self::API_VERSION . '/trainers/free/';
     public const DELETE_TRAINER = self::PREFIX_API . self::API_VERSION . '/trainers/';
+    public const DETACH_TRAINER = self::PREFIX_API . self::API_VERSION . '/trainers/%s/detach';
 
     // LEARNER
     public const CREATE_LEARNER = self::PREFIX_API . self::API_VERSION . '/learners';
@@ -57,6 +59,7 @@ class ApiUrls
     public const GET_COLLECTION_SOCIETY = self::PREFIX_API . self::API_VERSION . '/societies';
     public const UPDATE_SOCIETY = self::PREFIX_API . self::API_VERSION . '/societies/';
     public const DELETE_SOCIETY = self::PREFIX_API . self::API_VERSION . '/societies/';
+    public const DETACH_SOCIETY = self::PREFIX_API . self::API_VERSION . '/societies/%s/detach';
 
     // ENROLLMENT
     public const CREATE_ENROLLMENT = self::PREFIX_API . self::API_VERSION . '/enrollments';
@@ -135,6 +138,14 @@ class ApiUrls
         return self::getBaseUrl() . self::DELETE_PERSON . rawurlencode($identifier);
     }
 
+    /**
+     * @param string $identifier Identifiant brut (uuid Agora ou "source:id"), encodé ici
+     */
+    public static function getDetachPerson(string $identifier): string
+    {
+        return self::getBaseUrl() . sprintf(self::DETACH_PERSON, rawurlencode($identifier));
+    }
+
     // TRAINER
     public static function getCreateTrainerEmployee(): string
     {
@@ -185,6 +196,14 @@ class ApiUrls
     public static function getDeleteTrainer(string $identifier): string
     {
         return self::getBaseUrl() . self::DELETE_TRAINER . rawurlencode($identifier);
+    }
+
+    /**
+     * @param string $identifier Identifiant brut (uuid Agora ou "source:id"), encodé ici
+     */
+    public static function getDetachTrainer(string $identifier): string
+    {
+        return self::getBaseUrl() . sprintf(self::DETACH_TRAINER, rawurlencode($identifier));
     }
 
     // LEARNER
@@ -319,6 +338,14 @@ class ApiUrls
     public static function getDeleteSociety(string $identifier): string
     {
         return self::getBaseUrl() . self::DELETE_SOCIETY . rawurlencode($identifier);
+    }
+
+    /**
+     * @param string $identifier Identifiant brut (uuid Agora ou "source:id"), encodé ici
+     */
+    public static function getDetachSociety(string $identifier): string
+    {
+        return self::getBaseUrl() . sprintf(self::DETACH_SOCIETY, rawurlencode($identifier));
     }
 
     // ENROLLMENT

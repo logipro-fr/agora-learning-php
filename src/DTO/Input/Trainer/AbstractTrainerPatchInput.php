@@ -15,16 +15,6 @@ use AgoraLearningPhp\DTO\Input\AbstractContactPatchInput;
 abstract class AbstractTrainerPatchInput extends AbstractContactPatchInput
 {
     /**
-     * Retire l'identifiant externe : le formateur n'est plus lié à l'application source.
-     *
-     * @return static
-     */
-    public function clearExternalIdentifier(): self
-    {
-        return $this->set('externalIdentifier', null);
-    }
-
-    /**
      * @return static
      */
     public function setVisibleInformation(bool $visibleInformation): self

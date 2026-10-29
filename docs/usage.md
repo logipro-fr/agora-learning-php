@@ -231,7 +231,7 @@ $client->patchPerson(
 );
 ```
 
-**Setters de `PersonPatchInput` :** `setExternalIdentifier(ExternalId)`, `setFamilyName(string)`, `setGivenName(string)`, `setEmail(string)`, `setGender(string)`, `setTelephone(?string)`, `setMobileNumber(?string)`, `setAddressStreet(?string)`, `setAddressPostcode(?string)`, `setAddressLocality(?string)`, `setAddressCountry(?string)`, `setImage(?string)`, `setBirthDate(?\DateTimeInterface)`, `setJobTitle(?string)`, `setSocietyId(?string)` (`null` retire la relation), `clearExternalIdentifier()` (détache la personne, voir `detachPerson()`).
+**Setters de `PersonPatchInput` :** `setExternalIdentifier(ExternalId)`, `setFamilyName(string)`, `setGivenName(string)`, `setEmail(string)`, `setGender(string)`, `setTelephone(?string)`, `setMobileNumber(?string)`, `setAddressStreet(?string)`, `setAddressPostcode(?string)`, `setAddressLocality(?string)`, `setAddressCountry(?string)`, `setImage(?string)`, `setBirthDate(?\DateTimeInterface)`, `setJobTitle(?string)`, `setSocietyId(?string)` (`null` retire la relation).
 
 ### `getPerson(ApiObjectIdentifier $identifier) : PersonOutput`
 
@@ -270,17 +270,15 @@ foreach ($persons as $person) {
 
 ### `detachPerson(ApiObjectIdentifier $identifier) : void`
 
-Détache la personne de l'application source en retirant son identifiant externe (`PATCH /persons/{id}`
-avec `{"externalIdentifier": null}`, équivalent à `patchPerson()` avec `PersonPatchInput::clearExternalIdentifier()`) :
-elle reste sur Agora mais n'est plus liée à l'application qui l'a créée. À appeler avant `deletePerson()`
-lorsque l'application source supprime son objet. L'identifiant externe étant retiré, la personne n'est
-ensuite plus désignable que par son UUID Agora (`AgoraId`).
+Détache la personne de l'application source (`PATCH /persons/{id}/detach`, réponse 204 sans contenu) : elle reste sur
+Agora mais n'est plus liée à l'application qui l'a créée. À appeler avant `deletePerson()` lorsque l'application
+source supprime son objet.
 
 ```php
 $client->detachPerson(new ExternalId('MonERP', 'P-42'));
 ```
 
-**Lève :** `AgoraLearningClientException` de code 404 si la personne n'existe pas.
+**Lève :** `AgoraLearningClientException` de code 404 si la personne n'existe pas, ou en cas de refus d'Agora.
 
 ### `deletePerson(ApiObjectIdentifier $identifier) : void`
 
@@ -521,7 +519,7 @@ $client->patchTrainerFree(
 );
 ```
 
-**Setters de `TrainerEmployeePatchInput` :** `setExternalIdentifier(ExternalId)`, `setFamilyName(string)`, `setGivenName(string)`, `setEmail(string)`, `setGender(string)`, `setTelephone(?string)`, `setMobileNumber(?string)`, `setAddressStreet(?string)`, `setAddressPostcode(?string)`, `setAddressLocality(?string)`, `setAddressCountry(?string)`, `setImage(?string)`, `setBirthDate(?\DateTimeInterface)`, `setJobTitle(?string)`, `setVisibleInformation(bool)`, `setSocietyId(?string)`, `setCv(?string)`, `setDegree(?string)`, `setContract(?string)`, `setJobDescription(?string)`, `clearExternalIdentifier()` (détache le formateur, voir `detachTrainer()`).
+**Setters de `TrainerEmployeePatchInput` :** `setExternalIdentifier(ExternalId)`, `setFamilyName(string)`, `setGivenName(string)`, `setEmail(string)`, `setGender(string)`, `setTelephone(?string)`, `setMobileNumber(?string)`, `setAddressStreet(?string)`, `setAddressPostcode(?string)`, `setAddressLocality(?string)`, `setAddressCountry(?string)`, `setImage(?string)`, `setBirthDate(?\DateTimeInterface)`, `setJobTitle(?string)`, `setVisibleInformation(bool)`, `setSocietyId(?string)`, `setCv(?string)`, `setDegree(?string)`, `setContract(?string)`, `setJobDescription(?string)`.
 
 **Setters supplémentaires de `TrainerFreePatchInput` :** `setHourlyCost(?float)`, `setDaylyCost(?float)`, `setSiret(?string)`, `setTvaNumber(?string)`, `setUrssafNumber(?string)`, `setUrssafCertificate(?string)`, `setBillingAddressStreet(?string)`, `setBillingAddressPostcode(?string)`, `setBillingAddressLocality(?string)`, `setBillingAddressCountry(?string)`.
 
@@ -549,19 +547,15 @@ foreach ($trainers as $trainer) {
 
 ### `detachTrainer(ApiObjectIdentifier $identifier) : void`
 
-Détache le formateur de l'application source en retirant son identifiant externe : il reste sur Agora mais
-n'est plus lié à l'application qui l'a créé. La route de modification dépendant du statut, le formateur est
-d'abord lu (`GET /trainers/{id}`), puis modifié avec `{"externalIdentifier": null}` sur
-`PATCH /trainers/employee/{id}` ou `PATCH /trainers/free/{id}` (équivalent à `patchTrainerEmployee()` /
-`patchTrainerFree()` avec `clearExternalIdentifier()`). À appeler avant `deleteTrainer()` lorsque
-l'application source supprime son objet. L'identifiant externe étant retiré, le formateur n'est ensuite plus
-désignable que par son UUID Agora (`AgoraId`).
+Détache le formateur de l'application source (`PATCH /trainers/{id}/detach`, réponse 204 sans contenu) : il reste sur
+Agora mais n'est plus lié à l'application qui l'a créé. À appeler avant `deleteTrainer()` lorsque l'application
+source supprime son objet.
 
 ```php
 $client->detachTrainer(new ExternalId('MonERP', 'T-42'));
 ```
 
-**Lève :** `AgoraLearningClientException` de code 404 si le formateur n'existe pas.
+**Lève :** `AgoraLearningClientException` de code 404 si le formateur n'existe pas, ou en cas de refus d'Agora.
 
 ### `deleteTrainer(ApiObjectIdentifier $identifier) : void`
 
@@ -840,17 +834,15 @@ foreach ($societies as $society) {
 
 ### `detachSociety(ApiObjectIdentifier $identifier) : void`
 
-Détache la société de l'application source en retirant son identifiant externe (`PATCH /societies/{id}`
-avec `{"externalId": null}`, équivalent à `patchSociety()` avec `SocietyPatchInput::clearExternalIdentifier()`) :
-elle reste sur Agora mais n'est plus liée à l'application qui l'a créée. À appeler avant `deleteSociety()`
-lorsque l'application source supprime son objet. L'identifiant externe étant retiré, la société n'est
-ensuite plus désignable que par son UUID Agora (`AgoraId`).
+Détache la société de l'application source (`PATCH /societies/{id}/detach`, réponse 204 sans contenu) : elle reste sur
+Agora mais n'est plus liée à l'application qui l'a créée. À appeler avant `deleteSociety()` lorsque l'application
+source supprime son objet.
 
 ```php
 $client->detachSociety(new ExternalId('MonERP', 'SOC-42'));
 ```
 
-**Lève :** `AgoraLearningClientException` de code 404 si la société n'existe pas.
+**Lève :** `AgoraLearningClientException` de code 404 si la société n'existe pas, ou en cas de refus d'Agora.
 
 ### `deleteSociety(ApiObjectIdentifier $identifier) : void`
 

@@ -739,58 +739,33 @@ class TrainerTest extends ServiceTestCase
     // detachTrainer
     // -------------------------------------------------------------------------
 
-    public function testDetachTrainerEmployeeSendsNullExternalIdentifierToEmployeeUrl(): void
+    public function testDetachTrainerSendsPatchToDetachUrl(): void
     {
         // Arrange
         $requests = [];
-        $trainer = $this->makeTrainer($this->makeHttpClientWithSequence([
-            [200, json_encode($this->makeMinimalEmployeeData())],
-            [200, json_encode(['agoraId' => 'trainer-emp-001'])],
-        ], $requests));
+        $trainer = $this->makeTrainer($this->makeHttpClientWithSequence([[204, '']], $requests));
 
         // Act
         $trainer->detachTrainer(new ExternalId('Src', 'X-42'));
 
         // Assert
-        $this->assertCount(2, $requests);
-        $this->assertSame('GET', $requests[0]['method']);
-        $this->assertSame('https://api.test.local/api/external/v1/trainers/Src%3AX-42', $requests[0]['url']);
-        $this->assertSame('PATCH', $requests[1]['method']);
-        $this->assertSame('https://api.test.local/api/external/v1/trainers/employee/Src%3AX-42', $requests[1]['url']);
-        $this->assertSame(['externalIdentifier' => null], json_decode($requests[1]['body'], true));
+        $this->assertCount(1, $requests);
+        $this->assertSame('PATCH', $requests[0]['method']);
+        $this->assertSame('https://api.test.local/api/external/v1/trainers/Src%3AX-42/detach', $requests[0]['url']);
+        $this->assertSame('{}', $requests[0]['body']);
     }
 
-    public function testDetachTrainerFreeSendsNullExternalIdentifierToFreeUrl(): void
+    public function testDetachTrainerThrowsExceptionWhenApiRefusesDetach(): void
     {
         // Arrange
-        $requests = [];
-        $trainer = $this->makeTrainer($this->makeHttpClientWithSequence([
-            [200, json_encode($this->makeMinimalFreeData())],
-            [200, json_encode(['agoraId' => 'trainer-free-001'])],
-        ], $requests));
-
-        // Act
-        $trainer->detachTrainer(new AgoraId('trainer-free-001'));
+        $trainer = $this->makeTrainer($this->makeHttpClientWithResponse(500, ''));
 
         // Assert
-        $this->assertSame('PATCH', $requests[1]['method']);
-        $this->assertSame('https://api.test.local/api/external/v1/trainers/free/trainer-free-001', $requests[1]['url']);
-        $this->assertSame(['externalIdentifier' => null], json_decode($requests[1]['body'], true));
-    }
-
-    public function testPatchTrainerCanClearExternalIdentifier(): void
-    {
-        // Arrange
-        $capturedBody = '';
-        $trainer = $this->makeTrainer(
-            $this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'per_001']), $capturedBody)
-        );
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionCode(500);
 
         // Act
-        $trainer->patchTrainerEmployee(new AgoraId('per_001'), (new TrainerEmployeePatchInput())->clearExternalIdentifier());
-
-        // Assert
-        $this->assertSame(['externalIdentifier' => null], json_decode($capturedBody, true));
+        $trainer->detachTrainer(new AgoraId('per_002'));
     }
 
     public function testDetachTrainerThrowsExceptionWithStatusCodeWhenApiReturns404(): void

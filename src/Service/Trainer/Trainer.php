@@ -101,20 +101,14 @@ class Trainer extends ApiService
     }
 
     /**
-     * Détache le formateur de l'application source en retirant son identifiant externe : il reste sur Agora
-     * mais n'est plus lié à l'application qui l'a créé. La route de modification dépendant du statut, le
-     * formateur est d'abord lu (GET) puis modifié (PATCH {"externalIdentifier": null}) sur la route de son
-     * statut (employé ou indépendant).
+     * Détache le formateur, employé ou indépendant, de l'application source (PATCH /trainers/{id}/detach,
+     * réponse 204 sans contenu) : il reste sur Agora mais n'est plus lié à l'application qui l'a créé.
      *
-     * @throws AgoraLearningClientException si le formateur n'existe pas (404) ou en cas d'erreur de l'API
+     * @throws AgoraLearningClientException si le formateur n'existe pas (404) ou si Agora refuse le détachement
      */
     public function detachTrainer(ApiObjectIdentifier $identifier): void
     {
-        if ($this->getTrainer($identifier) instanceof TrainerFreeOutput) {
-            $this->patchTrainerFree($identifier, (new TrainerFreePatchInput())->clearExternalIdentifier());
-            return;
-        }
-        $this->patchTrainerEmployee($identifier, (new TrainerEmployeePatchInput())->clearExternalIdentifier());
+        $this->sendDetach(ApiUrls::getDetachTrainer($identifier->getId()));
     }
 
     /**

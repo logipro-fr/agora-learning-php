@@ -88,6 +88,19 @@ abstract class ApiService
     }
 
     /**
+     * Envoie un détachement (PATCH /{ressource}/{id}/detach, réponse 204 sans contenu) : lève une exception
+     * s'il a échoué. La route n'attend aucun champ, mais le PATCH exige un corps JSON (merge-patch).
+     *
+     * @throws AgoraLearningClientException si l'objet n'existe pas (404) ou si Agora refuse le détachement
+     */
+    protected function sendDetach(string $url): void
+    {
+        $body = '{}';
+        $response = $this->httpClient->request(RequestMethod::PATCH, $url, $body);
+        $this->assertResponseSuccess($response);
+    }
+
+    /**
      * Envoie une suppression (DELETE, réponse 204 sans contenu) : lève une exception si elle a échoué.
      *
      * @throws AgoraLearningClientException si l'objet n'existe pas (404) ou en cas d'erreur de l'API

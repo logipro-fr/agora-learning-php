@@ -573,54 +573,33 @@ class PersonTest extends ServiceTestCase
     // detachPerson
     // -------------------------------------------------------------------------
 
-    public function testDetachPersonWithExternalIdSendsPatchToEncodedPersonUrl(): void
+    public function testDetachPersonSendsPatchToDetachUrl(): void
     {
         // Arrange
-        $method = '';
-        $url = '';
-        $person = $this->makePerson($this->makeHttpClientInspectingRequest(
-            200,
-            json_encode(['agoraId' => 'per_001']),
-            $method,
-            $url
-        ));
+        $requests = [];
+        $person = $this->makePerson($this->makeHttpClientWithSequence([[204, '']], $requests));
 
         // Act
         $person->detachPerson(new ExternalId('Src', 'X-42'));
 
         // Assert
-        $this->assertSame('PATCH', $method);
-        $this->assertSame('https://api.test.local/api/external/v1/persons/Src%3AX-42', $url);
+        $this->assertCount(1, $requests);
+        $this->assertSame('PATCH', $requests[0]['method']);
+        $this->assertSame('https://api.test.local/api/external/v1/persons/Src%3AX-42/detach', $requests[0]['url']);
+        $this->assertSame('{}', $requests[0]['body']);
     }
 
-    public function testDetachPersonSendsOnlyANullExternalIdentifier(): void
+    public function testDetachPersonThrowsExceptionWhenApiRefusesDetach(): void
     {
         // Arrange
-        $capturedBody = '';
-        $person = $this->makePerson(
-            $this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'per_001']), $capturedBody)
-        );
+        $person = $this->makePerson($this->makeHttpClientWithResponse(500, ''));
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionCode(500);
 
         // Act
         $person->detachPerson(new AgoraId('per_001'));
-
-        // Assert
-        $this->assertSame(['externalIdentifier' => null], json_decode($capturedBody, true));
-    }
-
-    public function testPatchPersonCanClearExternalIdentifier(): void
-    {
-        // Arrange
-        $capturedBody = '';
-        $person = $this->makePerson(
-            $this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'per_001']), $capturedBody)
-        );
-
-        // Act
-        $person->patchPerson(new AgoraId('per_001'), (new PersonPatchInput())->clearExternalIdentifier());
-
-        // Assert
-        $this->assertSame(['externalIdentifier' => null], json_decode($capturedBody, true));
     }
 
     public function testDetachPersonThrowsExceptionWithStatusCodeWhenApiReturns404(): void

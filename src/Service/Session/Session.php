@@ -98,10 +98,7 @@ class Session extends ApiService
      */
     public function detachSession(ApiObjectIdentifier $identifier): void
     {
-        // Le PATCH exige un corps JSON (merge-patch) : la route n'attend aucun champ
-        $body = '{}';
-        $response = $this->httpClient->request(RequestMethod::PATCH, ApiUrls::getDetachSession($identifier->getId()), $body);
-        $this->assertResponseSuccess($response);
+        $this->sendDetach(ApiUrls::getDetachSession($identifier->getId()));
     }
 
     /**
