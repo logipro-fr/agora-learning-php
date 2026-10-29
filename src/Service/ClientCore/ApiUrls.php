@@ -49,6 +49,7 @@ class ApiUrls
     public const UPDATE_FIXED_SESSION = self::PREFIX_API . self::API_VERSION . '/sessions/fixed/';
     public const UPDATE_OPEN_SESSION = self::PREFIX_API . self::API_VERSION . '/sessions/opened/';
     public const DELETE_SESSION = self::PREFIX_API . self::API_VERSION . '/sessions/';
+    public const DETACH_SESSION = self::PREFIX_API . self::API_VERSION . '/sessions/%s/detach';
 
     // SOCIETY
     public const CREATE_SOCIETY = self::PREFIX_API . self::API_VERSION . '/societies';
@@ -273,6 +274,14 @@ class ApiUrls
     public static function getDeleteSession(string $identifier): string
     {
         return self::getBaseUrl() . self::DELETE_SESSION . rawurlencode($identifier);
+    }
+
+    /**
+     * @param string $identifier Identifiant brut (uuid Agora ou "source:id"), encodé ici
+     */
+    public static function getDetachSession(string $identifier): string
+    {
+        return self::getBaseUrl() . sprintf(self::DETACH_SESSION, rawurlencode($identifier));
     }
 
     // SOCIETY

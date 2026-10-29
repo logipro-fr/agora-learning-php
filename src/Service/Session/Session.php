@@ -91,20 +91,17 @@ class Session extends ApiService
     }
 
     /**
-     * Détache la session de l'application source en retirant son identifiant externe : elle reste sur Agora
-     * mais n'est plus liée à l'application qui l'a créée. La route de modification dépendant du type, la
-     * session est d'abord lue (GET) puis modifiée (PATCH {"externalIdentifier": null}) sur la route de son
-     * type (fixe ou ouverte).
+     * Détache la session de l'application source (PATCH /sessions/{id}/detach, réponse 204 sans contenu) :
+     * elle reste sur Agora mais n'est plus liée à l'application qui l'a créée.
      *
-     * @throws AgoraLearningClientException si la session n'existe pas (404) ou en cas d'erreur de l'API
+     * @throws AgoraLearningClientException si la session n'existe pas (404) ou si Agora refuse le détachement
      */
     public function detachSession(ApiObjectIdentifier $identifier): void
     {
-        if ($this->getSession($identifier)->sessionData instanceof OpenedSessionOutput) {
-            $this->patchSession($identifier, (new OpenedSessionPatchInput())->clearExternalIdentifier());
-            return;
-        }
-        $this->patchSession($identifier, (new FixedSessionPatchInput())->clearExternalIdentifier());
+        // Le PATCH exige un corps JSON (merge-patch) : la route n'attend aucun champ
+        $body = '{}';
+        $response = $this->httpClient->request(RequestMethod::PATCH, ApiUrls::getDetachSession($identifier->getId()), $body);
+        $this->assertResponseSuccess($response);
     }
 
     /**

@@ -1063,7 +1063,7 @@ $client->patchSession(
 $client->patchSession(new AgoraId('ses_01KRXPMF9AE5HBH7JY2N8Q2PQB'), (new OpenedSessionPatchInput())->setAccessDurationDays(60));
 ```
 
-**Setters communs :** `setExternalIdentifier(ExternalId)`, `setTitle(string)`, `setDescription(?string)`, `setDurationInSeconds(int)`, `setManualDuration(bool)`, `setPrice(float)`, `setMaxPlaces(?int)` (`null` = illimité), `setHasForum(bool)`, `setNotifyMailForum(bool)`, `setPedagogicalTrainer(?string)`, `setAdministrativePerson(?string)`, `setUrlPreTrainingSurvey(?string)`, `setUrlOnTheSpotSurvey(?string)`, `setUrlDelayedSurvey(?string)`, `setImage(?string)`, `clearExternalIdentifier()` (détache la session, voir `detachSession()`).
+**Setters communs :** `setExternalIdentifier(ExternalId)`, `setTitle(string)`, `setDescription(?string)`, `setDurationInSeconds(int)`, `setManualDuration(bool)`, `setPrice(float)`, `setMaxPlaces(?int)` (`null` = illimité), `setHasForum(bool)`, `setNotifyMailForum(bool)`, `setPedagogicalTrainer(?string)`, `setAdministrativePerson(?string)`, `setUrlPreTrainingSurvey(?string)`, `setUrlOnTheSpotSurvey(?string)`, `setUrlDelayedSurvey(?string)`, `setImage(?string)`.
 
 **`FixedSessionPatchInput` :** `setType(string)`, `setMode(string)`, `setAvailabilityStartDate(\DateTimeInterface)`, `setAvailabilityEndDate(\DateTimeInterface)`.
 
@@ -1102,18 +1102,16 @@ foreach ($sessions as $session) {
 
 ### `detachSession(ApiObjectIdentifier $identifier) : void`
 
-Détache la session de l'application source en retirant son identifiant externe : elle reste sur Agora mais
-n'est plus liée à l'application qui l'a créée. La route de modification dépendant du type, la session est
-d'abord lue (`GET /sessions/{id}`), puis modifiée avec `{"externalIdentifier": null}` sur
-`PATCH /sessions/fixed/{id}` ou `PATCH /sessions/opened/{id}` (équivalent à `patchSession()` avec
-`clearExternalIdentifier()`). L'identifiant externe étant retiré, la session n'est ensuite plus désignable que
-par son UUID Agora (`AgoraId`).
+Détache la session de l'application source (`PATCH /sessions/{id}/detach`, réponse 204 sans contenu) : elle
+reste sur Agora mais n'est plus liée à l'application qui l'a créée. Agora conserve l'identifiant externe et
+passe la session à l'état détaché.
 
 ```php
 $client->detachSession(new ExternalId('MonERP', 'S-42'));
 ```
 
-**Lève :** `AgoraLearningClientException` de code 404 si la session n'existe pas.
+**Lève :** `AgoraLearningClientException` de code 404 si la session n'existe pas, ou de code 500 si Agora
+refuse le détachement (session créée dans Agora ou supprimée).
 
 ### `deleteSession(ApiObjectIdentifier $identifier) : void`
 

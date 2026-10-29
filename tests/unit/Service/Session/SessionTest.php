@@ -408,6 +408,65 @@ class SessionTest extends ServiceTestCase
         $this->assertSame('ses_new_002', $result->agoraId->getId());
     }
 
+    public function testPostSessionThrowsAgoraErrorMessageOnConflict(): void
+    {
+        // Arrange
+        $session = $this->makeSession($this->makeHttpClientWithResponse(
+            409,
+            json_encode(['error' => 'id "S-1" already exists.', 'externalId' => 'S-1'])
+        ));
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionMessage('id "S-1" already exists.');
+        $this->expectExceptionCode(409);
+
+        // Act
+        $session->postSession($this->makeFixedSessionInput());
+    }
+
+    public function testPostSessionThrowsClientExceptionWithHttpCodeWhenErrorBodyIsEmpty(): void
+    {
+        // Arrange
+        $session = $this->makeSession($this->makeHttpClientWithResponse(500, ''));
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionMessage('An unexpected error occured (HTTP 500)');
+        $this->expectExceptionCode(500);
+
+        // Act
+        $session->postSession($this->makeFixedSessionInput());
+    }
+
+    public function testGetSessionThrowsClientExceptionWhenErrorBodyIsNotJson(): void
+    {
+        // Arrange
+        $session = $this->makeSession($this->makeHttpClientWithResponse(502, '<html>Bad Gateway</html>'));
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionMessage('An unexpected error occured (HTTP 502)');
+        $this->expectExceptionCode(502);
+
+        // Act
+        $session->getSession(new AgoraId('ses_001'));
+    }
+
+    private function makeFixedSessionInput(): SessionInput
+    {
+        return new SessionInput(
+            new ExternalId('Test', 'S-1'),
+            'Formation PHP',
+            new FixedSessionInput(
+                new \DateTimeImmutable('2024-01-01'),
+                new \DateTimeImmutable('2024-12-31'),
+                SessionType::SESSION_TYPE_INTER,
+                SessionMode::SESSION_MODE_FACE_TO_FACE
+            )
+        );
+    }
+
     public function testPostSessionThrowsOnInvalidSessionData(): void
     {
         // Arrange
@@ -627,58 +686,33 @@ class SessionTest extends ServiceTestCase
     // detachSession
     // -------------------------------------------------------------------------
 
-    public function testDetachFixedSessionSendsNullExternalIdentifierToFixedUrl(): void
+    public function testDetachSessionSendsPatchToDetachUrl(): void
     {
         // Arrange
         $requests = [];
-        $session = $this->makeSession($this->makeHttpClientWithSequence([
-            [200, json_encode(array_merge($this->makeBaseSessionData(), $this->makeFixedSessionData()))],
-            [200, json_encode(['agoraId' => 'sess-uuid-001'])],
-        ], $requests));
+        $session = $this->makeSession($this->makeHttpClientWithSequence([[204, '']], $requests));
 
         // Act
         $session->detachSession(new ExternalId('Src', 'X-42'));
 
         // Assert
-        $this->assertCount(2, $requests);
-        $this->assertSame('GET', $requests[0]['method']);
-        $this->assertSame('https://api.test.local/api/external/v1/sessions/Src%3AX-42', $requests[0]['url']);
-        $this->assertSame('PATCH', $requests[1]['method']);
-        $this->assertSame('https://api.test.local/api/external/v1/sessions/fixed/Src%3AX-42', $requests[1]['url']);
-        $this->assertSame(['externalIdentifier' => null], json_decode($requests[1]['body'], true));
+        $this->assertCount(1, $requests);
+        $this->assertSame('PATCH', $requests[0]['method']);
+        $this->assertSame('https://api.test.local/api/external/v1/sessions/Src%3AX-42/detach', $requests[0]['url']);
+        $this->assertSame('{}', $requests[0]['body']);
     }
 
-    public function testDetachOpenedSessionSendsNullExternalIdentifierToOpenedUrl(): void
+    public function testDetachSessionThrowsExceptionWhenApiRefusesDetach(): void
     {
         // Arrange
-        $requests = [];
-        $session = $this->makeSession($this->makeHttpClientWithSequence([
-            [200, json_encode(array_merge($this->makeBaseSessionData(), $this->makeOpenedSessionData()))],
-            [200, json_encode(['agoraId' => 'sess-uuid-001'])],
-        ], $requests));
-
-        // Act
-        $session->detachSession(new AgoraId('sess-uuid-001'));
+        $session = $this->makeSession($this->makeHttpClientWithResponse(500, ''));
 
         // Assert
-        $this->assertSame('PATCH', $requests[1]['method']);
-        $this->assertSame('https://api.test.local/api/external/v1/sessions/opened/sess-uuid-001', $requests[1]['url']);
-        $this->assertSame(['externalIdentifier' => null], json_decode($requests[1]['body'], true));
-    }
-
-    public function testPatchSessionCanClearExternalIdentifier(): void
-    {
-        // Arrange
-        $capturedBody = '';
-        $session = $this->makeSession(
-            $this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'ses_001']), $capturedBody)
-        );
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionCode(500);
 
         // Act
-        $session->patchSession(new AgoraId('ses_001'), (new FixedSessionPatchInput())->clearExternalIdentifier());
-
-        // Assert
-        $this->assertSame(['externalIdentifier' => null], json_decode($capturedBody, true));
+        $session->detachSession(new AgoraId('ses_001'));
     }
 
     public function testDetachSessionThrowsExceptionWithStatusCodeWhenApiReturns404(): void

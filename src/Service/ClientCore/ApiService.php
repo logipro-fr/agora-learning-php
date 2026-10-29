@@ -39,15 +39,11 @@ abstract class ApiService
      */
     protected function convertResponseToDTO(ResponseInterface $response): ApiOutput
     {
+        $this->throwIfError($response);
+
         /** @var array<string, mixed> $responseData */
         $responseData = JsonHandler::jsonDecode($response->getContent(false), true);
-        if (HttpClient::isHttpSuccess($response)) {
-            return static::convertDataToDTO($responseData);
-        }
-
-        $detail = $responseData['detail'] ?? null;
-        $message = is_string($detail) ? $detail : 'An unexpected error occured';
-        throw new AgoraLearningClientException($message, $response->getStatusCode());
+        return static::convertDataToDTO($responseData);
     }
 
     /**
@@ -55,20 +51,16 @@ abstract class ApiService
      */
     protected function convertResponseToDTOarray(ResponseInterface $response): array
     {
+        $this->throwIfError($response);
+
         $result = [];
         /** @var array<string, mixed> $responseData */
         $responseData = JsonHandler::jsonDecode($response->getContent(false), true);
-        if (HttpClient::isHttpSuccess($response)) {
-            foreach ($responseData as $data) {
-                /** @var array<string, mixed> $data */
-                $result[] = static::convertDataToDTO($data);
-            }
-            return $result;
+        foreach ($responseData as $data) {
+            /** @var array<string, mixed> $data */
+            $result[] = static::convertDataToDTO($data);
         }
-
-        $detail = $responseData['detail'] ?? null;
-        $message = is_string($detail) ? $detail : 'An unexpected error occured';
-        throw new AgoraLearningClientException($message, $response->getStatusCode());
+        return $result;
     }
 
     /**
@@ -88,15 +80,11 @@ abstract class ApiService
      */
     protected function convertResponsePostToDTO(ResponseInterface $response): CreatedOutput
     {
+        $this->throwIfError($response);
+
         /** @var array<string, mixed> $responseData */
         $responseData = JsonHandler::jsonDecode($response->getContent(false), true);
-        if (HttpClient::isHttpSuccess($response)) {
-            return self::convertPostDataToDTO($responseData);
-        }
-
-        $detail = $responseData['detail'] ?? null;
-        $message = is_string($detail) ? $detail : 'An unexpected error occured';
-        throw new AgoraLearningClientException($message, $response->getStatusCode());
+        return self::convertPostDataToDTO($responseData);
     }
 
     /**
@@ -116,15 +104,34 @@ abstract class ApiService
      */
     protected function assertResponseSuccess(ResponseInterface $response): void
     {
+        $this->throwIfError($response);
+    }
+
+    /**
+     * Lève une AgoraLearningClientException portant le code HTTP si la réponse est une erreur.
+     *
+     * Le motif est lu dans "detail" (erreurs API Platform) ou "error" (conflits, ex. identifiant externe
+     * déjà utilisé) ; le corps d'une erreur n'étant pas forcément du JSON (erreur du serveur web, réponse
+     * vide), le message par défaut précise alors le code HTTP.
+     *
+     * @throws AgoraLearningClientException
+     */
+    private function throwIfError(ResponseInterface $response): void
+    {
         if (HttpClient::isHttpSuccess($response)) {
             return;
         }
 
-        // Le corps d'une erreur n'est pas forcément du JSON (erreur du serveur web)
+        $statusCode = $response->getStatusCode();
         $responseData = json_decode($response->getContent(false), true);
-        $detail = is_array($responseData) ? ($responseData['detail'] ?? null) : null;
-        $message = is_string($detail) ? $detail : 'An unexpected error occured';
-        throw new AgoraLearningClientException($message, $response->getStatusCode());
+        $reason = null;
+        if (is_array($responseData)) {
+            $reason = $responseData['detail'] ?? $responseData['error'] ?? null;
+        }
+        $message = is_string($reason) && $reason !== ''
+            ? $reason
+            : sprintf('An unexpected error occured (HTTP %d)', $statusCode);
+        throw new AgoraLearningClientException($message, $statusCode);
     }
 
     /**

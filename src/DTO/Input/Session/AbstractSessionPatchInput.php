@@ -22,16 +22,6 @@ abstract class AbstractSessionPatchInput extends AbstractPatchInput
     }
 
     /**
-     * Retire l'identifiant externe : la session n'est plus liée à l'application source.
-     *
-     * @return static
-     */
-    public function clearExternalIdentifier(): self
-    {
-        return $this->set('externalIdentifier', null);
-    }
-
-    /**
      * @return static
      */
     public function setTitle(string $title): self
