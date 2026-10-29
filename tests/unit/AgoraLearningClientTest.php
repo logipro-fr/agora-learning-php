@@ -856,6 +856,16 @@ class AgoraLearningClientTest extends TestCase
         $this->client->detachSociety($identifier);
     }
 
+    public function testDetachSession(): void
+    {
+        // Arrange
+        $identifier = new AgoraId('ses_1');
+        $this->sessionMock->expects($this->once())->method('detachSession')->with($identifier);
+
+        // Act
+        $this->client->detachSession($identifier);
+    }
+
     public function testDeleteSession(): void
     {
         // Arrange

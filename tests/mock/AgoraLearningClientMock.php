@@ -600,6 +600,11 @@ class AgoraLearningClientMock extends AgoraLearningClient
         return $this->makeUpdatedOutput($identifier, 'ses_01XXXXXXXXXXXXXXXXXXXXXXXXX');
     }
 
+    public function detachSession(ApiObjectIdentifier $identifier): void
+    {
+        // Détachement factice de la session : rien à renvoyer
+    }
+
     public function deleteSession(ApiObjectIdentifier $identifier): void
     {
         // Suppression factice de la session : rien à renvoyer

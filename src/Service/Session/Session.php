@@ -91,6 +91,23 @@ class Session extends ApiService
     }
 
     /**
+     * Détache la session de l'application source en retirant son identifiant externe : elle reste sur Agora
+     * mais n'est plus liée à l'application qui l'a créée. La route de modification dépendant du type, la
+     * session est d'abord lue (GET) puis modifiée (PATCH {"externalIdentifier": null}) sur la route de son
+     * type (fixe ou ouverte).
+     *
+     * @throws AgoraLearningClientException si la session n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function detachSession(ApiObjectIdentifier $identifier): void
+    {
+        if ($this->getSession($identifier)->sessionData instanceof OpenedSessionOutput) {
+            $this->patchSession($identifier, (new OpenedSessionPatchInput())->clearExternalIdentifier());
+            return;
+        }
+        $this->patchSession($identifier, (new FixedSessionPatchInput())->clearExternalIdentifier());
+    }
+
+    /**
      * Supprime la session, fixe ou ouverte (DELETE, réponse 204 sans contenu).
      *
      * @throws AgoraLearningClientException si la session n'existe pas (404) ou en cas d'erreur de l'API

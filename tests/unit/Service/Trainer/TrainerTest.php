@@ -18,11 +18,8 @@ use AgoraLearningPhp\Exception\AgoraLearningClientException;
 use AgoraLearningPhp\Identifier\AgoraId;
 use AgoraLearningPhp\Identifier\ExternalId;
 use AgoraLearningPhp\Service\ClientCore\HttpClient;
-use AgoraLearningPhp\Service\ClientCore\TokenHandler;
 use AgoraLearningPhp\Service\Trainer\Trainer;
 use AgoraLearningPhp\Tests\unit\Service\ServiceTestCase;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
-use Symfony\Contracts\HttpClient\ResponseInterface;
 
 class TrainerTest extends ServiceTestCase
 {
@@ -56,37 +53,6 @@ class TrainerTest extends ServiceTestCase
             'educationalManagerSessions' => [],
             'statut'                    => TrainerStatut::STATUT_FREE,
         ];
-    }
-
-    /**
-     * Crée un HttpClient qui renvoie les réponses dans l'ordre des requêtes et capture chaque requête
-     * (méthode, URL, corps).
-     *
-     * @param array<int, array{int, string}> $responses couples [code HTTP, corps de la réponse]
-     * @param array<int, array{method: string, url: string, body: string}> $capturedRequests
-     */
-    private function makeHttpClientWithSequence(array $responses, array &$capturedRequests): HttpClient
-    {
-        $this->injectCachedToken('test-token');
-
-        $mockResponses = [];
-        foreach ($responses as [$statusCode, $body]) {
-            $mockResponse = $this->createMock(ResponseInterface::class);
-            $mockResponse->method('getStatusCode')->willReturn($statusCode);
-            $mockResponse->method('getContent')->with(false)->willReturn($body);
-            $mockResponses[] = $mockResponse;
-        }
-
-        $mockInner = $this->createMock(HttpClientInterface::class);
-        $mockInner->method('request')
-            ->willReturnCallback(
-                function (string $method, string $url, array $options) use (&$mockResponses, &$capturedRequests) {
-                    $capturedRequests[] = ['method' => $method, 'url' => $url, 'body' => $options['body'] ?? ''];
-                    return array_shift($mockResponses);
-                }
-            );
-
-        return new HttpClient($mockInner, new TokenHandler($mockInner));
     }
 
     private function makeTrainer(HttpClient $httpClient): Trainer

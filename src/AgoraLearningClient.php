@@ -323,6 +323,16 @@ class AgoraLearningClient
     }
 
     /**
+     * Détache la session de l'application source : elle reste sur Agora mais n'y est plus liée.
+     *
+     * @throws AgoraLearningClientException si la session n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function detachSession(ApiObjectIdentifier $identifier): void
+    {
+        $this->makeSession()->detachSession($identifier);
+    }
+
+    /**
      * Supprime la session, fixe ou ouverte.
      *
      * @throws AgoraLearningClientException si la session n'existe pas (404) ou en cas d'erreur de l'API

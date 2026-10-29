@@ -113,6 +113,37 @@ abstract class ServiceTestCase extends TestCase
     }
 
     /**
+     * Crée un HttpClient qui renvoie les réponses dans l'ordre des requêtes et capture chaque requête
+     * (méthode, URL, corps).
+     *
+     * @param array<int, array{int, string}> $responses couples [code HTTP, corps de la réponse]
+     * @param array<int, array{method: string, url: string, body: string}> $capturedRequests
+     */
+    protected function makeHttpClientWithSequence(array $responses, array &$capturedRequests): HttpClient
+    {
+        $this->injectCachedToken('test-token');
+
+        $mockResponses = [];
+        foreach ($responses as [$statusCode, $body]) {
+            $mockResponse = $this->createMock(ResponseInterface::class);
+            $mockResponse->method('getStatusCode')->willReturn($statusCode);
+            $mockResponse->method('getContent')->with(false)->willReturn($body);
+            $mockResponses[] = $mockResponse;
+        }
+
+        $mockInner = $this->createMock(HttpClientInterface::class);
+        $mockInner->method('request')
+            ->willReturnCallback(
+                function (string $method, string $url, array $options) use (&$mockResponses, &$capturedRequests) {
+                    $capturedRequests[] = ['method' => $method, 'url' => $url, 'body' => $options['body'] ?? ''];
+                    return array_shift($mockResponses);
+                }
+            );
+
+        return new HttpClient($mockInner, new TokenHandler($mockInner));
+    }
+
+    /**
      * Injecte un token valide et non expiré dans l'état statique de TokenHandler.
      * Cela évite que le TokenHandler tente une requête réseau pour s'authentifier.
      */
