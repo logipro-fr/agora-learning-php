@@ -10,6 +10,7 @@ use AgoraLearningPhp\DTO\Input\Learner\LearnerInput;
 use AgoraLearningPhp\DTO\Input\Learner\LearnerPatchInput;
 use AgoraLearningPhp\DTO\Input\Person\PersonInput;
 use AgoraLearningPhp\DTO\Input\Person\PersonPatchInput;
+use AgoraLearningPhp\DTO\Input\Program\ProgramInput;
 use AgoraLearningPhp\DTO\Input\Session\AbstractSessionPatchInput;
 use AgoraLearningPhp\DTO\Input\Session\SessionInput;
 use AgoraLearningPhp\DTO\Input\Society\SocietyInput;
@@ -22,6 +23,7 @@ use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Enrollment\EnrollmentOutput;
 use AgoraLearningPhp\DTO\Output\Learner\LearnerOutput;
 use AgoraLearningPhp\DTO\Output\Person\PersonOutput;
+use AgoraLearningPhp\DTO\Output\Program\ProgramOutput;
 use AgoraLearningPhp\DTO\Output\Session\FixedSessionOutput;
 use AgoraLearningPhp\DTO\Output\Session\OpenedSessionOutput;
 use AgoraLearningPhp\DTO\Output\Session\SessionOutput;
@@ -998,6 +1000,17 @@ class AgoraLearningClientMock extends AgoraLearningClient
     public function deleteCollectionEnrollmentFromLearner(ApiObjectIdentifier $learnerIdentifier): void
     {
         // Suppression factice des inscriptions de l'apprenant : rien à renvoyer
+    }
+
+    // Program
+    public function getProgram(ApiObjectIdentifier $sessionIdentifier): ProgramOutput
+    {
+        return new ProgramOutput($sessionIdentifier->getId(), new ProgramInput());
+    }
+
+    public function replaceProgram(ApiObjectIdentifier $sessionIdentifier, ProgramInput $programInput): CreatedOutput
+    {
+        return $this->makeUpdatedOutput($sessionIdentifier, 'ses_mock');
     }
 
     /**

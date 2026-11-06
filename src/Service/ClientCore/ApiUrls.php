@@ -61,6 +61,10 @@ class ApiUrls
     public const DELETE_SOCIETY = self::PREFIX_API . self::API_VERSION . '/societies/';
     public const DETACH_SOCIETY = self::PREFIX_API . self::API_VERSION . '/societies/%s/detach';
 
+    // PROGRAM
+    public const GET_PROGRAM = self::PREFIX_API . self::API_VERSION . '/programs/sessions/';
+    public const UPDATE_PROGRAM = self::PREFIX_API . self::API_VERSION . '/programs/sessions/';
+
     // ENROLLMENT
     public const CREATE_ENROLLMENT = self::PREFIX_API . self::API_VERSION . '/enrollments';
     public const GET_ENROLLMENT = self::PREFIX_API . self::API_VERSION . '/enrollments/';
@@ -346,6 +350,23 @@ class ApiUrls
     public static function getDetachSociety(string $identifier): string
     {
         return self::getBaseUrl() . sprintf(self::DETACH_SOCIETY, rawurlencode($identifier));
+    }
+
+    // PROGRAM
+    /**
+     * @param string $identifier UUID Agora ou identifiant externe (source:id) de la session
+     */
+    public static function getGetProgram(string $identifier): string
+    {
+        return self::getBaseUrl() . self::GET_PROGRAM . rawurlencode($identifier);
+    }
+
+    /**
+     * @param string $identifier UUID Agora ou identifiant externe (source:id) de la session
+     */
+    public static function getUpdateProgram(string $identifier): string
+    {
+        return self::getBaseUrl() . self::UPDATE_PROGRAM . rawurlencode($identifier);
     }
 
     // ENROLLMENT

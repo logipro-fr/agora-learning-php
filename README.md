@@ -80,6 +80,7 @@ $learner = $client->getLearner($created->agoraId);
 | **Society**    | `getSociety()`, `getCollectionSociety()`                                                                                        | `createSociety()`                                | `replaceSociety()`                                   | `patchSociety()`                                 | `deleteSociety()`    |
 | **Session**    | `getSession()`, `getCollectionSession()`                                                                                        | `createSession()`                                | `replaceSession()`                                   | `patchSession()`                                 | `deleteSession()`    |
 | **Enrollment** | `getEnrollment()`, `getCollectionEnrollmentFromSession()`, `getCollectionEnrollmentFromLearner()`, `getEnrollmentFromSessionAndLearner()` | `createEnrollment()`                    |                                                      |                                                  | `deleteEnrollment()`, `deleteEnrollmentFromSessionAndLearner()`, `deleteCollectionEnrollmentFromSession()`, `deleteCollectionEnrollmentFromLearner()` |
+| **Program** | `getProgram()` |  | `replaceProgram()` |  |  |
 
 Les suppressions ne renvoient rien (réponse 204) et lèvent une `AgoraLearningClientException` de code 404 si l'objet n'existe pas.
 

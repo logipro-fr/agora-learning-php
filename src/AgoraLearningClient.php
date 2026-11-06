@@ -9,6 +9,7 @@ use AgoraLearningPhp\DTO\Input\Learner\LearnerInput;
 use AgoraLearningPhp\DTO\Input\Learner\LearnerPatchInput;
 use AgoraLearningPhp\DTO\Input\Person\PersonInput;
 use AgoraLearningPhp\DTO\Input\Person\PersonPatchInput;
+use AgoraLearningPhp\DTO\Input\Program\ProgramInput;
 use AgoraLearningPhp\DTO\Input\Session\AbstractSessionPatchInput;
 use AgoraLearningPhp\DTO\Input\Session\SessionInput;
 use AgoraLearningPhp\DTO\Input\Society\SocietyInput;
@@ -21,6 +22,7 @@ use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Enrollment\EnrollmentOutput;
 use AgoraLearningPhp\DTO\Output\Learner\LearnerOutput;
 use AgoraLearningPhp\DTO\Output\Person\PersonOutput;
+use AgoraLearningPhp\DTO\Output\Program\ProgramOutput;
 use AgoraLearningPhp\DTO\Output\Session\SessionOutput;
 use AgoraLearningPhp\DTO\Output\Society\SocietyOutput;
 use AgoraLearningPhp\DTO\Output\Trainer\TrainerOutput;
@@ -32,6 +34,7 @@ use AgoraLearningPhp\Service\ClientCore\TokenHandler;
 use AgoraLearningPhp\Service\Enrollment\Enrollment;
 use AgoraLearningPhp\Service\Learner\Learner;
 use AgoraLearningPhp\Service\Person\Person;
+use AgoraLearningPhp\Service\Program\Program;
 use AgoraLearningPhp\Service\Session\Session;
 use AgoraLearningPhp\Service\Society\Society;
 use AgoraLearningPhp\Service\Trainer\Trainer;
@@ -342,6 +345,28 @@ class AgoraLearningClient
         $this->makeSession()->deleteSession($identifier);
     }
 
+    // Program
+    /**
+     * Programme de formation de la session.
+     *
+     * @throws AgoraLearningClientException si la session n'existe pas (404) ou n'a pas de parcours (422)
+     */
+    public function getProgram(ApiObjectIdentifier $sessionIdentifier): ProgramOutput
+    {
+        return $this->makeProgram()->getProgram($sessionIdentifier);
+    }
+
+    /**
+     * Remplace tout le programme de formation de la session (PUT) : un type non renseigné est vidé.
+     *
+     * @throws AgoraLearningClientException si la session n'existe pas (404), n'a pas de parcours (422) ou
+     *                                      si Agora refuse le programme
+     */
+    public function replaceProgram(ApiObjectIdentifier $sessionIdentifier, ProgramInput $programInput): CreatedOutput
+    {
+        return $this->makeProgram()->putProgram($sessionIdentifier, $programInput);
+    }
+
     // Enrollment
     /**
      * @return array<int, EnrollmentOutput>
@@ -452,5 +477,10 @@ class AgoraLearningClient
     protected function makeEnrollment(): Enrollment
     {
         return new Enrollment();
+    }
+
+    protected function makeProgram(): Program
+    {
+        return new Program();
     }
 }

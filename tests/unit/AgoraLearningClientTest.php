@@ -10,6 +10,7 @@ use AgoraLearningPhp\DTO\Input\Learner\LearnerInput;
 use AgoraLearningPhp\DTO\Input\Learner\LearnerPatchInput;
 use AgoraLearningPhp\DTO\Input\Person\PersonInput;
 use AgoraLearningPhp\DTO\Input\Person\PersonPatchInput;
+use AgoraLearningPhp\DTO\Input\Program\ProgramInput;
 use AgoraLearningPhp\DTO\Input\Session\FixedSessionPatchInput;
 use AgoraLearningPhp\DTO\Input\Session\SessionInput;
 use AgoraLearningPhp\DTO\Input\Society\SocietyInput;
@@ -22,6 +23,7 @@ use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Enrollment\EnrollmentOutput;
 use AgoraLearningPhp\DTO\Output\Learner\LearnerOutput;
 use AgoraLearningPhp\DTO\Output\Person\PersonOutput;
+use AgoraLearningPhp\DTO\Output\Program\ProgramOutput;
 use AgoraLearningPhp\DTO\Output\Session\SessionOutput;
 use AgoraLearningPhp\DTO\Output\Society\SocietyOutput;
 use AgoraLearningPhp\DTO\Output\Trainer\TrainerOutput;
@@ -33,6 +35,7 @@ use AgoraLearningPhp\Service\ClientCore\TokenHandler;
 use AgoraLearningPhp\Service\Enrollment\Enrollment;
 use AgoraLearningPhp\Service\Learner\Learner;
 use AgoraLearningPhp\Service\Person\Person;
+use AgoraLearningPhp\Service\Program\Program;
 use AgoraLearningPhp\Service\Session\Session;
 use AgoraLearningPhp\Service\Society\Society;
 use AgoraLearningPhp\Service\Trainer\Trainer;
@@ -56,6 +59,7 @@ class AgoraLearningClientTest extends TestCase
     private $societyMock;
     private $sessionMock;
     private $enrollmentMock;
+    private $programMock;
 
     protected function setUp(): void
     {
@@ -68,6 +72,7 @@ class AgoraLearningClientTest extends TestCase
         $this->societyMock = $this->createMock(Society::class);
         $this->sessionMock = $this->createMock(Session::class);
         $this->enrollmentMock = $this->createMock(Enrollment::class);
+        $this->programMock = $this->createMock(Program::class);
 
         $this->client = new class (
             $this->pingMock,
@@ -76,7 +81,8 @@ class AgoraLearningClientTest extends TestCase
             $this->learnerMock,
             $this->societyMock,
             $this->sessionMock,
-            $this->enrollmentMock
+            $this->enrollmentMock,
+            $this->programMock
         ) extends AgoraLearningClient {
             private $p;
             private $pe;
@@ -85,8 +91,9 @@ class AgoraLearningClientTest extends TestCase
             private $so;
             private $se;
             private $en;
+            private $pr;
 
-            public function __construct($p, $pe, $t, $l, $so, $se, $en)
+            public function __construct($p, $pe, $t, $l, $so, $se, $en, $pr)
             {
                 // Volontairement aucun appel à parent::__construct() ici pour isoler les méthodes unitaires
                 $this->p = $p;
@@ -96,6 +103,7 @@ class AgoraLearningClientTest extends TestCase
                 $this->so = $so;
                 $this->se = $se;
                 $this->en = $en;
+                $this->pr = $pr;
             }
 
             protected function makePing(): Ping
@@ -125,6 +133,10 @@ class AgoraLearningClientTest extends TestCase
             protected function makeEnrollment(): Enrollment
             {
                 return $this->en;
+            }
+            protected function makeProgram(): Program
+            {
+                return $this->pr;
             }
         };
     }
@@ -907,6 +919,35 @@ class AgoraLearningClientTest extends TestCase
 
         // Act
         $this->client->deleteCollectionEnrollmentFromLearner($identifier);
+    }
+
+    public function testGetProgram(): void
+    {
+        // Arrange
+        $identifier = new AgoraId('ses_1');
+        $output = new ProgramOutput('ses_1', new ProgramInput());
+        $this->programMock->expects($this->once())->method('getProgram')->with($identifier)->willReturn($output);
+
+        // Act
+        $result = $this->client->getProgram($identifier);
+
+        // Assert
+        $this->assertSame($output, $result);
+    }
+
+    public function testReplaceProgram(): void
+    {
+        // Arrange
+        $identifier = new AgoraId('ses_1');
+        $input = new ProgramInput();
+        $output = new CreatedOutput(new AgoraId('ses_1'));
+        $this->programMock->expects($this->once())->method('putProgram')->with($identifier, $input)->willReturn($output);
+
+        // Act
+        $result = $this->client->replaceProgram($identifier, $input);
+
+        // Assert
+        $this->assertSame($output, $result);
     }
 
     private function createFinalDtoInstance(string $className)

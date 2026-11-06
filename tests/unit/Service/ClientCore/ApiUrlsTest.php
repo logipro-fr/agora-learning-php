@@ -244,6 +244,30 @@ class ApiUrlsTest extends TestCase
         $this->assertSame(self::BASE . ApiUrls::CREATE_FIXED_SESSION, $url);
     }
 
+    public function testGetGetProgram(): void
+    {
+        // Arrange
+        ApiUrls::initBaseUrl(self::BASE);
+
+        // Act
+        $url = ApiUrls::getGetProgram('Src:S 1');
+
+        // Assert
+        $this->assertSame(self::BASE . '/api/external/v1/programs/sessions/Src%3AS%201', $url);
+    }
+
+    public function testGetUpdateProgram(): void
+    {
+        // Arrange
+        ApiUrls::initBaseUrl(self::BASE);
+
+        // Act
+        $url = ApiUrls::getUpdateProgram('Src:S 1');
+
+        // Assert
+        $this->assertSame(self::BASE . '/api/external/v1/programs/sessions/Src%3AS%201', $url);
+    }
+
     public function testGetCreateOpenedSession(): void
     {
         // Arrange

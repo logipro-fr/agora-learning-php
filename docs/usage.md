@@ -1117,6 +1117,55 @@ $client->deleteSession(new ExternalId('MonERP', 'S-42'));
 
 ---
 
+## Program — Programme de formation d'une session
+
+Le programme est rattaché au parcours de la session : `getProgram()` et `replaceProgram()` lèvent une
+`AgoraLearningClientException` de code 422 si la session n'a pas de parcours.
+
+| Format | Classe | Types |
+|--------|--------|-------|
+| texte | `ProgramText(string $programText)` | `accessDelay`, `pedagogicalMethods` (moyens d'encadrement), `pedagogicalMeans` (méthodes mobilisées), `technicalMeans`, `level`, `accessModality`, `assessmentAchievements`, `accessTerms`, `successRate`, `opportunities`, `metricsDropoutRate`, `metricsInterruptRate`, `metricsCertificationRate`, `metricsGateways`, `metricsHandicapReferent` |
+| liste | `ProgramSimpleList(array $programSimpleList)` | `metricsValidableSkills`, `metricsEquivalences`, `metricsCareerSuites` |
+| liste avec description | `ProgramComplexList(?string $description, ?ProgramSimpleList $programSimpleList)` | `preRequisite`, `aptitude`, `skills`, `targetAudience` |
+| liste à deux niveaux | `ProgramBiLevelComplexList(?string $description, array $programComplexList)` | `pedagogicalObjective`, `pedagogicalContent` |
+
+Dans une liste à deux niveaux, chaque élément principal est une `ProgramComplexList` : sa `description` est
+l'élément principal, sa `programSimpleList` ses sous-éléments.
+
+### `getProgram(ApiObjectIdentifier $sessionIdentifier) : ProgramOutput`
+
+Lit le programme (`GET /programs/sessions/{id}`). `ProgramOutput::$program` est un `ProgramInput`, qui peut être
+modifié puis renvoyé à `replaceProgram()`. Un type absent du programme vaut `null`.
+
+### `replaceProgram(ApiObjectIdentifier $sessionIdentifier, ProgramInput $input) : CreatedOutput`
+
+Remplace **tout** le programme (`PUT /programs/sessions/{id}`) : un type non renseigné (`null`) est vidé sur
+Agora. Pour ne changer que certains types, partir du programme lu :
+
+```php
+use AgoraLearningPhp\DTO\Input\Program\ProgramBiLevelComplexList;
+use AgoraLearningPhp\DTO\Input\Program\ProgramComplexList;
+use AgoraLearningPhp\DTO\Input\Program\ProgramSimpleList;
+use AgoraLearningPhp\DTO\Input\Program\ProgramText;
+
+$session = new ExternalId('MonERP', 'S-42');
+
+$program = $client->getProgram($session)->program;
+$program->preRequisite = new ProgramComplexList(null, new ProgramSimpleList(['Connaître Windows']));
+$program->pedagogicalContent = new ProgramBiLevelComplexList(null, [
+    new ProgramComplexList('Module 1 : les bases', new ProgramSimpleList(['Saisie', 'Formules'])),
+    new ProgramComplexList('Module 2 : graphiques'),
+]);
+$program->assessmentAchievements = new ProgramText("QCM\nMise en situation");
+
+$client->replaceProgram($session, $program);
+```
+
+**Lève :** `AgoraLearningClientException` de code 404 si la session n'existe pas, 422 si elle n'a pas de
+parcours ou si Agora refuse le programme (motif dans le message).
+
+---
+
 ## Enrollment — Gestion des inscriptions
 
 Une **Enrollment** représente l'inscription d'un apprenant à une session. Elle lie un `Learner` à une `Session`.
