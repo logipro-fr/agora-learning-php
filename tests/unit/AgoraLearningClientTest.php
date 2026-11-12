@@ -950,6 +950,16 @@ class AgoraLearningClientTest extends TestCase
         $this->assertSame($output, $result);
     }
 
+    public function testDeleteProgram(): void
+    {
+        // Arrange
+        $identifier = new AgoraId('ses_1');
+        $this->programMock->expects($this->once())->method('deleteProgram')->with($identifier);
+
+        // Act
+        $this->client->deleteProgram($identifier);
+    }
+
     private function createFinalDtoInstance(string $className)
     {
         $reflection = new \ReflectionClass($className);

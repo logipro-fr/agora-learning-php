@@ -1013,6 +1013,11 @@ class AgoraLearningClientMock extends AgoraLearningClient
         return $this->makeUpdatedOutput($sessionIdentifier, 'ses_mock');
     }
 
+    public function deleteProgram(ApiObjectIdentifier $sessionIdentifier): void
+    {
+        // Suppression factice du programme : rien à renvoyer
+    }
+
     /**
      * Réponse factice d'une modification : reprend l'identifiant de l'URL s'il est du bon type.
      */

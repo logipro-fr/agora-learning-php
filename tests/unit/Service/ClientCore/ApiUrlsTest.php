@@ -253,7 +253,19 @@ class ApiUrlsTest extends TestCase
         $url = ApiUrls::getGetProgram('Src:S 1');
 
         // Assert
-        $this->assertSame(self::BASE . '/api/external/v1/programs/sessions/Src%3AS%201', $url);
+        $this->assertSame(self::BASE . '/api/external/v1/sessions/Src%3AS%201/programs', $url);
+    }
+
+    public function testGetDeleteProgram(): void
+    {
+        // Arrange
+        ApiUrls::initBaseUrl(self::BASE);
+
+        // Act
+        $url = ApiUrls::getDeleteProgram('Src:S 1');
+
+        // Assert
+        $this->assertSame(self::BASE . '/api/external/v1/sessions/Src%3AS%201/programs', $url);
     }
 
     public function testGetUpdateProgram(): void
@@ -265,7 +277,7 @@ class ApiUrlsTest extends TestCase
         $url = ApiUrls::getUpdateProgram('Src:S 1');
 
         // Assert
-        $this->assertSame(self::BASE . '/api/external/v1/programs/sessions/Src%3AS%201', $url);
+        $this->assertSame(self::BASE . '/api/external/v1/sessions/Src%3AS%201/programs', $url);
     }
 
     public function testGetCreateOpenedSession(): void

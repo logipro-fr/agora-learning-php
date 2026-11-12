@@ -56,6 +56,16 @@ class Program extends ApiService
     }
 
     /**
+     * Vide le contenu du programme de la session (DELETE, réponse 204 sans contenu).
+     *
+     * @throws AgoraLearningClientException si la session n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deleteProgram(ApiObjectIdentifier $sessionIdentifier): void
+    {
+        $this->sendDelete(ApiUrls::getDeleteProgram($sessionIdentifier->getId()));
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function buildBody(ProgramInput $programInput): array

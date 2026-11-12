@@ -1134,12 +1134,12 @@ l'élément principal, sa `programSimpleList` ses sous-éléments.
 
 ### `getProgram(ApiObjectIdentifier $sessionIdentifier) : ProgramOutput`
 
-Lit le programme (`GET /programs/sessions/{id}`). `ProgramOutput::$program` est un `ProgramInput`, qui peut être
+Lit le programme (`GET /sessions/{id}/programs`). `ProgramOutput::$program` est un `ProgramInput`, qui peut être
 modifié puis renvoyé à `replaceProgram()`. Un type absent du programme vaut `null`.
 
 ### `replaceProgram(ApiObjectIdentifier $sessionIdentifier, ProgramInput $input) : CreatedOutput`
 
-Remplace **tout** le programme (`PUT /programs/sessions/{id}`) : un type non renseigné (`null`) est vidé sur
+Remplace **tout** le programme (`PUT /sessions/{id}/programs`) : un type non renseigné (`null`) est vidé sur
 Agora. Pour ne changer que certains types, partir du programme lu :
 
 ```php
@@ -1163,6 +1163,17 @@ $client->replaceProgram($session, $program);
 
 **Lève :** `AgoraLearningClientException` de code 404 si la session n'existe pas, 422 si elle n'a pas de
 parcours ou si Agora refuse le programme (motif dans le message).
+
+### `deleteProgram(ApiObjectIdentifier $sessionIdentifier) : void`
+
+Vide le contenu du programme de la session (`DELETE /sessions/{id}/programs`, réponse 204 sans contenu) : la
+session est conservée.
+
+```php
+$client->deleteProgram(new ExternalId('MonERP', 'S-42'));
+```
+
+**Lève :** `AgoraLearningClientException` de code 404 si la session n'existe pas.
 
 ---
 

@@ -80,7 +80,7 @@ $learner = $client->getLearner($created->agoraId);
 | **Society**    | `getSociety()`, `getCollectionSociety()`                                                                                        | `createSociety()`                                | `replaceSociety()`                                   | `patchSociety()`                                 | `deleteSociety()`    |
 | **Session**    | `getSession()`, `getCollectionSession()`                                                                                        | `createSession()`                                | `replaceSession()`                                   | `patchSession()`                                 | `deleteSession()`    |
 | **Enrollment** | `getEnrollment()`, `getCollectionEnrollmentFromSession()`, `getCollectionEnrollmentFromLearner()`, `getEnrollmentFromSessionAndLearner()` | `createEnrollment()`                    |                                                      |                                                  | `deleteEnrollment()`, `deleteEnrollmentFromSessionAndLearner()`, `deleteCollectionEnrollmentFromSession()`, `deleteCollectionEnrollmentFromLearner()` |
-| **Program** | `getProgram()` |  | `replaceProgram()` |  |  |
+| **Program** | `getProgram()` |  | `replaceProgram()` |  | `deleteProgram()` (vide le programme) |
 
 Les suppressions ne renvoient rien (réponse 204) et lèvent une `AgoraLearningClientException` de code 404 si l'objet n'existe pas.
 
@@ -185,6 +185,8 @@ examples/
 │   ├── replace_fixed.php
 │   ├── patch_fixed.php
 │   ├── patch_opened.php
+│   └── delete.php
+├── program/
 │   └── delete.php
 └── enrollment/
     ├── get_from_session.php

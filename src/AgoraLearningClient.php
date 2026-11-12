@@ -367,6 +367,16 @@ class AgoraLearningClient
         return $this->makeProgram()->putProgram($sessionIdentifier, $programInput);
     }
 
+    /**
+     * Vide le contenu du programme de formation de la session.
+     *
+     * @throws AgoraLearningClientException si la session n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deleteProgram(ApiObjectIdentifier $sessionIdentifier): void
+    {
+        $this->makeProgram()->deleteProgram($sessionIdentifier);
+    }
+
     // Enrollment
     /**
      * @return array<int, EnrollmentOutput>

@@ -62,8 +62,9 @@ class ApiUrls
     public const DETACH_SOCIETY = self::PREFIX_API . self::API_VERSION . '/societies/%s/detach';
 
     // PROGRAM
-    public const GET_PROGRAM = self::PREFIX_API . self::API_VERSION . '/programs/sessions/';
-    public const UPDATE_PROGRAM = self::PREFIX_API . self::API_VERSION . '/programs/sessions/';
+    public const GET_PROGRAM = self::PREFIX_API . self::API_VERSION . '/sessions/%s/programs';
+    public const UPDATE_PROGRAM = self::PREFIX_API . self::API_VERSION . '/sessions/%s/programs';
+    public const DELETE_PROGRAM = self::PREFIX_API . self::API_VERSION . '/sessions/%s/programs';
 
     // ENROLLMENT
     public const CREATE_ENROLLMENT = self::PREFIX_API . self::API_VERSION . '/enrollments';
@@ -358,7 +359,7 @@ class ApiUrls
      */
     public static function getGetProgram(string $identifier): string
     {
-        return self::getBaseUrl() . self::GET_PROGRAM . rawurlencode($identifier);
+        return self::getBaseUrl() . sprintf(self::GET_PROGRAM, rawurlencode($identifier));
     }
 
     /**
@@ -366,7 +367,15 @@ class ApiUrls
      */
     public static function getUpdateProgram(string $identifier): string
     {
-        return self::getBaseUrl() . self::UPDATE_PROGRAM . rawurlencode($identifier);
+        return self::getBaseUrl() . sprintf(self::UPDATE_PROGRAM, rawurlencode($identifier));
+    }
+
+    /**
+     * @param string $identifier UUID Agora ou identifiant externe (source:id) de la session
+     */
+    public static function getDeleteProgram(string $identifier): string
+    {
+        return self::getBaseUrl() . sprintf(self::DELETE_PROGRAM, rawurlencode($identifier));
     }
 
     // ENROLLMENT

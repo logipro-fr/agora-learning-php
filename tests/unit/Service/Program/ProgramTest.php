@@ -45,7 +45,7 @@ class ProgramTest extends ServiceTestCase
 
         // Assert
         $this->assertSame(RequestMethod::GET, $method);
-        $this->assertSame('https://api.test.local/api/external/v1/programs/sessions/Src%3AS-1', $url);
+        $this->assertSame('https://api.test.local/api/external/v1/sessions/Src%3AS-1/programs', $url);
     }
 
     public function testGetProgramConvertsEachProgramFormat(): void
@@ -117,7 +117,7 @@ class ProgramTest extends ServiceTestCase
 
         // Assert
         $this->assertSame(RequestMethod::PUT, $method);
-        $this->assertSame('https://api.test.local/api/external/v1/programs/sessions/ses_1', $url);
+        $this->assertSame('https://api.test.local/api/external/v1/sessions/ses_1/programs', $url);
         $this->assertSame('ses_1', $updated->agoraId->getId());
     }
 
@@ -244,5 +244,34 @@ class ProgramTest extends ServiceTestCase
 
         // Act
         $program->putProgram(new AgoraId('ses_1'), new ProgramInput());
+    }
+
+    public function testDeleteProgramSendsDeleteToSessionProgramUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $program = $this->makeProgram($this->makeHttpClientInspectingRequest(204, '', $method, $url));
+
+        // Act
+        $program->deleteProgram(new ExternalId('Src', 'S-1'));
+
+        // Assert
+        $this->assertSame(RequestMethod::DELETE, $method);
+        $this->assertSame('https://api.test.local/api/external/v1/sessions/Src%3AS-1/programs', $url);
+    }
+
+    public function testDeleteProgramThrowsExceptionWithStatusCodeWhenApiReturns404(): void
+    {
+        // Arrange
+        $program = $this->makeProgram($this->makeHttpClientWithResponse(404, '{"detail":"Session not found"}'));
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionCode(404);
+        $this->expectExceptionMessage('Session not found');
+
+        // Act
+        $program->deleteProgram(new AgoraId('ses_missing'));
     }
 }
