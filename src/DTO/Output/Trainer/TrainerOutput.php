@@ -7,6 +7,7 @@ namespace AgoraLearningPhp\DTO\Output\Trainer;
 use AgoraLearningPhp\DTO\Output\ApiOutput;
 use AgoraLearningPhp\DTO\Output\Society\SocietyOutput;
 use AgoraLearningPhp\Enum\Gender;
+use AgoraLearningPhp\Identifier\ExternalId;
 
 class TrainerOutput extends ApiOutput
 {
@@ -27,6 +28,7 @@ class TrainerOutput extends ApiOutput
     public ?\DateTimeImmutable $birthDate;
     public ?string $jobTitle;
     public ?SocietyOutput $society;
+    public ?ExternalId $externalIdentifier;
 
     /**
      * @param array<int, mixed> $educationalManagerSessions
@@ -47,7 +49,8 @@ class TrainerOutput extends ApiOutput
         ?string $addressCountry = null,
         ?\DateTimeImmutable $birthDate = null,
         ?string $jobTitle = null,
-        ?SocietyOutput $society = null
+        ?SocietyOutput $society = null,
+        ?ExternalId $externalIdentifier = null
     ) {
         $this->uuid = $uuid;
         $this->familyName = $familyName;
@@ -64,6 +67,7 @@ class TrainerOutput extends ApiOutput
         $this->birthDate = $birthDate;
         $this->jobTitle = $jobTitle;
         $this->society = $society;
+        $this->externalIdentifier = $externalIdentifier;
         $this->educationalManagerSessions = $educationalManagerSessions;
     }
 }

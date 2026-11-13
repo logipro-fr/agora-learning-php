@@ -1,8 +1,9 @@
 services:
+  # PHP 8.2 : environnement par défaut
   php:
     build:
       context: .
-      dockerfile: docker/Dockerfile
+      dockerfile: docker/Dockerfile.php82
     volumes:
       - .:/app
       - composer-cache:/root/.composer/cache
@@ -12,12 +13,31 @@ services:
     # C'est cohérent avec notre usage (un environnement PHP pour lancer des commandes : composer, bin/console, etc.)
     command: tail -f /dev/null
 
+  # PHP 8.5 : dernière version supportée.
+  # vendor/ est remplacé par vendor85/ pour ne pas mélanger les dépendances des versions.
   php85:
     build:
       context: .
       dockerfile: docker/Dockerfile.php85
     volumes:
       - .:/app
+      - ./vendor85:/app/vendor
+      - composer-cache:/root/.composer/cache
+    working_dir: /app
+
+    # tail -f /dev/null est le moyen standard pour garder vivant un conteneur utilitaire (sans daemon comme php-fpm ou nginx). 
+    # C'est cohérent avec notre usage (un environnement PHP pour lancer des commandes : composer, bin/console, etc.)
+    command: tail -f /dev/null
+
+  # PHP 7.4 : vérification de la compatibilité minimale.
+  # vendor/ est remplacé par vendor74/ pour ne pas mélanger les dépendances des versions.
+  php74:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.php74
+    volumes:
+      - .:/app
+      - ./vendor74:/app/vendor
       - composer-cache:/root/.composer/cache
     working_dir: /app
 

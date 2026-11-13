@@ -6,13 +6,14 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 $config = require __DIR__ . '/../config.php';
 
 use AgoraLearningPhp\AgoraLearningClient;
+use AgoraLearningPhp\Identifier\AgoraId;
 
 $client = new AgoraLearningClient($config['url'], $config['api_key']);
 
 $sessionUuid = 'ses_01XXXXXXXXXXXXXXXXXXXXXXXXX';
 
 try {
-    $enrollments = $client->getCollectionEnrollmentFromSession($sessionUuid);
+    $enrollments = $client->getCollectionEnrollmentFromSession(new AgoraId($sessionUuid));
 
     foreach ($enrollments as $enrollment) {
         var_dump($enrollment);

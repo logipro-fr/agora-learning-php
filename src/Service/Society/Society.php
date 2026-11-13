@@ -4,16 +4,18 @@ declare(strict_types=1);
 
 namespace AgoraLearningPhp\Service\Society;
 
-use AgoraLearningPhp\DTO\Input\Person\PersonInput;
 use AgoraLearningPhp\DTO\Input\Society\SocietyInput;
+use AgoraLearningPhp\DTO\Input\Society\SocietyPatchInput;
+use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Society\SocietyOutput;
 use AgoraLearningPhp\Enum\RequestMethod;
+use AgoraLearningPhp\Exception\AgoraLearningClientException;
+use AgoraLearningPhp\Identifier\ApiObjectIdentifier;
+use AgoraLearningPhp\Identifier\ExternalId;
 use AgoraLearningPhp\Service\ClientCore\ApiService;
 use AgoraLearningPhp\Service\ClientCore\ApiUrls;
-use AgoraLearningPhp\Service\ClientCore\HttpClient;
 use AgoraLearningPhp\Service\Person\Person;
 use AgoraLearningPhp\Service\Tools\JsonHandler;
-use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
  * @extends ApiService<SocietyOutput>
@@ -30,72 +32,58 @@ class Society extends ApiService
         return $this->convertResponseToDTOarray($response);
     }
 
-    public function getSociety(string $uuid): SocietyOutput
+    public function getSociety(ApiObjectIdentifier $identifier): SocietyOutput
     {
         $body = '';
-        $response = $this->httpClient->request(RequestMethod::GET, ApiUrls::getGetSociety($uuid), $body);
+        $response = $this->httpClient->request(RequestMethod::GET, ApiUrls::getGetSociety($identifier->getId()), $body);
         return $this->convertResponseToDTO($response);
     }
 
-    public function postSociety(SocietyInput $societyInput): SocietyOutput
+    public function postSociety(SocietyInput $societyInput): CreatedOutput
     {
-        $body = JsonHandler::jsonEncode(
-            [
-                "name" => $societyInput->name,
-                "siret" => $societyInput->siret,
-                "telephone" => $societyInput->telephone,
-                "email" => $societyInput->email,
-                "legalStatus" => $societyInput->legalStatus,
-                "addressStreetHeadOffice" => $societyInput->addressStreetHeadOffice,
-                "addressPostcodeHeadOffice" => $societyInput->addressPostcodeHeadOffice,
-                "addressLocalityHeadOffice" => $societyInput->addressLocalityHeadOffice,
-                "addressCountryHeadOffice" => $societyInput->addressCountryHeadOffice,
-                "addressStreetInvoicing" => $societyInput->addressStreetInvoicing,
-                "addressPostcodeInvoicing" => $societyInput->addressPostcodeInvoicing,
-                "addressLocalityInvoicing" => $societyInput->addressLocalityInvoicing,
-                "addressCountryInvoicing" => $societyInput->addressCountryInvoicing,
-                'legalPerson' => $this->serializePersonInput($societyInput->legalPerson),
-                'administrativePerson' => $this->serializePersonInput($societyInput->administrativePerson),
-                'rhPerson' => $this->serializePersonInput($societyInput->rhPerson),
-                "image" => $societyInput->image
-            ]
-        );
+        $body = JsonHandler::jsonEncode($this->buildBody($societyInput));
         $response = $this->httpClient->request(RequestMethod::POST, ApiUrls::getCreateSociety(), $body);
-        return $this->convertResponseToDTO($response);
-    }
-
-    protected function convertResponseToDTO(ResponseInterface $response): SocietyOutput
-    {
-        /** @var array<string, mixed> $responseData */
-        $responseData = JsonHandler::jsonDecode($response->getContent(false), true);
-        if (HttpClient::isHttpSuccess($response)) {
-            return self::convertDataToDTO($responseData);
-        }
-
-        $detail = $responseData['detail'] ?? null;
-        $message = is_string($detail) ? $detail : 'An unexpected error occured';
-        throw new \AgoraLearningPhp\Exception\AgoraLearningClientException($message);
+        return $this->convertResponsePostToDTO($response);
     }
 
     /**
-     * @return array<int, SocietyOutput>
+     * Remplace la société (PUT) : un champ facultatif non renseigné est vidé
+     * et un responsable non renseigné est retiré.
      */
-    protected function convertResponseToDTOarray(ResponseInterface $response): array
+    public function putSociety(ApiObjectIdentifier $identifier, SocietyInput $societyInput): CreatedOutput
     {
-        $result = [];
-        /** @var array<string, mixed> $responseData */
-        $responseData = JsonHandler::jsonDecode($response->getContent(false), true);
-        if (HttpClient::isHttpSuccess($response)) {
-            foreach ($responseData as $data) {
-                /** @var array<string, mixed> $data */
-                $result[] = self::convertDataToDTO($data);
-            }
-            return $result;
-        }
+        $body = JsonHandler::jsonEncode($this->buildBody($societyInput));
+        $response = $this->httpClient->request(RequestMethod::PUT, ApiUrls::getUpdateSociety($identifier->getId()), $body);
+        return $this->convertResponsePostToDTO($response);
+    }
 
-        $detail = $responseData['detail'] ?? null;
-        $message = is_string($detail) ? $detail : 'An unexpected error occured';
-        throw new \AgoraLearningPhp\Exception\AgoraLearningClientException($message);
+    /**
+     * Modifie partiellement la société (PATCH) : seuls les champs renseignés sont modifiés.
+     */
+    public function patchSociety(ApiObjectIdentifier $identifier, SocietyPatchInput $societyPatchInput): CreatedOutput
+    {
+        return $this->sendPatch(ApiUrls::getUpdateSociety($identifier->getId()), $societyPatchInput);
+    }
+
+    /**
+     * Détache la société de l'application source (PATCH /societies/{id}/detach, réponse 204 sans contenu) :
+     * elle reste sur Agora mais n'est plus liée à l'application qui l'a créée.
+     *
+     * @throws AgoraLearningClientException si la société n'existe pas (404) ou si Agora refuse le détachement
+     */
+    public function detachSociety(ApiObjectIdentifier $identifier): void
+    {
+        $this->sendDetach(ApiUrls::getDetachSociety($identifier->getId()));
+    }
+
+    /**
+     * Supprime la société (DELETE, réponse 204 sans contenu).
+     *
+     * @throws AgoraLearningClientException si la société n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deleteSociety(ApiObjectIdentifier $identifier): void
+    {
+        $this->sendDelete(ApiUrls::getDeleteSociety($identifier->getId()));
     }
 
     /**
@@ -104,7 +92,8 @@ class Society extends ApiService
     public static function convertDataToDTO(array $data): SocietyOutput
     {
         /** @var array{
-         *     id: string,
+         *     agoraId: string,
+         *     externalIdentifier?: array<string, mixed>|null,
          *     name: string,
          *     siret?: string|null,
          *     legalStatus?: string|null,
@@ -134,6 +123,7 @@ class Society extends ApiService
         $addressPostcodeInvoicing = $data['addressPostcodeInvoicing'] ?? null;
         $addressLocalityInvoicing = $data['addressLocalityInvoicing'] ?? null;
         $addressCountryInvoicing = $data['addressCountryInvoicing'] ?? null;
+        $externalIdentifier = !empty($data['externalIdentifier']) ? ExternalId::fromArray($data['externalIdentifier']) : null;
 
         $legalPerson = array_key_exists('legalPerson', $data)
             ? Person::convertDataToDTO($data['legalPerson'])
@@ -146,7 +136,7 @@ class Society extends ApiService
             : null;
 
         return new SocietyOutput(
-            $data['id'],
+            $data['agoraId'],
             $data['name'],
             $siret,
             $legalStatus,
@@ -162,31 +152,38 @@ class Society extends ApiService
             $addressCountryInvoicing,
             $legalPerson,
             $administrativePerson,
-            $rhPerson
+            $rhPerson,
+            $externalIdentifier,
         );
     }
 
     /**
-     * @return array<string, string|null>|null
+     * Corps commun à la création (POST) et au remplacement (PUT).
+     * Attention : la clé de l'identifiant externe est "externalId" (et non "externalIdentifier").
+     *
+     * @return array<string, mixed>
      */
-    private function serializePersonInput(?PersonInput $person): ?array
+    private function buildBody(SocietyInput $societyInput): array
     {
-        if ($person === null) {
-            return null;
-        }
         return [
-            'familyName'      => $person->familyName,
-            'givenName'       => $person->givenName,
-            'gender'          => $person->gender,
-            'birthDate'       => $person->birthDate ? $person->birthDate->format(self::DATETIME_FORMAT) : null,
-            'jobTitle'        => $person->jobTitle,
-            'addressStreet'   => $person->addressStreet,
-            'addressPostcode' => $person->addressPostcode,
-            'addressLocality' => $person->addressLocality,
-            'addressCountry'  => $person->addressCountry,
-            'telephone'       => $person->telephone,
-            'email'           => $person->email,
-            'image'           => $person->image,
+            "externalId" => $societyInput->externalIdentifier->toArray(),
+            "name" => $societyInput->name,
+            "siret" => $societyInput->siret,
+            "telephone" => $societyInput->telephone,
+            "email" => $societyInput->email,
+            "legalStatus" => $societyInput->legalStatus,
+            "addressStreetHeadOffice" => $societyInput->addressStreetHeadOffice,
+            "addressPostcodeHeadOffice" => $societyInput->addressPostcodeHeadOffice,
+            "addressLocalityHeadOffice" => $societyInput->addressLocalityHeadOffice,
+            "addressCountryHeadOffice" => $societyInput->addressCountryHeadOffice,
+            "addressStreetInvoicing" => $societyInput->addressStreetInvoicing,
+            "addressPostcodeInvoicing" => $societyInput->addressPostcodeInvoicing,
+            "addressLocalityInvoicing" => $societyInput->addressLocalityInvoicing,
+            "addressCountryInvoicing" => $societyInput->addressCountryInvoicing,
+            "legalPersonId" => $societyInput->legalPersonId,
+            "administrativePersonId" => $societyInput->administrativePersonId,
+            "rhPersonId" => $societyInput->rhPersonId,
+            "image" => $societyInput->image
         ];
     }
 }

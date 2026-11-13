@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace AgoraLearningPhp\Tests\unit\Service\Society;
 
-use AgoraLearningPhp\DTO\Input\Person\PersonInput;
 use AgoraLearningPhp\DTO\Input\Society\SocietyInput;
+use AgoraLearningPhp\DTO\Input\Society\SocietyPatchInput;
+use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Person\PersonOutput;
 use AgoraLearningPhp\DTO\Output\Society\SocietyOutput;
-use AgoraLearningPhp\Enum\Gender;
 use AgoraLearningPhp\Exception\AgoraLearningClientException;
+use AgoraLearningPhp\Identifier\AgoraId;
+use AgoraLearningPhp\Identifier\ExternalId;
 use AgoraLearningPhp\Service\ClientCore\HttpClient;
 use AgoraLearningPhp\Service\Society\Society;
 use AgoraLearningPhp\Tests\unit\Service\ServiceTestCase;
@@ -23,7 +25,7 @@ class SocietyTest extends ServiceTestCase
     private function makeMinimalData(): array
     {
         return [
-            'id'   => 'soc-uuid-001',
+            'agoraId' => 'soc-uuid-001',
             'name' => 'Acme Corp',
         ];
     }
@@ -31,7 +33,7 @@ class SocietyTest extends ServiceTestCase
     private function makePersonData(): array
     {
         return [
-            'id'         => 'person-uuid-001',
+            'agoraId'    => 'person-uuid-001',
             'familyName' => 'Doe',
             'givenName'  => 'John',
             'email' => 'john.doe@example.net'
@@ -40,7 +42,7 @@ class SocietyTest extends ServiceTestCase
 
     private function makeSociety(HttpClient $httpClient): Society
     {
-        return new class($httpClient) extends Society {
+        return new class ($httpClient) extends Society {
             public function __construct(HttpClient $client)
             {
                 $this->httpClient = $client;
@@ -69,6 +71,30 @@ class SocietyTest extends ServiceTestCase
         // Assert
         $this->assertSame('soc-uuid-001', $dto->uuid);
         $this->assertSame('Acme Corp', $dto->name);
+    }
+
+    public function testConvertDataToDTOMapsExternalIdentifier(): void
+    {
+        // Arrange
+        $data = array_merge($this->makeMinimalData(), [
+            'externalIdentifier' => ['sourceName' => 'MonERP', 'id' => 'X-42'],
+        ]);
+
+        // Act
+        $dto = Society::convertDataToDTO($data);
+
+        // Assert
+        $this->assertInstanceOf(ExternalId::class, $dto->externalIdentifier);
+        $this->assertSame('MonERP:X-42', $dto->externalIdentifier->getId());
+    }
+
+    public function testConvertDataToDTOSetsExternalIdentifierToNullWhenAbsent(): void
+    {
+        // Act
+        $dto = Society::convertDataToDTO($this->makeMinimalData());
+
+        // Assert
+        $this->assertNull($dto->externalIdentifier);
     }
 
     public function testConvertDataToDTOSetsOptionalFieldsToNullWhenAbsent(): void
@@ -137,9 +163,9 @@ class SocietyTest extends ServiceTestCase
     {
         // Arrange
         $data = array_merge($this->makeMinimalData(), [
-            'legalPerson'          => array_merge($this->makePersonData(), ['id' => 'p1']),
-            'administrativePerson' => array_merge($this->makePersonData(), ['id' => 'p2']),
-            'rhPerson'             => array_merge($this->makePersonData(), ['id' => 'p3']),
+            'legalPerson'          => array_merge($this->makePersonData(), ['agoraId' => 'p1']),
+            'administrativePerson' => array_merge($this->makePersonData(), ['agoraId' => 'p2']),
+            'rhPerson'             => array_merge($this->makePersonData(), ['agoraId' => 'p3']),
         ]);
 
         // Act
@@ -171,8 +197,8 @@ class SocietyTest extends ServiceTestCase
     {
         // Arrange
         $body    = json_encode([
-            ['id' => 's1', 'name' => 'Corp A'],
-            ['id' => 's2', 'name' => 'Corp B'],
+            ['agoraId' => 's1', 'name' => 'Corp A'],
+            ['agoraId' => 's2', 'name' => 'Corp B'],
         ]);
         $society = $this->makeSociety($this->makeHttpClientWithResponse(200, $body));
 
@@ -189,14 +215,35 @@ class SocietyTest extends ServiceTestCase
     {
         // Arrange
         $society = $this->makeSociety(
-            $this->makeHttpClientWithResponse(200, json_encode(['id' => 'soc-uuid-001', 'name' => 'Acme Corp']))
+            $this->makeHttpClientWithResponse(200, json_encode(['agoraId' => 'soc-uuid-001', 'name' => 'Acme Corp']))
         );
 
         // Act
-        $result = $society->getSociety('soc-uuid-001');
+        $result = $society->getSociety(new AgoraId('soc-uuid-001'));
 
         // Assert
         $this->assertInstanceOf(SocietyOutput::class, $result);
+        $this->assertSame('soc-uuid-001', $result->uuid);
+    }
+
+    public function testGetSocietyWithExternalIdCallsEncodedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $society = $this->makeSociety($this->makeHttpClientInspectingRequest(
+            200,
+            json_encode(['agoraId' => 'soc-uuid-001', 'name' => 'Acme Corp']),
+            $method,
+            $url
+        ));
+
+        // Act
+        $result = $society->getSociety(new ExternalId('Src', 'X-42'));
+
+        // Assert
+        $this->assertSame('GET', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/societies/Src%3AX-42', $url);
         $this->assertSame('soc-uuid-001', $result->uuid);
     }
 
@@ -212,17 +259,18 @@ class SocietyTest extends ServiceTestCase
         $this->expectExceptionMessage('Society not found');
 
         // Act
-        $society->getSociety('missing-uuid');
+        $society->getSociety(new AgoraId('missing-uuid'));
     }
 
-    public function testPostSocietyWithPersonInputs(): void
+    public function testPostSocietySendsPersonIdentifiers(): void
     {
         // Arrange
-        $society     = $this->makeSociety(
-            $this->makeHttpClientWithResponse(200, json_encode(['id' => 'soc-new-001', 'name' => 'NewCorp']))
+        $capturedBody = '';
+        $society = $this->makeSociety(
+            $this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'soc_new_001', 'sourceName' => 'Test', 'externalId' => 'SOC-1']), $capturedBody)
         );
-        $legalPerson = new PersonInput('Legal', 'Rep', 'legal.rep@example.com', Gender::GENDER_MALE);
-        $input       = new SocietyInput(
+        $input = new SocietyInput(
+            new ExternalId('Test', 'SOC-1'),
             'NewCorp',
             null,
             null,
@@ -236,28 +284,36 @@ class SocietyTest extends ServiceTestCase
             null,
             null,
             null,
-            $legalPerson
+            'Test:P-1',
+            'per_admin',
+            null
         );
 
         // Act
         $result = $society->postSociety($input);
 
         // Assert
-        $this->assertInstanceOf(SocietyOutput::class, $result);
+        $this->assertInstanceOf(CreatedOutput::class, $result);
+        $body = json_decode($capturedBody, true);
+        $this->assertSame('Test:P-1', $body['legalPersonId']);
+        $this->assertSame('per_admin', $body['administrativePersonId']);
+        $this->assertArrayHasKey('rhPersonId', $body);
+        $this->assertNull($body['rhPersonId']);
+        $this->assertArrayNotHasKey('legalPerson', $body);
     }
 
     public function testPostSocietyWithNullPersonInputs(): void
     {
         // Arrange
         $society = $this->makeSociety(
-            $this->makeHttpClientWithResponse(200, json_encode(['id' => 'soc-new-002', 'name' => 'EmptyCorp']))
+            $this->makeHttpClientWithResponse(200, json_encode(['agoraId' => 'soc_new_002', 'sourceName' => 'Test', 'externalId' => 'SOC-2']))
         );
 
         // Act
-        $result = $society->postSociety(new SocietyInput('EmptyCorp'));
+        $result = $society->postSociety(new SocietyInput(new ExternalId('Test', 'SOC-2'), 'EmptyCorp'));
 
         // Assert
-        $this->assertInstanceOf(SocietyOutput::class, $result);
+        $this->assertInstanceOf(CreatedOutput::class, $result);
     }
 
     public function testPostSocietySendsAllFieldsInBody(): void
@@ -265,9 +321,10 @@ class SocietyTest extends ServiceTestCase
         // Arrange
         $capturedBody = '';
         $society      = $this->makeSociety(
-            $this->makeHttpClientInspectingBody(200, json_encode(['id' => 'soc-new-003', 'name' => 'FullCorp']), $capturedBody)
+            $this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'soc_new_003', 'sourceName' => 'Test', 'externalId' => 'SOC-3']), $capturedBody)
         );
         $input = new SocietyInput(
+            new ExternalId('Test', 'SOC-3'),
             'FullCorp',
             '12345678900001',
             'SAS',
@@ -336,5 +393,201 @@ class SocietyTest extends ServiceTestCase
 
         // Act
         $society->getCollectionSociety();
+    }
+
+    // -------------------------------------------------------------------------
+    // PUT / PATCH
+    // -------------------------------------------------------------------------
+
+    public function testPutSocietySendsPutRequestToEncodedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $society = $this->makeSociety($this->makeHttpClientInspectingRequest(
+            200,
+            json_encode(['agoraId' => 'soc_001', 'sourceName' => 'Src', 'externalId' => 'X-42']),
+            $method,
+            $url
+        ));
+
+        // Act
+        $result = $society->putSociety(new ExternalId('Src', 'X-42'), new SocietyInput(new ExternalId('Src', 'X-42'), 'Corp'));
+
+        // Assert
+        $this->assertSame('PUT', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/societies/Src%3AX-42', $url);
+        $this->assertSame('soc_001', $result->agoraId->getId());
+    }
+
+    public function testPutSocietySendsFullBodyWithExternalIdKey(): void
+    {
+        // Arrange
+        $capturedBody = '';
+        $society = $this->makeSociety(
+            $this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'soc_001']), $capturedBody)
+        );
+
+        // Act
+        $society->putSociety(new AgoraId('soc_001'), new SocietyInput(new ExternalId('Src', 'X-42'), 'Corp'));
+
+        // Assert
+        $body = json_decode($capturedBody, true);
+        $this->assertSame(['sourceName' => 'Src', 'id' => 'X-42'], $body['externalId']);
+        $this->assertSame('Corp', $body['name']);
+        $this->assertArrayHasKey('siret', $body);
+        $this->assertNull($body['siret']);
+        $this->assertArrayHasKey('legalPersonId', $body);
+    }
+
+    public function testPatchSocietySendsOnlySetFields(): void
+    {
+        // Arrange
+        $capturedBody = '';
+        $society = $this->makeSociety(
+            $this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'soc_001']), $capturedBody)
+        );
+        $patch = (new SocietyPatchInput())
+            ->setTelephone('0102030405')
+            ->setRhPersonId(null)
+            ->setExternalIdentifier(new ExternalId('Src', 'X-43'));
+
+        // Act
+        $society->patchSociety(new AgoraId('soc_001'), $patch);
+
+        // Assert
+        $this->assertSame(
+            ['telephone' => '0102030405', 'rhPersonId' => null, 'externalId' => ['sourceName' => 'Src', 'id' => 'X-43']],
+            json_decode($capturedBody, true)
+        );
+    }
+
+    public function testPatchSocietySendsPatchRequest(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $society = $this->makeSociety($this->makeHttpClientInspectingRequest(
+            200,
+            json_encode(['agoraId' => 'soc_001']),
+            $method,
+            $url
+        ));
+
+        // Act
+        $society->patchSociety(new AgoraId('soc_001'), (new SocietyPatchInput())->setName('Corp'));
+
+        // Assert
+        $this->assertSame('PATCH', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/societies/soc_001', $url);
+    }
+
+    public function testPatchSocietyThrowsExceptionWhenApiReturns422(): void
+    {
+        // Arrange
+        $society = $this->makeSociety(
+            $this->makeHttpClientWithResponse(422, json_encode(['detail' => 'name: Obligatoire']))
+        );
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionMessage('name: Obligatoire');
+
+        // Act
+        $society->patchSociety(new AgoraId('soc_001'), new SocietyPatchInput());
+    }
+
+    // -------------------------------------------------------------------------
+    // deleteSociety
+    // -------------------------------------------------------------------------
+
+    public function testDeleteSocietyWithExternalIdSendsDeleteToEncodedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $society = $this->makeSociety($this->makeHttpClientInspectingRequest(204, '', $method, $url));
+
+        // Act
+        $society->deleteSociety(new ExternalId('Src', 'X-42'));
+
+        // Assert
+        $this->assertSame('DELETE', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/societies/Src%3AX-42', $url);
+    }
+
+    public function testDeleteSocietyThrowsExceptionWithStatusCodeWhenApiReturns404(): void
+    {
+        // Arrange
+        $society = $this->makeSociety($this->makeHttpClientWithResponse(404, json_encode(['detail' => 'Society not found'])));
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionMessage('Society not found');
+        $this->expectExceptionCode(404);
+
+        // Act
+        $society->deleteSociety(new AgoraId('soc_missing'));
+    }
+
+    // -------------------------------------------------------------------------
+    // detachSociety
+    // -------------------------------------------------------------------------
+
+    public function testDetachSocietySendsPatchToDetachUrl(): void
+    {
+        // Arrange
+        $requests = [];
+        $society = $this->makeSociety($this->makeHttpClientWithSequence([[204, '']], $requests));
+
+        // Act
+        $society->detachSociety(new ExternalId('Src', 'X-42'));
+
+        // Assert
+        $this->assertCount(1, $requests);
+        $this->assertSame('PATCH', $requests[0]['method']);
+        $this->assertSame('https://api.test.local/api/external/v1/societies/Src%3AX-42/detach', $requests[0]['url']);
+        $this->assertSame('{}', $requests[0]['body']);
+    }
+
+    public function testDetachSocietyThrowsExceptionWhenApiRefusesDetach(): void
+    {
+        // Arrange
+        $society = $this->makeSociety($this->makeHttpClientWithResponse(500, ''));
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionCode(500);
+
+        // Act
+        $society->detachSociety(new AgoraId('soc_001'));
+    }
+
+    public function testDetachSocietyThrowsExceptionWithStatusCodeWhenApiReturns404(): void
+    {
+        // Arrange
+        $society = $this->makeSociety($this->makeHttpClientWithResponse(404, json_encode(['detail' => 'Society not found'])));
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionMessage('Society not found');
+        $this->expectExceptionCode(404);
+
+        // Act
+        $society->detachSociety(new AgoraId('soc_missing'));
+    }
+
+    public function testGetSocietyThrowsExceptionWithStatusCodeWhenApiReturns404(): void
+    {
+        // Arrange
+        $society = $this->makeSociety($this->makeHttpClientWithResponse(404, json_encode(['detail' => 'Society not found'])));
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionMessage('Society not found');
+        $this->expectExceptionCode(404);
+
+        // Act
+        $society->getSociety(new AgoraId('soc_missing'));
     }
 }

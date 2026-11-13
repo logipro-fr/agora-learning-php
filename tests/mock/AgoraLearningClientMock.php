@@ -7,16 +7,23 @@ namespace AgoraLearningPhp\Tests\mock;
 use AgoraLearningPhp\AgoraLearningClient;
 use AgoraLearningPhp\DTO\Input\Enrollment\EnrollmentInput;
 use AgoraLearningPhp\DTO\Input\Learner\LearnerInput;
+use AgoraLearningPhp\DTO\Input\Learner\LearnerPatchInput;
 use AgoraLearningPhp\DTO\Input\Person\PersonInput;
-use AgoraLearningPhp\DTO\Input\Session\FixedSessionInput;
-use AgoraLearningPhp\DTO\Input\Session\OpenedSessionInput;
+use AgoraLearningPhp\DTO\Input\Person\PersonPatchInput;
+use AgoraLearningPhp\DTO\Input\Program\ProgramInput;
+use AgoraLearningPhp\DTO\Input\Session\AbstractSessionPatchInput;
 use AgoraLearningPhp\DTO\Input\Session\SessionInput;
 use AgoraLearningPhp\DTO\Input\Society\SocietyInput;
+use AgoraLearningPhp\DTO\Input\Society\SocietyPatchInput;
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerEmployeeInput;
+use AgoraLearningPhp\DTO\Input\Trainer\TrainerEmployeePatchInput;
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerFreeInput;
+use AgoraLearningPhp\DTO\Input\Trainer\TrainerFreePatchInput;
+use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Enrollment\EnrollmentOutput;
 use AgoraLearningPhp\DTO\Output\Learner\LearnerOutput;
 use AgoraLearningPhp\DTO\Output\Person\PersonOutput;
+use AgoraLearningPhp\DTO\Output\Program\ProgramOutput;
 use AgoraLearningPhp\DTO\Output\Session\FixedSessionOutput;
 use AgoraLearningPhp\DTO\Output\Session\OpenedSessionOutput;
 use AgoraLearningPhp\DTO\Output\Session\SessionOutput;
@@ -27,6 +34,9 @@ use AgoraLearningPhp\DTO\Output\Trainer\TrainerOutput;
 use AgoraLearningPhp\Enum\Gender;
 use AgoraLearningPhp\Enum\SessionMode;
 use AgoraLearningPhp\Enum\SessionType;
+use AgoraLearningPhp\Identifier\AgoraId;
+use AgoraLearningPhp\Identifier\ApiObjectIdentifier;
+use AgoraLearningPhp\Identifier\ExternalId;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -35,7 +45,8 @@ class AgoraLearningClientMock extends AgoraLearningClient
     public function __construct(
         string $url,
         string $apiKey
-    ) {}
+    ) {
+    }
 
     // Auth
     public function ping(): ResponseInterface
@@ -81,7 +92,7 @@ class AgoraLearningClientMock extends AgoraLearningClient
         ];
     }
 
-    public function getPerson(string $uuid): PersonOutput
+    public function getPerson(ApiObjectIdentifier $identifier): PersonOutput
     {
         return new PersonOutput(
             $uuid,
@@ -99,22 +110,32 @@ class AgoraLearningClientMock extends AgoraLearningClient
         );
     }
 
-    public function createPerson(PersonInput $personInput): PersonOutput
+    public function createPerson(PersonInput $personInput): CreatedOutput
     {
-        return new PersonOutput(
-            'per_01XXXXXXXXXXXXXXXXXXXXXXXXX',
-            $personInput->familyName,
-            $personInput->givenName,
-            $personInput->email,
-            $personInput->telephone,
-            $personInput->addressStreet,
-            $personInput->addressPostcode,
-            $personInput->addressLocality,
-            $personInput->addressCountry,
-            $personInput->gender,
-            $personInput->birthDate,
-            $personInput->jobTitle
+        return new CreatedOutput(
+            new AgoraId('per_01XXXXXXXXXXXXXXXXXXXXXXXXX'),
+            $personInput->externalIdentifier
         );
+    }
+
+    public function replacePerson(ApiObjectIdentifier $identifier, PersonInput $personInput): CreatedOutput
+    {
+        return $this->makeUpdatedOutput($identifier, 'per_01XXXXXXXXXXXXXXXXXXXXXXXXX', $personInput->externalIdentifier);
+    }
+
+    public function patchPerson(ApiObjectIdentifier $identifier, PersonPatchInput $personPatchInput): CreatedOutput
+    {
+        return $this->makeUpdatedOutput($identifier, 'per_01XXXXXXXXXXXXXXXXXXXXXXXXX');
+    }
+
+    public function detachPerson(ApiObjectIdentifier $identifier): void
+    {
+        // Détachement factice du contact : rien à renvoyer
+    }
+
+    public function deletePerson(ApiObjectIdentifier $identifier): void
+    {
+        // Suppression factice du contact : rien à renvoyer
     }
 
     // Trainer
@@ -178,7 +199,7 @@ class AgoraLearningClientMock extends AgoraLearningClient
         ];
     }
 
-    public function getTrainer(string $uuid): TrainerOutput
+    public function getTrainer(ApiObjectIdentifier $identifier): TrainerOutput
     {
         return new TrainerEmployeeOutput(
             $uuid,
@@ -203,63 +224,50 @@ class AgoraLearningClientMock extends AgoraLearningClient
         );
     }
 
-    public function createTrainerEmployee(TrainerEmployeeInput $trainerEmployeeInput): TrainerOutput
+    public function createTrainerEmployee(TrainerEmployeeInput $trainerEmployeeInput): CreatedOutput
     {
-        return new TrainerEmployeeOutput(
-            'per_01XXXXXXXXXXXXXXXXXXXXXXXXX',
-            'Martin',
-            'Sophie',
-            'sophie.martin@example.com',
-            true,
-            Gender::GENDER_FEMALE,
-            ['ses_01XXXXXXXXXXXXXXXXXXXXXXXXX'],
-            '0123456789',
-            '0612345678',
-            '12 avenue des Formateurs',
-            '69001',
-            'Lyon',
-            'France',
-            new \DateTimeImmutable('1990-03-20'),
-            'Formatrice senior',
-            new SocietyOutput(
-                'soc_01XXXXXXXXXXXXXXXXXXXXXXXXX',
-                'Formation Excellence SAS'
-            )
+        return new CreatedOutput(
+            new AgoraId('per_01XXXXXXXXXXXXXXXXXXXXXXXXX'),
+            $trainerEmployeeInput->externalIdentifier
         );
     }
 
-    public function createTrainerFree(TrainerFreeInput $trainerFreeInput): TrainerOutput
+    public function replaceTrainerEmployee(ApiObjectIdentifier $identifier, TrainerEmployeeInput $trainerEmployeeInput): CreatedOutput
     {
-        return new TrainerFreeOutput(
-            'per_01XXXXXXXXXXXXXXXXXXXXXXXXX',
-            'Bernard',
-            'Pierre',
-            'pierre.bernard@example.com',
-            true,
-            Gender::GENDER_MALE,
-            [],
-            '0123456789',
-            '0612345678',
-            '5 rue des Indépendants',
-            '33000',
-            'Bordeaux',
-            'France',
-            new \DateTimeImmutable('1982-11-08'),
-            'Formateur indépendant',
-            new SocietyOutput(
-                'soc_01XXXXXXXXXXXXXXXXXXXXXXXXX',
-                'Formation Excellence SAS'
-            ),
-            80.0,
-            600.0,
-            '12345678901234',
-            'FR12345678901',
-            '987654321',
-            '5 rue des Indépendants',
-            '33000',
-            'Bordeaux',
-            'France'
+        return $this->makeUpdatedOutput($identifier, 'per_01XXXXXXXXXXXXXXXXXXXXXXXXX', $trainerEmployeeInput->externalIdentifier);
+    }
+
+    public function patchTrainerEmployee(ApiObjectIdentifier $identifier, TrainerEmployeePatchInput $trainerEmployeePatchInput): CreatedOutput
+    {
+        return $this->makeUpdatedOutput($identifier, 'per_01XXXXXXXXXXXXXXXXXXXXXXXXX');
+    }
+
+    public function createTrainerFree(TrainerFreeInput $trainerFreeInput): CreatedOutput
+    {
+        return new CreatedOutput(
+            new AgoraId('per_01XXXXXXXXXXXXXXXXXXXXXXXXX'),
+            $trainerFreeInput->externalIdentifier
         );
+    }
+
+    public function replaceTrainerFree(ApiObjectIdentifier $identifier, TrainerFreeInput $trainerFreeInput): CreatedOutput
+    {
+        return $this->makeUpdatedOutput($identifier, 'per_01XXXXXXXXXXXXXXXXXXXXXXXXX', $trainerFreeInput->externalIdentifier);
+    }
+
+    public function patchTrainerFree(ApiObjectIdentifier $identifier, TrainerFreePatchInput $trainerFreePatchInput): CreatedOutput
+    {
+        return $this->makeUpdatedOutput($identifier, 'per_01XXXXXXXXXXXXXXXXXXXXXXXXX');
+    }
+
+    public function detachTrainer(ApiObjectIdentifier $identifier): void
+    {
+        // Détachement factice du formateur : rien à renvoyer
+    }
+
+    public function deleteTrainer(ApiObjectIdentifier $identifier): void
+    {
+        // Suppression factice du formateur : rien à renvoyer
     }
 
     // Learner
@@ -296,7 +304,7 @@ class AgoraLearningClientMock extends AgoraLearningClient
         ];
     }
 
-    public function getLearner(string $uuid): LearnerOutput
+    public function getLearner(ApiObjectIdentifier $identifier): LearnerOutput
     {
         return new LearnerOutput(
             $uuid,
@@ -316,24 +324,27 @@ class AgoraLearningClientMock extends AgoraLearningClient
         );
     }
 
-    public function createLearner(LearnerInput $learnerInput): LearnerOutput
+    public function createLearner(LearnerInput $learnerInput): CreatedOutput
     {
-        return new LearnerOutput(
-            'per_01XXXXXXXXXXXXXXXXXXXXXXXXX',
-            'user.name',
-            $learnerInput->familyName,
-            $learnerInput->givenName,
-            $learnerInput->gender,
-            $learnerInput->recoverEmail,
-            $learnerInput->email,
-            $learnerInput->telephone,
-            $learnerInput->addressStreet,
-            $learnerInput->addressPostcode,
-            $learnerInput->addressLocality,
-            $learnerInput->addressCountry,
-            $learnerInput->birthDate,
-            $learnerInput->jobTitle
+        return new CreatedOutput(
+            new AgoraId('per_01XXXXXXXXXXXXXXXXXXXXXXXXX'),
+            $learnerInput->externalIdentifier
         );
+    }
+
+    public function replaceLearner(ApiObjectIdentifier $identifier, LearnerInput $learnerInput): CreatedOutput
+    {
+        return $this->makeUpdatedOutput($identifier, 'per_01XXXXXXXXXXXXXXXXXXXXXXXXX', $learnerInput->externalIdentifier);
+    }
+
+    public function patchLearner(ApiObjectIdentifier $identifier, LearnerPatchInput $learnerPatchInput): CreatedOutput
+    {
+        return $this->makeUpdatedOutput($identifier, 'per_01XXXXXXXXXXXXXXXXXXXXXXXXX');
+    }
+
+    public function deleteLearner(ApiObjectIdentifier $identifier): void
+    {
+        // Suppression factice de l'apprenant : rien à renvoyer
     }
 
     // Society
@@ -387,7 +398,7 @@ class AgoraLearningClientMock extends AgoraLearningClient
         ];
     }
 
-    public function getSociety(string $uuid): SocietyOutput
+    public function getSociety(ApiObjectIdentifier $identifier): SocietyOutput
     {
         return new SocietyOutput(
             $uuid,
@@ -428,27 +439,32 @@ class AgoraLearningClientMock extends AgoraLearningClient
         );
     }
 
-    public function createSociety(SocietyInput $societyInput): SocietyOutput
+    public function createSociety(SocietyInput $societyInput): CreatedOutput
     {
-        return new SocietyOutput(
-            'soc_01XXXXXXXXXXXXXXXXXXXXXXXXX',
-            $societyInput->name,
-            $societyInput->siret,
-            $societyInput->legalStatus,
-            $societyInput->email,
-            $societyInput->telephone,
-            $societyInput->addressStreetHeadOffice,
-            $societyInput->addressPostcodeHeadOffice,
-            $societyInput->addressLocalityHeadOffice,
-            $societyInput->addressCountryHeadOffice,
-            $societyInput->addressStreetInvoicing,
-            $societyInput->addressPostcodeInvoicing,
-            $societyInput->addressLocalityInvoicing,
-            $societyInput->addressCountryInvoicing,
-            $societyInput->legalPerson,
-            $societyInput->administrativePerson,
-            $societyInput->rhPerson
+        return new CreatedOutput(
+            new AgoraId('soc_01XXXXXXXXXXXXXXXXXXXXXXXXX'),
+            $societyInput->externalIdentifier
         );
+    }
+
+    public function replaceSociety(ApiObjectIdentifier $identifier, SocietyInput $societyInput): CreatedOutput
+    {
+        return $this->makeUpdatedOutput($identifier, 'soc_01XXXXXXXXXXXXXXXXXXXXXXXXX', $societyInput->externalIdentifier);
+    }
+
+    public function patchSociety(ApiObjectIdentifier $identifier, SocietyPatchInput $societyPatchInput): CreatedOutput
+    {
+        return $this->makeUpdatedOutput($identifier, 'soc_01XXXXXXXXXXXXXXXXXXXXXXXXX');
+    }
+
+    public function deleteSociety(ApiObjectIdentifier $identifier): void
+    {
+        // Suppression factice de la société : rien à renvoyer
+    }
+
+    public function detachSociety(ApiObjectIdentifier $identifier): void
+    {
+        // Détachement factice de la société : rien à renvoyer
     }
 
     // Session
@@ -530,10 +546,10 @@ class AgoraLearningClientMock extends AgoraLearningClient
         ];
     }
 
-    public function getSession(string $uuid): SessionOutput
+    public function getSession(ApiObjectIdentifier $identifier): SessionOutput
     {
         return new SessionOutput(
-            $uuid,
+            $identifier->getId(),
             'Formation PHP avancé',
             SessionType::SESSION_TYPE_INTER,
             SessionMode::SESSION_MODE_FACE_TO_FACE,
@@ -568,76 +584,39 @@ class AgoraLearningClientMock extends AgoraLearningClient
         );
     }
 
-    public function createSession(SessionInput $sessionInput): SessionOutput
+    public function createSession(SessionInput $sessionInput): CreatedOutput
     {
-        $sessionData = $sessionInput->sessionData;
-        if ($sessionData instanceof FixedSessionInput) {
-            $type = $sessionData->type;
-            $mode = $sessionData->mode;
-            $dateData = new FixedSessionOutput(
-                $sessionData->availabilityStartDate,
-                $sessionData->availabilityEndDate
-            );
-        } elseif ($sessionData instanceof OpenedSessionInput) {
-            $type = SessionType::SESSION_TYPE_INTER;
-            $mode = SessionMode::SESSION_MODE_E_LEARNING;
-            $dateData = new OpenedSessionOutput(
-                $sessionData->subscribeStartDate,
-                $sessionData->subscribeEndDate,
-                $sessionData->accessDurationDays
-            );
-        } else {
-            throw new \Exception('Wrong SessionInput');
-        }
-
-        $trainer = null;
-        if ($sessionInput->pedagogicalTrainer) {
-            $trainer = new TrainerEmployeeOutput(
-                'per_01XXXXXXXXXXXXXXXXXXXXXXXXX',
-                'Martin',
-                'Sophie',
-                'sophie.martin@example.com',
-                true,
-                Gender::GENDER_FEMALE,
-                ['ses_01XXXXXXXXXXXXXXXXXXXXXXXXX']
-            );
-        }
-
-        $administrativePerson = null;
-        if ($sessionInput->administrativePerson) {
-            $administrativePerson = new PersonOutput(
-                'per_02XXXXXXXXXXXXXXXXXXXXXXXXX',
-                'Derivière',
-                'Olivia'
-            );
-        }
-
-        return new SessionOutput(
-            'ses_01XXXXXXXXXXXXXXXXXXXXXXXXX',
-            $sessionInput->title,
-            $type,
-            $mode,
-            $dateData,
-            $sessionInput->manualDuration,
-            $sessionInput->hasForum,
-            $sessionInput->notifyMailForum,
-            $sessionInput->price,
-            $sessionInput->durationInSeconds,
-            $sessionInput->description,
-            $sessionInput->maxPlaces,
-            $trainer,
-            $administrativePerson,
-            $sessionInput->urlPreTrainingSurvey,
-            $sessionInput->urlOnTheSpotSurvey,
-            $sessionInput->urlDelayedSurvey
+        return new CreatedOutput(
+            new AgoraId('ses_01XXXXXXXXXXXXXXXXXXXXXXXXX'),
+            $sessionInput->externalIdentifier
         );
+    }
+
+    public function replaceSession(ApiObjectIdentifier $identifier, SessionInput $sessionInput): CreatedOutput
+    {
+        return $this->makeUpdatedOutput($identifier, 'ses_01XXXXXXXXXXXXXXXXXXXXXXXXX', $sessionInput->externalIdentifier);
+    }
+
+    public function patchSession(ApiObjectIdentifier $identifier, AbstractSessionPatchInput $sessionPatchInput): CreatedOutput
+    {
+        return $this->makeUpdatedOutput($identifier, 'ses_01XXXXXXXXXXXXXXXXXXXXXXXXX');
+    }
+
+    public function detachSession(ApiObjectIdentifier $identifier): void
+    {
+        // Détachement factice de la session : rien à renvoyer
+    }
+
+    public function deleteSession(ApiObjectIdentifier $identifier): void
+    {
+        // Suppression factice de la session : rien à renvoyer
     }
 
     // Enrollment
     /**
      * @return array<int, EnrollmentOutput>
      */
-    public function getCollectionEnrollmentFromSession(string $sessionUuid): array
+    public function getCollectionEnrollmentFromSession(ApiObjectIdentifier $sessionIdentifier): array
     {
         return [
             0 => new EnrollmentOutput(
@@ -659,7 +638,7 @@ class AgoraLearningClientMock extends AgoraLearningClient
                     'Développeur'
                 ),
                 new SessionOutput(
-                    $sessionUuid,
+                    $sessionIdentifier->getId(),
                     'Formation PHP avancé',
                     SessionType::SESSION_TYPE_INTER,
                     SessionMode::SESSION_MODE_FACE_TO_FACE,
@@ -714,7 +693,7 @@ class AgoraLearningClientMock extends AgoraLearningClient
                     'Développeuse'
                 ),
                 new SessionOutput(
-                    $sessionUuid,
+                    $sessionIdentifier->getId(),
                     'Formation PHP avancé',
                     SessionType::SESSION_TYPE_INTER,
                     SessionMode::SESSION_MODE_FACE_TO_FACE,
@@ -756,13 +735,13 @@ class AgoraLearningClientMock extends AgoraLearningClient
     /**
      * @return array<int, EnrollmentOutput>
      */
-    public function getCollectionEnrollmentFromLearner(string $learnerUuid): array
+    public function getCollectionEnrollmentFromLearner(ApiObjectIdentifier $learnerIdentifier): array
     {
         return [
             0 => new EnrollmentOutput(
                 'enr_01XXXXXXXXXXXXXXXXXXXXXXXXX',
                 new LearnerOutput(
-                    $learnerUuid,
+                    $learnerIdentifier->getId(),
                     'dupont.jean',
                     'Dupont',
                     'Jean',
@@ -817,7 +796,7 @@ class AgoraLearningClientMock extends AgoraLearningClient
             1 => new EnrollmentOutput(
                 'enr_02XXXXXXXXXXXXXXXXXXXXXXXXX',
                 new LearnerOutput(
-                    $learnerUuid,
+                    $learnerIdentifier->getId(),
                     'dupont.jean',
                     'Dupont',
                     'Jean',
@@ -873,7 +852,7 @@ class AgoraLearningClientMock extends AgoraLearningClient
         ];
     }
 
-    public function getEnrollment(string $uuid): EnrollmentOutput
+    public function getEnrollment(ApiObjectIdentifier $identifier): EnrollmentOutput
     {
         return new EnrollmentOutput(
             $uuid,
@@ -932,12 +911,14 @@ class AgoraLearningClientMock extends AgoraLearningClient
         );
     }
 
-    public function getEnrollmentFromSessionAndLearner(string $sessionUuid, string $learnerUuid): EnrollmentOutput
-    {
+    public function getEnrollmentFromSessionAndLearner(
+        ApiObjectIdentifier $sessionIdentifier,
+        ApiObjectIdentifier $learnerIdentifier
+    ): EnrollmentOutput {
         return new EnrollmentOutput(
             'enr_01XXXXXXXXXXXXXXXXXXXXXXXXX',
             new LearnerOutput(
-                $learnerUuid,
+                $learnerIdentifier->getId(),
                 'dupont.jean',
                 'Dupont',
                 'Jean',
@@ -953,7 +934,7 @@ class AgoraLearningClientMock extends AgoraLearningClient
                 'Développeur'
             ),
             new SessionOutput(
-                $sessionUuid,
+                $sessionIdentifier->getId(),
                 'Formation PHP avancé',
                 SessionType::SESSION_TYPE_INTER,
                 SessionMode::SESSION_MODE_FACE_TO_FACE,
@@ -991,62 +972,67 @@ class AgoraLearningClientMock extends AgoraLearningClient
         );
     }
 
-    public function createEnrollment(EnrollmentInput $enrollmentInput): EnrollmentOutput
+    public function createEnrollment(EnrollmentInput $enrollmentInput): CreatedOutput
     {
-        return new EnrollmentOutput(
-            'enr_01XXXXXXXXXXXXXXXXXXXXXXXXX',
-            new LearnerOutput(
-                $enrollmentInput->learnerUuid,
-                'dupont.jean',
-                'Dupont',
-                'Jean',
-                Gender::GENDER_MALE,
-                'jean.dupont.recovery@example.com',
-                'jean.dupont@example.com',
-                '0123456789',
-                '3 rue de la Paix',
-                '75001',
-                'Paris',
-                'France',
-                new \DateTimeImmutable('1985-06-15'),
-                'Développeur'
-            ),
-            new SessionOutput(
-                $enrollmentInput->sessionUuid,
-                'Formation PHP avancé',
-                SessionType::SESSION_TYPE_INTER,
-                SessionMode::SESSION_MODE_FACE_TO_FACE,
-                new FixedSessionOutput(
-                    new \DateTimeImmutable('2026-09-01'),
-                    new \DateTimeImmutable('2026-09-05')
-                ),
-                false,
-                true,
-                true,
-                1500.0,
-                28800,
-                'Formation intensive sur les bonnes pratiques PHP',
-                12,
-                new TrainerEmployeeOutput(
-                    'per_01XXXXXXXXXXXXXXXXXXXXXXXXX',
-                    'Martin',
-                    'Sophie',
-                    'sophie.martin@example.com',
-                    true,
-                    Gender::GENDER_FEMALE,
-                    ['ses_01XXXXXXXXXXXXXXXXXXXXXXXXX']
-                ),
-                new PersonOutput(
-                    'per_02XXXXXXXXXXXXXXXXXXXXXXXXX',
-                    'Derivière',
-                    'Olivia'
-                ),
-                'https://example.com/survey/pre',
-                'https://example.com/survey/spot',
-                'https://example.com/survey/delayed'
-            ),
-            new \DateTimeImmutable('2026-09-01'),
-            new \DateTimeImmutable('2026-09-05')
+        return new CreatedOutput(
+            new AgoraId('enr_01XXXXXXXXXXXXXXXXXXXXXXXXX'),
+            $enrollmentInput->externalIdentifier
+        );
+    }
+
+    public function deleteEnrollment(ApiObjectIdentifier $identifier): void
+    {
+        // Désinscription factice : rien à renvoyer
+    }
+
+    public function deleteEnrollmentFromSessionAndLearner(
+        ApiObjectIdentifier $sessionIdentifier,
+        ApiObjectIdentifier $learnerIdentifier
+    ): void {
+        // Désinscription factice : rien à renvoyer
+    }
+
+    public function deleteCollectionEnrollmentFromSession(ApiObjectIdentifier $sessionIdentifier): void
+    {
+        // Suppression factice des inscriptions de la session : rien à renvoyer
+    }
+
+    public function deleteCollectionEnrollmentFromLearner(ApiObjectIdentifier $learnerIdentifier): void
+    {
+        // Suppression factice des inscriptions de l'apprenant : rien à renvoyer
+    }
+
+    // Program
+    public function getProgram(ApiObjectIdentifier $sessionIdentifier): ProgramOutput
+    {
+        return new ProgramOutput($sessionIdentifier->getId(), new ProgramInput());
+    }
+
+    public function replaceProgram(ApiObjectIdentifier $sessionIdentifier, ProgramInput $programInput): CreatedOutput
+    {
+        return $this->makeUpdatedOutput($sessionIdentifier, 'ses_mock');
+    }
+
+    public function deleteProgram(ApiObjectIdentifier $sessionIdentifier): void
+    {
+        // Suppression factice du programme : rien à renvoyer
+    }
+
+    /**
+     * Réponse factice d'une modification : reprend l'identifiant de l'URL s'il est du bon type.
+     */
+    private function makeUpdatedOutput(
+        ApiObjectIdentifier $identifier,
+        string $defaultAgoraId,
+        ?ExternalId $externalId = null
+    ): CreatedOutput {
+        if ($externalId === null && $identifier instanceof ExternalId) {
+            $externalId = $identifier;
+        }
+
+        return new CreatedOutput(
+            $identifier instanceof AgoraId ? $identifier : new AgoraId($defaultAgoraId),
+            $externalId
         );
     }
 }

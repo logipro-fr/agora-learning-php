@@ -37,6 +37,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 use AgoraLearningPhp\AgoraLearningClient;
 use AgoraLearningPhp\DTO\Input\Learner\LearnerInput;
+use AgoraLearningPhp\Identifier\ExternalId;
 
 $client = new AgoraLearningClient(
     'https://votre-instance.example.com', // TODO: à adapter
@@ -52,28 +53,43 @@ if ($ping->getStatusCode() !== 200) {
 }
 
 // Créer un apprenant
-$learner = $client->createLearner(new LearnerInput(
+$created = $client->createLearner(new LearnerInput(
+    new ExternalId('MonERP', 'L-41'),
     'Dupont',
     'Marie',
-    'marie.dupont@example.com'
+    'marie.dupont@example.com', // recoverEmail
+    'marie.dupont@example.com'  // email
 ));
 
-echo $learner->uuid;
+echo $created->agoraId->getId(); // identifiant Agora de l'apprenant créé
+
+// Les créations ne renvoient que les identifiants : relire l'objet complet si besoin
+$learner = $client->getLearner($created->agoraId);
 ```
 
 ---
 
 ## Ressources disponibles
 
-| Ressource      | Méthodes disponibles                                                                                                                                            |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Auth**       | `ping()`                                                                                                                                                        |
-| **Person**     | `getPerson()`, `getCollectionPerson()`, `createPerson()`                                                                                                        |
-| **Trainer**    | `getTrainer()`, `getCollectionTrainer()`, `createTrainerEmployee()`, `createTrainerFree()`                                                                      |
-| **Learner**    | `getLearner()`, `getCollectionLearner()`, `createLearner()`                                                                                                     |
-| **Society**    | `getSociety()`, `getCollectionSociety()`, `createSociety()`                                                                                                     |
-| **Session**    | `getSession()`, `getCollectionSession()`, `createSession()`                                                                                                     |
-| **Enrollment** | `getEnrollment()`, `getCollectionEnrollmentFromSession()`, `getCollectionEnrollmentFromLearner()`, `getEnrollmentFromSessionAndLearner()`, `createEnrollment()` |
+| Ressource      | Lecture                                                                                                                         | Création                                         | Remplacement (PUT)                                   | Modification partielle (PATCH)                   | Suppression (DELETE) |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ---------------------------------------------------- | ------------------------------------------------ | -------------------- |
+| **Auth**       | `ping()`                                                                                                                        |                                                  |                                                      |                                                  |                      |
+| **Person**     | `getPerson()`, `getCollectionPerson()`                                                                                          | `createPerson()`                                 | `replacePerson()`                                    | `patchPerson()`                                  | `deletePerson()`     |
+| **Trainer**    | `getTrainer()`, `getCollectionTrainer()`                                                                                        | `createTrainerEmployee()`, `createTrainerFree()` | `replaceTrainerEmployee()`, `replaceTrainerFree()`   | `patchTrainerEmployee()`, `patchTrainerFree()`   | `deleteTrainer()`    |
+| **Learner**    | `getLearner()`, `getCollectionLearner()`                                                                                        | `createLearner()`                                | `replaceLearner()`                                   | `patchLearner()`                                 | `deleteLearner()`    |
+| **Society**    | `getSociety()`, `getCollectionSociety()`                                                                                        | `createSociety()`                                | `replaceSociety()`                                   | `patchSociety()`                                 | `deleteSociety()`    |
+| **Session**    | `getSession()`, `getCollectionSession()`                                                                                        | `createSession()`                                | `replaceSession()`                                   | `patchSession()`                                 | `deleteSession()`    |
+| **Enrollment** | `getEnrollment()`, `getCollectionEnrollmentFromSession()`, `getCollectionEnrollmentFromLearner()`, `getEnrollmentFromSessionAndLearner()` | `createEnrollment()`                    |                                                      |                                                  | `deleteEnrollment()`, `deleteEnrollmentFromSessionAndLearner()`, `deleteCollectionEnrollmentFromSession()`, `deleteCollectionEnrollmentFromLearner()` |
+| **Program** | `getProgram()` |  | `replaceProgram()` |  | `deleteProgram()` (vide le programme) |
+
+Les suppressions ne renvoient rien (réponse 204) et lèvent une `AgoraLearningClientException` de code 404 si l'objet n'existe pas.
+
+Une personne, une société, un formateur ou une session peut aussi être détaché de l'application source avec `detachPerson()`, `detachSociety()`, `detachTrainer()` ou `detachSession()` (`PATCH /{ressource}/{id}/detach`, réponse 204) : il reste sur Agora mais n'y est plus lié.
+
+Les lectures, modifications et suppressions acceptent un `AgoraId` ou un `ExternalId` ; les créations prennent un `ExternalId` obligatoire. Créations et modifications renvoient un `CreatedOutput` (`agoraId`, `externalId`).
+
+- `replace*()` (PUT) reprend le DTO de création et **remplace** l'objet : un champ facultatif non renseigné est vidé.
+- `patch*()` (PATCH, `application/merge-patch+json`) prend un DTO de patch (`PersonPatchInput`, `FixedSessionPatchInput`…) : seuls les champs renseignés par ses setters sont modifiés, `null` vide le champ.
 
 Consultez [docs/usage.md](docs/usage.md) pour un exemple complet par méthode.
 
@@ -101,6 +117,26 @@ php examples/society/create.php
 # etc.
 ```
 
+#### Avec Docker, sur une instance Agora locale
+
+Si l'URL de `examples/config.php` pointe vers une instance Agora qui tourne dans Docker sur la même machine (par exemple `http://agoralearning-local/phoenix`), le nom d'hôte n'est connu que sur le réseau Docker `agora-network`. Un conteneur lancé par `docker compose run` n'est pas sur ce réseau et échoue avec `Could not resolve host`.
+
+Lancer l'exemple avec `docker run` en le rattachant à ce réseau :
+
+```bash
+# PHP 7.4 (dépendances dans vendor74/)
+docker run --rm --network agora-network \
+  -v "$PWD":/app -v "$PWD/vendor74":/app/vendor -w /app \
+  agora-learning-php-php74 php examples/ping.php
+
+# PHP 8.2 (dépendances dans vendor/)
+docker run --rm --network agora-network \
+  -v "$PWD":/app -w /app \
+  agora-learning-php-php php examples/ping.php
+```
+
+> Les images doivent avoir été construites (`docker compose build`) et les dépendances installées dans le dossier `vendor*` correspondant. La stack Agora doit être démarrée pour que le réseau `agora-network` existe.
+
 ### Arborescence
 
 ```
@@ -110,31 +146,58 @@ examples/
 ├── person/
 │   ├── get_collection.php
 │   ├── get_one.php
-│   └── create.php
+│   ├── get_one_by_agora_id.php
+│   ├── create.php
+│   ├── replace.php
+│   ├── patch.php
+│   └── delete.php
 ├── trainer/
 │   ├── get_collection.php
 │   ├── get_one.php
 │   ├── create_employee.php
-│   └── create_free.php
+│   ├── create_free.php
+│   ├── replace_employee.php
+│   ├── replace_free.php
+│   ├── patch_employee.php
+│   ├── patch_free.php
+│   └── delete.php
 ├── learner/
 │   ├── get_collection.php
 │   ├── get_one.php
-│   └── create.php
+│   ├── create.php
+│   ├── replace.php
+│   ├── patch.php
+│   └── delete.php
 ├── society/
 │   ├── get_collection.php
 │   ├── get_one.php
-│   └── create.php
+│   ├── create.php
+│   ├── replace.php
+│   ├── patch.php
+│   └── delete.php
 ├── session/
 │   ├── get_collection.php
 │   ├── get_one.php
+│   ├── get_one_by_agora_id.php
+│   ├── get_one_by_external_id.php
 │   ├── create_fixed.php
-│   └── create_opened.php
+│   ├── create_opened.php
+│   ├── replace_fixed.php
+│   ├── patch_fixed.php
+│   ├── patch_opened.php
+│   └── delete.php
+├── program/
+│   └── delete.php
 └── enrollment/
     ├── get_from_session.php
     ├── get_from_learner.php
     ├── get_one.php
     ├── get_from_session_and_learner.php
-    └── create.php
+    ├── create.php
+    ├── delete.php
+    ├── delete_from_session_and_learner.php
+    ├── delete_from_session.php
+    └── delete_from_learner.php
 ```
 
 ---
@@ -158,9 +221,11 @@ PHP 7.4+ et Composer installés localement, **ou** Docker (aucun prérequis PHP 
 | `composer cs-check`  | php-cs-fixer      | Vérifie le style PSR-12 sans modifier les fichiers |
 | `composer cs-fix`    | php-cs-fixer      | Corrige automatiquement les violations de style    |
 | `composer phpstan`   | PHPStan niveau 10 | Analyse statique du répertoire `src/`              |
-| `composer test`      | PHPUnit 9         | Lance la suite de tests unitaires                  |
+| `composer test`      | PHPUnit 9         | Lance tous les tests (unitaires + intégration)     |
+| `composer test-unitaire` | PHPUnit 9     | Lance les tests unitaires (`tests/unit/`)          |
+| `composer test-integration` | PHPUnit 9  | Lance les tests d'intégration (`tests/integration/`) contre une vraie instance Agora |
 | `composer infection` | Infection 0.29    | Tests de mutation (suite `Unit`, 4 threads)        |
-| `composer qa`        | -                 | Enchaîne cs-check, phpstan et test                 |
+| `composer qa`        | -                 | Enchaîne cs-check, phpstan et test-unitaire        |
 
 ---
 
@@ -173,8 +238,14 @@ composer install
 # Tous les contrôles qualité
 composer qa
 
-# Tests unitaires seuls
+# Tous les tests (unitaires + intégration)
 composer test
+
+# Tests unitaires seuls
+composer test-unitaire
+
+# Tests d'intégration (instance Agora configurée dans .env.local)
+composer test-integration
 
 # Tests de mutation
 composer infection
@@ -184,20 +255,23 @@ composer infection
 
 ### Avec Docker
 
-Deux services sont disponibles : `php` (PHP 8.2) et `php74` (PHP 7.4).
+Trois services sont disponibles : `php` (PHP 8.2, par défaut, dépendances dans `vendor/`), `php85` (PHP 8.5, dépendances dans `vendor85/`) et `php74` (PHP 7.4, dépendances dans `vendor74/`).
 
 #### Construire les images
 
 ```bash
-# Les deux images en une commande
+# Toutes les images en une commande
 docker compose build
 
 # Une image spécifique
-# PHP 7.4
+# PHP 8.2 (par défaut)
 docker compose build php
 
 # PHP 8.5
 docker compose build php85
+
+# PHP 7.4
+docker compose build php74
 ```
 
 #### Accéder au docker
@@ -209,31 +283,59 @@ docker exec -ti agora-learning-php-php-1 /bin/bash
 #### Installer les dépendances
 
 ```bash
-# PHP 7.4
-docker compose run --rm php composer install
+# PHP 8.2 (par défaut), dans vendor/
+docker compose run --rm php composer update
 
-# PHP 8.5
-docker compose run --rm php85 composer install
+# PHP 8.5, dans vendor85/
+docker compose run --rm php85 composer update
+
+# PHP 7.4, dans vendor74/
+docker compose run --rm php74 composer update
 ```
 
 #### Contrôles qualité
 
 ```bash
-# PHP 7.4
+# PHP 8.2 (par défaut)
 docker compose run --rm php composer qa
 
 # PHP 8.5
 docker compose run --rm php85 composer qa
+
+# PHP 7.4
+docker compose run --rm php74 composer qa
 ```
 
 #### Tests unitaires
 
 ```bash
-# PHP 7.4
-docker compose run --rm php composer test
+# PHP 8.2 (par défaut)
+docker compose run --rm php composer test-unitaire
 
 # PHP 8.5
-docker compose run --rm php85 composer test
+docker compose run --rm php85 composer test-unitaire
+
+# PHP 7.4
+docker compose run --rm php74 composer test-unitaire
+```
+
+#### Tests d'intégration
+
+Ils appellent une vraie instance Agora et y créent des données : utilisez une instance de développement, jamais la production.
+
+La configuration se fait par deux variables :
+
+| Variable | Rôle | Où la définir |
+| --- | --- | --- |
+| `AGORA_BASE_URL` | URL racine de l'instance, vue depuis le conteneur (sans `/api/external/v1`) | valeur par défaut dans `.env`, à surcharger dans `.env.local` |
+| `AGORA_API_KEY` | clé API externe de l'instance | `.env.local` uniquement |
+
+`.env.local` n'est pas versionné. `composer install` et `composer update` le créent à partir de `.env.local.dist` s'il n'existe pas. Ordre de priorité : variable d'environnement, puis `.env.local`, puis `.env`.
+
+Si une variable est vide ou si l'instance n'est pas joignable, les tests sont ignorés (*skipped*) avec le motif.
+
+```bash
+docker compose run --rm php composer test-integration
 ```
 
 #### Style de code
@@ -255,11 +357,14 @@ docker compose run --rm php composer phpstan
 #### Tests de mutation (Infection)
 
 ```bash
-# PHP 7.4
+# PHP 8.2 (par défaut)
 docker compose run --rm php composer infection
 
 # PHP 8.5
 docker compose run --rm php85 composer infection
+
+# PHP 7.4
+docker compose run --rm php74 composer infection
 ```
 
 ---

@@ -20,6 +20,85 @@ $client = new AgoraLearningClient(
 
 ---
 
+## Identifiants
+
+Les méthodes de lecture unitaire (`getPerson()`, `getTrainer()`, `getLearner()`, `getSociety()`, `getSession()`, `getEnrollment()`) ainsi que les lectures d'inscriptions par session et/ou apprenant attendent un `ApiObjectIdentifier` :
+
+```php
+use AgoraLearningPhp\Identifier\AgoraId;
+use AgoraLearningPhp\Identifier\ExternalId;
+
+$client->getLearner(new AgoraId('per_01KRXPMF8GENX8HCB8QKECBGZC')); // GET /learners/per_01KRXPMF8GENX8HCB8QKECBGZC
+$client->getLearner(new ExternalId('MonERP', 'L-42'));               // GET /learners/MonERP%3AL-42
+```
+
+> ⚠️ La lecture par `ExternalId` nécessite que le serveur Agora prenne en charge les identifiants `source:id` sur la route appelée.
+
+| Classe          | Format `getId()` | Contraintes                                                                                         |
+| --------------- | ---------------- | --------------------------------------------------------------------------------------------------- |
+| `AgoraId`       | `per_…`, `ses_…` | non vide, ne contient jamais `:`                                                                    |
+| `ExternalId`    | `source:id`      | `source` : `[A-Za-z0-9_-]{1,50}` ; `id` : non vide, `:` autorisé                                    |
+
+Les deux classes appliquent `trim()` à leurs arguments et lèvent une `\InvalidArgumentException` si une contrainte n'est pas respectée. L'identifiant est encodé (`rawurlencode`) avant d'être placé dans l'URL.
+
+Pour reconstruire un identifiant stocké sous sa forme `getId()` :
+
+```php
+use AgoraLearningPhp\Identifier\ApiObjectIdentifierFactory;
+
+$identifier = ApiObjectIdentifierFactory::fromString('MonERP:S-42'); // ExternalId('MonERP', 'S-42')
+$identifier = ApiObjectIdentifierFactory::fromString('ses_abc');     // AgoraId('ses_abc')
+```
+
+### Identifiant externe à la création
+
+Chaque DTO de création (`PersonInput`, `TrainerEmployeeInput`, `TrainerFreeInput`, `LearnerInput`, `SocietyInput`, `SessionInput`, `EnrollmentInput`) prend en **premier argument obligatoire** un `ExternalId` : l'identifiant de l'objet dans votre système. Il est envoyé à l'API (`{"sourceName": ..., "id": ...}`) et permet ensuite de relire l'objet sans connaître son `AgoraId`. L'API répond `409` si cet identifiant externe existe déjà.
+
+Les méthodes `create*()` ne renvoient que les identifiants de l'objet créé, sous la forme d'un `CreatedOutput` :
+
+| Champ        | Type        | Description                              |
+| ------------ | ----------- | ---------------------------------------- |
+| `agoraId`    | AgoraId     | Identifiant Agora de l'objet créé        |
+| `externalId` | ?ExternalId | Identifiant externe renvoyé par l'API    |
+
+```php
+$created = $client->createLearner($input);
+$learner = $client->getLearner($created->agoraId); // relire l'objet complet si besoin
+```
+
+En lecture, chaque DTO de sortie expose `uuid` (l'`agoraId`) et `externalIdentifier` (`?ExternalId`).
+
+### Modification : `replace*()` (PUT) et `patch*()` (PATCH)
+
+Chaque ressource modifiable (Person, Learner, Trainer, Society, Session) propose deux méthodes de modification. Elles prennent en premier argument l'identifiant de l'objet à modifier (`AgoraId` ou `ExternalId`) et renvoient, comme les créations, un `CreatedOutput` (identifiants de l'objet modifié). Les inscriptions (Enrollment) ne sont pas modifiables.
+
+| Méthode      | HTTP    | Argument                                     | Effet                                                                 |
+| ------------ | ------- | -------------------------------------------- | --------------------------------------------------------------------- |
+| `replace*()` | `PUT`   | le DTO de création (`PersonInput`, …)        | **Remplace** l'objet : un champ facultatif non renseigné est **vidé** |
+| `patch*()`   | `PATCH` | un DTO de patch (`PersonPatchInput`, …)      | **Modifie** uniquement les champs renseignés                          |
+
+Les DTO de patch se construisent vides puis se remplissent par des setters chaînables : un champ jamais renseigné n'est pas envoyé (donc inchangé), un champ renseigné à `null` est vidé. Les setters des champs obligatoires n'acceptent pas `null`. La requête est envoyée en `application/merge-patch+json`.
+
+```php
+use AgoraLearningPhp\DTO\Input\Person\PersonPatchInput;
+use AgoraLearningPhp\Identifier\ExternalId;
+
+$client->patchPerson(
+    new ExternalId('MonERP', 'P-41'),
+    (new PersonPatchInput())
+        ->setTelephone('0102030405') // modifié
+        ->setJobTitle(null)          // vidé
+);                                   // tous les autres champs sont inchangés
+```
+
+À savoir :
+
+- **Relations** (responsables d'une société, référent d'une session, société d'un formateur) : désignées par leur identifiant (`AgoraId::getId()` ou `ExternalId::getId()`). En `replace*()`, une relation non renseignée est retirée ; en `patch*()`, `null` la retire.
+- **Fichiers** (image, CV, diplôme…) : URL publique téléchargée par Agora. Une valeur vide ou `null` **ne supprime pas** le fichier existant.
+- **Sessions et formateurs** : la route dépend du type (`/sessions/fixed/{id}`, `/sessions/opened/{id}`, `/trainers/employee/{id}`, `/trainers/free/{id}`). Le type d'une session et le statut d'un formateur ne peuvent pas être changés : utiliser le DTO correspondant au type existant, sinon l'API répond `404`.
+
+---
+
 ## Auth — Vérification de connexion
 
 ### `ping()`
@@ -54,58 +133,66 @@ Gender::GENDER_FEMALE;
 Gender::GENDER_MALE;
 ```
 
-### `createPerson(PersonInput $input) : PersonOutput`
+### `createPerson(PersonInput $input) : CreatedOutput`
 
-Crée une nouvelle personne à partir d'un objet PersonInput, retourne en cas de succès un objet PersonOutput
+Crée une nouvelle personne à partir d'un objet PersonInput, retourne en cas de succès un objet CreatedOutput contenant les identifiants de la personne créée (`agoraId` et `externalId`). Utilisez `getPerson()` pour récupérer la personne complète.
 
 ```php
 use AgoraLearningPhp\DTO\Input\Person\PersonInput;
 use AgoraLearningPhp\Enum\Gender;
+use AgoraLearningPhp\Identifier\ExternalId;
 
 $input = new PersonInput(
+    new ExternalId('MonERP', 'P-41'),  // externalIdentifier (obligatoire)
     'Dupont',                  // familyName (obligatoire)
     'Jean',                    // givenName (obligatoire)
-    'jean.dupont@example.com', // email
+    'jean.dupont@example.com', // email (obligatoire)
+    Gender::GENDER_MALE,       // gender
     '0601020304',              // telephone
     '12 rue de la Paix',       // addressStreet
     '75001',                   // addressPostcode
     'Paris',                   // addressLocality
     'FR',                      // addressCountry
     'url/image.jpeg',          // image (URL)
-    Gender::GENDER_MALE,       // gender
     new \DateTimeImmutable(),  // birthDate
     'Directeur commercial'     // jobTitle
 );
 
-$person = $client->createPerson($input);
+$created = $client->createPerson($input);
 
-echo $person->uuid;       // "per_01KRXPMF8FET29Q0YV9CYQ3Z8C"
+echo $created->agoraId->getId();    // "per_01KRXPMF8FET29Q0YV9CYQ3Z8C"
+echo $created->externalId->getId(); // "MonERP:P-41"
+
+$person = $client->getPerson($created->agoraId);
 echo $person->familyName; // "Dupont"
-echo $person->givenName;  // "Jean"
 ```
 
 **Champs de `PersonInput` :**
 
 | Champ             | Type                | Obligatoire | Description                    |
 | ----------------- | ------------------- | ----------- | ------------------------------ |
+| `externalIdentifier` | ExternalId | Oui         | Identifiant dans le système externe |
 | `familyName`      | string              | Oui         | Nom de famille                 |
 | `givenName`       | string              | Oui         | Prénom                         |
-| `email`           | ?string             | Non         | Adresse e-mail                 |
+| `email`           | string              | Oui         | Adresse e-mail                 |
+| `gender`          | string              | Non         | `Gender::GENDER_NA` par défaut |
 | `telephone`       | ?string             | Non         | Numéro de téléphone            |
 | `addressStreet`   | ?string             | Non         | Rue                            |
 | `addressPostcode` | ?string             | Non         | Code postal                    |
 | `addressLocality` | ?string             | Non         | Ville                          |
 | `addressCountry`  | ?string             | Non         | Pays                           |
 | `image`           | ?string             | Non         | URL d'avatar                   |
-| `gender`          | string              | Non         | `Gender::GENDER_NA` par défaut |
 | `birthDate`       | ?\DateTimeImmutable | Non         | Date de naissance              |
 | `jobTitle`        | ?string             | Non         | Intitulé du poste              |
+| `mobileNumber`    | ?string             | Non         | Téléphone portable               |
+| `societyId`       | ?string             | Non         | Société du contact : identifiant Agora ou `source:id` (dernier argument). En `replacePerson()`, `null` retire la relation |
 
 **Champs de `PersonOutput` :**
 
 | Champ             | Type                | Description                    |
 | ----------------- | ------------------- | ------------------------------ |
 | `uuid`            | string              | Identifiant unique             |
+| `externalIdentifier` | ?ExternalId         | Identifiant dans le système externe |
 | `familyName`      | string              | Nom de famille                 |
 | `givenName`       | string              | Prénom                         |
 | `email`           | ?string             | Adresse e-mail                 |
@@ -119,12 +206,47 @@ echo $person->givenName;  // "Jean"
 | `birthDate`       | ?\DateTimeImmutable | Date de naissance              |
 | `jobTitle`        | ?string             | Intitulé du poste              |
 
-### `getPerson(string $uuid) : PersonOutput`
+### `replacePerson(ApiObjectIdentifier $identifier, PersonInput $input) : CreatedOutput`
+
+Remplace la personne (`PUT /persons/{id}`). Le corps est le même que pour `createPerson()` : un champ facultatif non renseigné est vidé.
+
+```php
+$updated = $client->replacePerson(
+    new ExternalId('MonERP', 'P-41'),
+    new PersonInput(new ExternalId('MonERP', 'P-41'), 'Dupont', 'Jeanne', 'jeanne.dupont@example.com', Gender::GENDER_FEMALE)
+);
+echo $updated->agoraId->getId(); // "per_01KRXPMF8FET29Q0YV9CYQ3Z8C"
+```
+
+### `patchPerson(ApiObjectIdentifier $identifier, PersonPatchInput $patch) : CreatedOutput`
+
+Modifie uniquement les champs renseignés (`PATCH /persons/{id}`).
+
+```php
+use AgoraLearningPhp\DTO\Input\Person\PersonPatchInput;
+
+$client->patchPerson(
+    new AgoraId('per_01KRXPMF8FET29Q0YV9CYQ3Z8C'),
+    (new PersonPatchInput())->setTelephone('0102030405')->setJobTitle(null)
+);
+```
+
+**Setters de `PersonPatchInput` :** `setExternalIdentifier(ExternalId)`, `setFamilyName(string)`, `setGivenName(string)`, `setEmail(string)`, `setGender(string)`, `setTelephone(?string)`, `setMobileNumber(?string)`, `setAddressStreet(?string)`, `setAddressPostcode(?string)`, `setAddressLocality(?string)`, `setAddressCountry(?string)`, `setImage(?string)`, `setBirthDate(?\DateTimeInterface)`, `setJobTitle(?string)`, `setSocietyId(?string)` (`null` retire la relation).
+
+### `getPerson(ApiObjectIdentifier $identifier) : PersonOutput`
 
 Récupère une personne par son identifiant unique, retourne en cas de succès un objet PersonOutput
 
+`$person->societyId` contient l'UUID Agora de la société du contact, ou `null`.
+
+L'identifiant est un `ApiObjectIdentifier` : `AgoraId` ou `ExternalId` (voir [Identifiants](#identifiants)).
+
 ```php
-$person = $client->getPerson('per_01KRXPMF8GENX8HCB8QKECBGZC');
+use AgoraLearningPhp\Identifier\AgoraId;
+use AgoraLearningPhp\Identifier\ExternalId;
+
+$person = $client->getPerson(new AgoraId('per_01KRXPMF8GENX8HCB8QKECBGZC'));
+$person = $client->getPerson(new ExternalId('MonERP', 'P-42'));
 
 echo $person->uuid;       // per_01KRXPMF8GENX8HCB8QKECBGZC
 echo $person->familyName; // "Dupont"
@@ -146,6 +268,28 @@ foreach ($persons as $person) {
 
 **Retourne :** `PersonOutput[]`
 
+### `detachPerson(ApiObjectIdentifier $identifier) : void`
+
+Détache la personne de l'application source (`PATCH /persons/{id}/detach`, réponse 204 sans contenu) : elle reste sur
+Agora mais n'est plus liée à l'application qui l'a créée. À appeler avant `deletePerson()` lorsque l'application
+source supprime son objet.
+
+```php
+$client->detachPerson(new ExternalId('MonERP', 'P-42'));
+```
+
+**Lève :** `AgoraLearningClientException` de code 404 si la personne n'existe pas, ou en cas de refus d'Agora.
+
+### `deletePerson(ApiObjectIdentifier $identifier) : void`
+
+Supprime le contact (`DELETE /persons/{id}`, réponse 204 sans contenu).
+
+```php
+$client->deletePerson(new ExternalId('MonERP', 'P-42'));
+```
+
+**Lève :** `AgoraLearningClientException` de code 404 si le contact n'existe pas.
+
 ---
 
 ## Trainer — Gestion des formateurs
@@ -164,15 +308,17 @@ TrainerStatut::STATUT_EMPLOYE; // formateur salarié
 TrainerStatut::STATUT_FREE;    // formateur indépendant
 ```
 
-### `createTrainerEmployee(TrainerEmployeeInput $input) : TrainerOutput`
+### `createTrainerEmployee(TrainerEmployeeInput $input) : CreatedOutput`
 
-Crée un formateur salarié.
+Crée un formateur salarié, retourne en cas de succès un objet CreatedOutput contenant les identifiants du formateur créé (`agoraId` et `externalId`). Utilisez `getTrainer()` pour récupérer le formateur complet.
 
 ```php
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerEmployeeInput;
 use AgoraLearningPhp\Enum\Gender;
+use AgoraLearningPhp\Identifier\ExternalId;
 
 $input = new TrainerEmployeeInput(
+    new ExternalId('MonERP', 'T-41'),  // externalIdentifier (obligatoire)
     'Bernard',                        // familyName (obligatoire)
     'Luc',                            // givenName (obligatoire)
     'luc.bernard@example.com',        // email (obligatoire)
@@ -192,12 +338,15 @@ $input = new TrainerEmployeeInput(
     'url/cv_file.pdf',                // cv (url)
     'url/degree_file.pdf',            // degree (url)
     'url/contract_file.pdf',          // contract (url)
-    'Description du poste'            // jobDescription
+    'url/job_description.pdf'         // jobDescription (url)
 );
 
-$trainer = $client->createTrainerEmployee($input);
+$created = $client->createTrainerEmployee($input);
 
-echo $trainer->uuid;
+echo $created->agoraId->getId();    // "per_01KRXPMF8GENX8HCB8QKECBGZC"
+echo $created->externalId->getId(); // "MonERP:T-41"
+
+$trainer = $client->getTrainer($created->agoraId);
 echo $trainer->familyName; // "Bernard"
 ```
 
@@ -205,6 +354,7 @@ echo $trainer->familyName; // "Bernard"
 
 | Champ                | Type                | Obligatoire | Description                    |
 | -------------------- | ------------------- | ----------- | ------------------------------ |
+| `externalIdentifier` | ExternalId | Oui         | Identifiant dans le système externe |
 | `familyName`         | string              | Oui         | Nom de famille                 |
 | `givenName`          | string              | Oui         | Prénom                         |
 | `email`              | string              | Oui         | Adresse e-mail                 |
@@ -224,16 +374,18 @@ echo $trainer->familyName; // "Bernard"
 | `cv`                 | ?string             | Non         | URL du CV                      |
 | `degree`             | ?string             | Non         | URL des Diplômes               |
 | `contract`           | ?string             | Non         | URL du contrat                 |
-| `jobDescription`     | ?string             | Non         | Description du poste           |
+| `jobDescription`     | ?string             | Non         | URL de la fiche de poste       |
 
-### `createTrainerFree(TrainerFreeInput $input) : TrainerOutput`
+### `createTrainerFree(TrainerFreeInput $input) : CreatedOutput`
 
-Crée un formateur indépendant. Hérite de tous les champs de `TrainerEmployeeInput` et ajoute :
+Crée un formateur indépendant, retourne en cas de succès un objet CreatedOutput contenant les identifiants du formateur créé (`agoraId` et `externalId`). Utilisez `getTrainer()` pour récupérer le formateur complet. Hérite de tous les champs de `TrainerEmployeeInput` et ajoute :
 
 ```php
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerFreeInput;
+use AgoraLearningPhp\Identifier\ExternalId;
 
 $input = new TrainerFreeInput(
+    new ExternalId('MonERP', 'T-42'), // externalIdentifier (obligatoire)
     'Martin',                      // familyName (obligatoire)
     'Claire',                      // givenName (obligatoire)
     'claire.martin@freelance.com', // email (obligatoire)
@@ -254,9 +406,12 @@ $input = new TrainerFreeInput(
     'FR'                           // billingAddressCountry
 );
 
-$trainer = $client->createTrainerFree($input);
+$created = $client->createTrainerFree($input);
 
-echo $trainer->uuid;
+echo $created->agoraId->getId();    // "per_01KRXPMF8GENX8HCB8QKECBGZD"
+echo $created->externalId->getId(); // "MonERP:T-42"
+
+$trainer = $client->getTrainer($created->agoraId);
 ```
 
 **Champs supplémentaires de `TrainerFreeInput` :**
@@ -279,6 +434,7 @@ echo $trainer->uuid;
 | Champ                        | Type                | Description                                         |
 | ---------------------------- | ------------------- | --------------------------------------------------- |
 | `uuid`                       | string              | Identifiant unique                                  |
+| `externalIdentifier`         | ?ExternalId         | Identifiant dans le système externe                 |
 | `familyName`                 | string              | Nom de famille                                      |
 | `givenName`                  | string              | Prénom                                              |
 | `email`                      | string              | Adresse e-mail                                      |
@@ -298,13 +454,14 @@ echo $trainer->uuid;
 | `cv`                         | ?string             | URL du CV                                           |
 | `degree`                     | ?string             | URL des Diplômes                                    |
 | `contract`                   | ?string             | URL du contrat                                      |
-| `jobDescription`             | ?string             | Description du poste                                |
+| `jobDescription`             | ?string             | URL de la fiche de poste                            |
 
 **Champs de `TrainerFreeOutput` :**
 
 | Champ                        | Type                | Description                                         |
 | ---------------------------- | ------------------- | --------------------------------------------------- |
 | `uuid`                       | string              | Identifiant unique                                  |
+| `externalIdentifier`         | ?ExternalId         | Identifiant dans le système externe                 |
 | `familyName`                 | string              | Nom de famille                                      |
 | `givenName`                  | string              | Prénom                                              |
 | `email`                      | string              | Adresse e-mail                                      |
@@ -324,7 +481,7 @@ echo $trainer->uuid;
 | `cv`                         | ?string             | URL du CV                                           |
 | `degree`                     | ?string             | URL des Diplômes                                    |
 | `contract`                   | ?string             | URL du contrat                                      |
-| `jobDescription`             | ?string             | Description du poste                                |
+| `jobDescription`             | ?string             | URL de la fiche de poste                            |
 | `hourlyCost`                 | ?float              | Coût horaire en euros                               |
 | `daylyCost`                  | ?float              | Coût journalier en euros                            |
 | `siret`                      | ?string             | Numéro SIRET                                        |
@@ -336,10 +493,40 @@ echo $trainer->uuid;
 | `billingAddressLocality`     | ?string             | Ville - Adresse de facturation                      |
 | `billingAddressCountry`      | ?string             | Pays - Adresse de facturation                       |
 
-### `getTrainer(string $uuid) : TrainerOutput`
+### `replaceTrainerEmployee(ApiObjectIdentifier $identifier, TrainerEmployeeInput $input) : CreatedOutput`
+### `replaceTrainerFree(ApiObjectIdentifier $identifier, TrainerFreeInput $input) : CreatedOutput`
+
+Remplace le formateur (`PUT /trainers/employee/{id}` ou `PUT /trainers/free/{id}`). Le corps est le même qu'à la création ; `notifyUser` est ignoré (pris en compte uniquement à la création). L'e-mail reste unique (`409` sinon).
 
 ```php
-$trainer = $client->getTrainer('per_01KRXPQB15F1RSTJHET0FAWGPT');
+$client->replaceTrainerEmployee(
+    new ExternalId('MonERP', 'T-41'),
+    new TrainerEmployeeInput(new ExternalId('MonERP', 'T-41'), 'Martin', 'Sophie', 'sophie.martin@example.com', false)
+);
+```
+
+### `patchTrainerEmployee(ApiObjectIdentifier $identifier, TrainerEmployeePatchInput $patch) : CreatedOutput`
+### `patchTrainerFree(ApiObjectIdentifier $identifier, TrainerFreePatchInput $patch) : CreatedOutput`
+
+Modifie uniquement les champs renseignés (`PATCH /trainers/employee/{id}` ou `PATCH /trainers/free/{id}`).
+
+```php
+use AgoraLearningPhp\DTO\Input\Trainer\TrainerFreePatchInput;
+
+$client->patchTrainerFree(
+    new ExternalId('MonERP', 'T-42'),
+    (new TrainerFreePatchInput())->setHourlyCost(65.0)->setSocietyId(null)
+);
+```
+
+**Setters de `TrainerEmployeePatchInput` :** `setExternalIdentifier(ExternalId)`, `setFamilyName(string)`, `setGivenName(string)`, `setEmail(string)`, `setGender(string)`, `setTelephone(?string)`, `setMobileNumber(?string)`, `setAddressStreet(?string)`, `setAddressPostcode(?string)`, `setAddressLocality(?string)`, `setAddressCountry(?string)`, `setImage(?string)`, `setBirthDate(?\DateTimeInterface)`, `setJobTitle(?string)`, `setVisibleInformation(bool)`, `setSocietyId(?string)`, `setCv(?string)`, `setDegree(?string)`, `setContract(?string)`, `setJobDescription(?string)`.
+
+**Setters supplémentaires de `TrainerFreePatchInput` :** `setHourlyCost(?float)`, `setDaylyCost(?float)`, `setSiret(?string)`, `setTvaNumber(?string)`, `setUrssafNumber(?string)`, `setUrssafCertificate(?string)`, `setBillingAddressStreet(?string)`, `setBillingAddressPostcode(?string)`, `setBillingAddressLocality(?string)`, `setBillingAddressCountry(?string)`.
+
+### `getTrainer(ApiObjectIdentifier $identifier) : TrainerOutput`
+
+```php
+$trainer = $client->getTrainer(new AgoraId('per_01KRXPQB15F1RSTJHET0FAWGPT'));
 
 echo $trainer->familyName;
 echo $trainer->email;
@@ -358,26 +545,50 @@ foreach ($trainers as $trainer) {
 
 **Retourne :** `TrainerOutput[]`
 
+### `detachTrainer(ApiObjectIdentifier $identifier) : void`
+
+Détache le formateur de l'application source (`PATCH /trainers/{id}/detach`, réponse 204 sans contenu) : il reste sur
+Agora mais n'est plus lié à l'application qui l'a créé. À appeler avant `deleteTrainer()` lorsque l'application
+source supprime son objet.
+
+```php
+$client->detachTrainer(new ExternalId('MonERP', 'T-42'));
+```
+
+**Lève :** `AgoraLearningClientException` de code 404 si le formateur n'existe pas, ou en cas de refus d'Agora.
+
+### `deleteTrainer(ApiObjectIdentifier $identifier) : void`
+
+Supprime le formateur (`DELETE /trainers/{id}`, réponse 204 sans contenu). Une seule méthode pour les deux statuts (employé et indépendant).
+
+```php
+$client->deleteTrainer(new ExternalId('MonERP', 'T-42'));
+```
+
+**Lève :** `AgoraLearningClientException` de code 404 si le formateur n'existe pas.
+
 ---
 
 ## Learner — Gestion des apprenants
 
 Un **Learner** est un compte apprenant pouvant se connecter à l'espace apprenant.
 
-### `createLearner(LearnerInput $input) : LearnerOutput`
+### `createLearner(LearnerInput $input) : CreatedOutput`
 
-Crée un nouvel apprenant.
+Crée un nouvel apprenant, retourne en cas de succès un objet CreatedOutput contenant les identifiants de l'apprenant créé (`agoraId` et `externalId`). Utilisez `getLearner()` pour récupérer l'apprenant complet.
 
 ```php
 use AgoraLearningPhp\DTO\Input\Learner\LearnerInput;
 use AgoraLearningPhp\Enum\Gender;
+use AgoraLearningPhp\Identifier\ExternalId;
 
 $input = new LearnerInput(
+    new ExternalId('MonERP', 'L-41'), // externalIdentifier (obligatoire)
     'Martin',                    // familyName (obligatoire)
     'Sophie',                    // givenName (obligatoire)
     'sophie.martin@example.com', // recoverEmail (obligatoire) — e-mail de récupération
+    'sophie@pro.example.com',    // email (obligatoire) — e-mail de contact
     Gender::GENDER_FEMALE,       // gender
-    'sophie@pro.example.com',    // email (e-mail de contact)
     '0612131415',                // telephone
     '5 avenue des Fleurs',       // addressStreet
     '69001',                     // addressPostcode
@@ -388,20 +599,24 @@ $input = new LearnerInput(
     'Responsable RH'             // jobTitle
 );
 
-$learner = $client->createLearner($input);
+$created = $client->createLearner($input);
 
-echo $learner->uuid;
+echo $created->agoraId->getId();    // "per_01KRXPMF8GENX8HCB8QKECBGZC"
+echo $created->externalId->getId(); // "MonERP:L-41"
+
+$learner = $client->getLearner($created->agoraId);
 ```
 
 **Champs de `LearnerInput` :**
 
 | Champ             | Type                | Obligatoire | Description                      |
 | ----------------- | ------------------- | ----------- | -------------------------------- |
+| `externalIdentifier` | ExternalId | Oui         | Identifiant dans le système externe |
 | `familyName`      | string              | Oui         | Nom de famille                   |
 | `givenName`       | string              | Oui         | Prénom                           |
 | `recoverEmail`    | string              | Oui         | E-mail de récupération du compte |
+| `email`           | string              | Oui         | E-mail de contact                |
 | `gender`          | string              | Non         | `Gender::GENDER_NA` par défaut   |
-| `email`           | ?string             | Non         | E-mail de contact                |
 | `telephone`       | ?string             | Non         | Numéro de téléphone              |
 | `addressStreet`   | ?string             | Non         | Rue                              |
 | `addressPostcode` | ?string             | Non         | Code postal                      |
@@ -410,14 +625,41 @@ echo $learner->uuid;
 | `image`           | ?string             | Non         | URL d'une image                  |
 | `birthDate`       | ?\DateTimeImmutable | Non         | Date de naissance                |
 | `jobTitle`        | ?string             | Non         | Intitulé du poste                |
+| `mobileNumber`    | ?string             | Non         | Téléphone portable               |
+| `societyId`       | ?string             | Non         | Société de l'apprenant : identifiant Agora ou `source:id` (dernier argument). En `replaceLearner()`, `null` retire la relation |
 
-### `getLearner(string $uuid) : LearnerOutput`
+### `replaceLearner(ApiObjectIdentifier $identifier, LearnerInput $input) : CreatedOutput`
+
+Remplace l'apprenant (`PUT /learners/{id}`). L'identifiant de connexion et le statut du compte sont conservés.
 
 ```php
-$learner = $client->getLearner('per_01KRXPMF8GENX8HCB8QKECBGZC');
+$client->replaceLearner(
+    new ExternalId('MonERP', 'L-41'),
+    new LearnerInput(new ExternalId('MonERP', 'L-41'), 'Lennon', 'John', 'john.recovery@example.com', 'john.lennon@example.com')
+);
+```
+
+### `patchLearner(ApiObjectIdentifier $identifier, LearnerPatchInput $patch) : CreatedOutput`
+
+Modifie uniquement les champs renseignés (`PATCH /learners/{id}`).
+
+```php
+use AgoraLearningPhp\DTO\Input\Learner\LearnerPatchInput;
+
+$client->patchLearner(new ExternalId('MonERP', 'L-41'), (new LearnerPatchInput())->setAddressLocality('Liverpool'));
+```
+
+**Setters de `LearnerPatchInput` :** ceux de `PersonPatchInput`, plus `setRecoverEmail(string)` et `setSocietyId(?string)` (`null` retire la relation).
+
+### `getLearner(ApiObjectIdentifier $identifier) : LearnerOutput`
+
+```php
+$learner = $client->getLearner(new AgoraId('per_01KRXPMF8GENX8HCB8QKECBGZC'));
 
 echo $learner->uuid;
 ```
+
+`$learner->society` contient la société de l'apprenant (`SocietyOutput`), ou `null`.
 
 ### `getCollectionLearner() : array`
 
@@ -432,44 +674,38 @@ foreach ($learners as $learner) {
 
 **Retourne :** `LearnerOutput[]`
 
+### `deleteLearner(ApiObjectIdentifier $identifier) : void`
+
+Supprime l'apprenant (`DELETE /learners/{id}`, réponse 204 sans contenu).
+
+```php
+$client->deleteLearner(new ExternalId('MonERP', 'L-42'));
+```
+
+**Lève :** `AgoraLearningClientException` de code 404 si l'apprenant n'existe pas.
+
 ---
 
 ## Society — Gestion des sociétés
 
-Une **Society** représente une entreprise cliente ou partenaire. Elle peut embarquer jusqu'à trois contacts (référent légal, référent administratif, référent RH), chacun modélisé par un `PersonInput`.
+Une **Society** représente une entreprise cliente ou partenaire. Elle peut référencer jusqu'à trois contacts **existants** (référent légal, référent administratif, référent RH), désignés par leur identifiant (`AgoraId` ou `ExternalId`, sous forme de chaîne `getId()`). Créer d'abord les contacts avec `createPerson()`.
 
-### `createSociety(SocietyInput $input) : SocietyOutput`
+### `createSociety(SocietyInput $input) : CreatedOutput`
 
-Crée une nouvelle société.
+Crée une nouvelle société, retourne en cas de succès un objet CreatedOutput contenant les identifiants de la société créée (`agoraId` et `externalId`). Utilisez `getSociety()` pour récupérer la société complète.
 
 ```php
 use AgoraLearningPhp\DTO\Input\Society\SocietyInput;
 use AgoraLearningPhp\DTO\Input\Person\PersonInput;
 use AgoraLearningPhp\Enum\Gender;
+use AgoraLearningPhp\Identifier\ExternalId;
 
-// Contacts optionnels
-$legalPerson = new PersonInput(
-    'Legrand',
-    'Pierre',
-    'pierre.legrand@acme.example.com'
-    Gender::GENDER_MALE
-);
-
-$administrativePerson = new PersonInput(
-    'Legrand',
-    'Paul',
-    'paul.legrand@acme.example.com'
-    Gender::GENDER_MALE
-);
-
-$rhPerson = new PersonInput(
-    'Legrand',
-    'Jacques',
-    'jacques.legrand@acme.example.com'
-    Gender::GENDER_MALE
-);
+// Contacts optionnels : des personnes existantes, désignées par leur identifiant
+$legalPersonId = new ExternalId('MonERP', 'P-42');
+$client->createPerson(new PersonInput($legalPersonId, 'Legrand', 'Pierre', 'pierre.legrand@acme.example.com', Gender::GENDER_MALE));
 
 $input = new SocietyInput(
+    new ExternalId('MonERP', 'SOC-41'), // externalIdentifier (obligatoire)
     'ACME Corp',                    // name (obligatoire)
     '12345678901234',               // siret
     'SAS',                          // legalStatus
@@ -483,15 +719,18 @@ $input = new SocietyInput(
     '75002',                        // addressPostcodeInvoicing
     'Paris',                        // addressLocalityInvoicing
     'FR',                           // addressCountryInvoicing
-    $legalPerson,                   // legalPerson
-    $administrativePerson,          // administrativePerson
-    $rhPerson,                      // rhPerson
+    $legalPersonId->getId(),        // legalPersonId ("MonERP:P-42")
+    'per_01KRXPMF8GENX8HCB8QKECBGZC', // administrativePersonId (AgoraId d'un contact existant)
+    null,                           // rhPersonId
     'url/image.jpeg',               // image
 );
 
-$society = $client->createSociety($input);
+$created = $client->createSociety($input);
 
-echo $society->uuid; // "soc_01KRXPMF93F039K58SC9QEZZNY"
+echo $created->agoraId->getId();    // "soc_01KRXPMF93F039K58SC9QEZZNY"
+echo $created->externalId->getId(); // "MonERP:SOC-41"
+
+$society = $client->getSociety($created->agoraId);
 echo $society->name; // "ACME Corp"
 ```
 
@@ -499,6 +738,7 @@ echo $society->name; // "ACME Corp"
 
 | Champ                       | Type         | Obligatoire | Description                      |
 | --------------------------- | ------------ | ----------- | -------------------------------- |
+| `externalIdentifier`        | ExternalId | Oui         | Identifiant dans le système externe (envoyé sous la clé `externalId`) |
 | `name`                      | string       | Oui         | Raison sociale                   |
 | `siret`                     | ?string      | Non         | Numéro SIRET                     |
 | `legalStatus`               | ?string      | Non         | Forme juridique (ex : SAS, SARL) |
@@ -512,9 +752,9 @@ echo $society->name; // "ACME Corp"
 | `addressPostcodeInvoicing`  | ?string      | Non         | Code postale facturation         |
 | `addressLocalityInvoicing`  | ?string      | Non         | Ville facturation                |
 | `addressCountryInvoicing`   | ?string      | Non         | Pays facturation                 |
-| `legalPerson`               | ?PersonInput | Non         | Référent légal                   |
-| `administrativePerson`      | ?PersonInput | Non         | Référent administratif           |
-| `rhPerson`                  | ?PersonInput | Non         | Référent RH                      |
+| `legalPersonId`             | ?string      | Non         | Identifiant du référent légal    |
+| `administrativePersonId`    | ?string      | Non         | Identifiant du référent administratif |
+| `rhPersonId`                | ?string      | Non         | Identifiant du référent RH       |
 | `image`                     | ?string      | Non         | URL du logo de la société        |
 
 **Champs de `SocietyOutput` :**
@@ -522,6 +762,7 @@ echo $society->name; // "ACME Corp"
 | Champ                       | Type          | Description                      |
 | --------------------------- | ------------- | -------------------------------- |
 | `uuid`                      | string        | Identifiant unique               |
+| `externalIdentifier`        | ?ExternalId   | Identifiant dans le système externe |
 | `name`                      | string        | Raison sociale                   |
 | `siret`                     | ?string       | Numéro SIRET                     |
 | `legalStatus`               | ?string       | Forme juridique (ex : SAS, SARL) |
@@ -540,10 +781,37 @@ echo $society->name; // "ACME Corp"
 | `rhPerson`                  | ?PersonOutput | Référent RH                      |
 | `image`                     | ?string       | URL du logo de la société        |
 
-### `getSociety(string $uuid) : SocietyOutput`
+### `replaceSociety(ApiObjectIdentifier $identifier, SocietyInput $input) : CreatedOutput`
+
+Remplace la société (`PUT /societies/{id}`) : un champ facultatif non renseigné est vidé et un référent non renseigné est retiré.
 
 ```php
-$society = $client->getSociety('soc_01KRXPMF93F039K58SC9QEZZNY');
+$client->replaceSociety(
+    new ExternalId('MonERP', 'SOC-41'),
+    new SocietyInput(new ExternalId('MonERP', 'SOC-41'), 'ACME SA', '12345678901234', 'SA')
+);
+```
+
+### `patchSociety(ApiObjectIdentifier $identifier, SocietyPatchInput $patch) : CreatedOutput`
+
+Modifie uniquement les champs renseignés (`PATCH /societies/{id}`).
+
+```php
+use AgoraLearningPhp\DTO\Input\Society\SocietyPatchInput;
+
+// Retirer le référent RH et changer le téléphone
+$client->patchSociety(
+    new AgoraId('soc_01KRXPMF93F039K58SC9QEZZNY'),
+    (new SocietyPatchInput())->setRhPersonId(null)->setTelephone('0140506071')
+);
+```
+
+**Setters de `SocietyPatchInput` :** `setExternalIdentifier(ExternalId)`, `setName(string)`, `setSiret(?string)`, `setLegalStatus(?string)`, `setEmail(?string)`, `setTelephone(?string)`, `setAddressStreetHeadOffice(?string)`, `setAddressPostcodeHeadOffice(?string)`, `setAddressLocalityHeadOffice(?string)`, `setAddressCountryHeadOffice(?string)`, `setAddressStreetInvoicing(?string)`, `setAddressPostcodeInvoicing(?string)`, `setAddressLocalityInvoicing(?string)`, `setAddressCountryInvoicing(?string)`, `setLegalPersonId(?string)`, `setAdministrativePersonId(?string)`, `setRhPersonId(?string)`, `setImage(?string)`.
+
+### `getSociety(ApiObjectIdentifier $identifier) : SocietyOutput`
+
+```php
+$society = $client->getSociety(new AgoraId('soc_01KRXPMF93F039K58SC9QEZZNY'));
 
 echo $society->name;
 if ($society->legalPerson !== null) {
@@ -563,6 +831,28 @@ foreach ($societies as $society) {
 ```
 
 **Retourne :** `SocietyOutput[]`
+
+### `detachSociety(ApiObjectIdentifier $identifier) : void`
+
+Détache la société de l'application source (`PATCH /societies/{id}/detach`, réponse 204 sans contenu) : elle reste sur
+Agora mais n'est plus liée à l'application qui l'a créée. À appeler avant `deleteSociety()` lorsque l'application
+source supprime son objet.
+
+```php
+$client->detachSociety(new ExternalId('MonERP', 'SOC-42'));
+```
+
+**Lève :** `AgoraLearningClientException` de code 404 si la société n'existe pas, ou en cas de refus d'Agora.
+
+### `deleteSociety(ApiObjectIdentifier $identifier) : void`
+
+Supprime la société (`DELETE /societies/{id}`, réponse 204 sans contenu).
+
+```php
+$client->deleteSociety(new ExternalId('MonERP', 'SOC-42'));
+```
+
+**Lève :** `AgoraLearningClientException` de code 404 si la société n'existe pas.
 
 ---
 
@@ -590,13 +880,16 @@ SessionMode::SESSION_MODE_BLENDED;      // mixte
 SessionMode::SESSION_MODE_DISTANCE;     // à distance
 ```
 
-### `createSession(SessionInput $input) : SessionOutput` — Session fixe
+### `createSession(SessionInput $input) : CreatedOutput` — Session fixe
+
+Crée une session à partir d'un objet SessionInput, retourne en cas de succès un objet CreatedOutput contenant les identifiants de la session créée (`agoraId` et `externalId`). Utilisez `getSession()` pour récupérer la session complète.
 
 ```php
 use AgoraLearningPhp\DTO\Input\Session\SessionInput;
 use AgoraLearningPhp\DTO\Input\Session\FixedSessionInput;
 use AgoraLearningPhp\Enum\SessionType;
 use AgoraLearningPhp\Enum\SessionMode;
+use AgoraLearningPhp\Identifier\ExternalId;
 
 $sessionData = new FixedSessionInput(
     new \DateTimeImmutable('2026-06-01'),  // availabilityStartDate
@@ -606,6 +899,7 @@ $sessionData = new FixedSessionInput(
 );
 
 $input = new SessionInput(
+    new ExternalId('MonERP', 'S-41'),          // externalIdentifier (obligatoire)
     'Formation PHP avancé',                    // title (obligatoire)
     $sessionData,                              // sessionData (obligatoire)
     false,                                     // manualDuration
@@ -615,15 +909,20 @@ $input = new SessionInput(
     21600,                                     // durationInSeconds (6 heures)
     'Formation intensive PHP',                 // description
     20,                                        // maxPlaces
+    null,                                      // pedagogicalTrainer (UUID du référent pédagogique)
+    null,                                      // administrativePerson (UUID du référent administratif)
     'mon-site.com/questionnaire_preliminaire', // urlPreTrainingSurvey
     'mon-site.com/questionnaire_a_chaud',      // urlOnTheSpotSurvey
     'mon-site.com/questionnaire_a_froid',      // urlDelayedSurvey
     'url/image.jpeg'                           // image
 );
 
-$session = $client->createSession($input);
+$created = $client->createSession($input);
+echo $created->agoraId->getId();    // "ses_01KRXPMF96F9DVGQKHHPD386D7"
+echo $created->externalId->getId(); // "MonERP:S-41"
 
-echo $session->uuid;  // "ses_01KRXPMF96F9DVGQKHHPD386D7"
+// Récupérer la session complète
+$session = $client->getSession($created->agoraId);
 echo $session->title; // "Formation PHP avancé"
 echo $session->type;  // "INTER"
 echo $session->mode;  // "FACE_TO_FACE"
@@ -636,11 +935,12 @@ if ($session->sessionData instanceof FixedSessionOutput) {
 }
 ```
 
-### `createSession(SessionInput $input) : SessionOutput` — Session ouverte
+### `createSession(SessionInput $input) : CreatedOutput` — Session ouverte
 
 ```php
 use AgoraLearningPhp\DTO\Input\Session\SessionInput;
 use AgoraLearningPhp\DTO\Input\Session\OpenedSessionInput;
+use AgoraLearningPhp\Identifier\ExternalId;
 
 $sessionData = new OpenedSessionInput(
     new \DateTimeImmutable('2026-01-01'), // subscribeStartDate (Y-m-d)
@@ -649,14 +949,17 @@ $sessionData = new OpenedSessionInput(
 );
 
 $input = new SessionInput(
+    new ExternalId('MonERP', 'S-42'), // externalIdentifier (obligatoire)
     'Parcours e-learning PHP',
     $sessionData
     // tous les autres paramètres sont optionnels
 );
 
-$session = $client->createSession($input);
+$created = $client->createSession($input);
+echo $created->agoraId->getId(); // "ses_01KRXPMF97F8BRPH7N7972QRYY"
 
-echo $session->uuid; // "ses_01KRXPMF97F8BRPH7N7972QRYY"
+// Récupérer la session complète
+$session = $client->getSession($created->agoraId);
 echo $session->type; // "INTER" (fixé automatiquement)
 echo $session->mode; // "E_LEARNING" (fixé automatiquement)
 
@@ -673,6 +976,7 @@ if ($session->sessionData instanceof OpenedSessionOutput) {
 
 | Champ                  | Type                                    | Obligatoire | Description                     |
 | ---------------------- | --------------------------------------- | ----------- | ------------------------------- |
+| `externalIdentifier`   | ExternalId | Oui         | Identifiant dans le système externe |
 | `title`                | string                                  | Oui         | Titre de la session             |
 | `sessionData`          | `FixedSessionInput\|OpenedSessionInput` | Oui         | Données spécifiques au type     |
 | `manualDuration`       | bool                                    | Non         | `false` par défaut              |
@@ -682,6 +986,8 @@ if ($session->sessionData instanceof OpenedSessionOutput) {
 | `durationInSeconds`    | int                                     | Non         | `0` par défaut                  |
 | `description`          | ?string                                 | Non         | Description de la session       |
 | `maxPlaces`            | ?int                                    | Non         | Nombre de places maximum        |
+| `pedagogicalTrainer`   | ?string                                 | Non         | UUID du référent pédagogique    |
+| `administrativePerson` | ?string                                 | Non         | UUID du référent administratif  |
 | `urlPreTrainingSurvey` | ?string                                 | Non         | URL questionnaire pré-formation |
 | `urlOnTheSpotSurvey`   | ?string                                 | Non         | URL questionnaire à chaud       |
 | `urlDelayedSurvey`     | ?string                                 | Non         | URL questionnaire à froid       |
@@ -692,6 +998,7 @@ if ($session->sessionData instanceof OpenedSessionOutput) {
 | Champ                  | Type                                      | Description                                           |
 | ---------------------- | ----------------------------------------- | ----------------------------------------------------- |
 | `uuid`                 | string                                    | Identifiant unique                                    |
+| `externalIdentifier`   | ?ExternalId                               | Identifiant dans le système externe                   |
 | `title`                | string                                    | Titre de la session                                   |
 | `type`                 | string                                    | `INTER` ou `INTRA`                                    |
 | `mode`                 | string                                    | `FACE_TO_FACE`, `E_LEARNING`, `BLENDED` ou `DISTANCE` |
@@ -708,10 +1015,65 @@ if ($session->sessionData instanceof OpenedSessionOutput) {
 | `urlDelayedSurvey`     | ?string                                   | URL questionnaire à froid                             |
 | `image`                | ?string                                   | URL de l'image d'illustration                         |
 
-### `getSession(string $uuid) : SessionOutput`
+### `replaceSession(ApiObjectIdentifier $identifier, SessionInput $input) : CreatedOutput`
+
+Remplace la session (`PUT /sessions/fixed/{id}` ou `PUT /sessions/opened/{id}`, selon le type de `$input->sessionData`). Le type doit être celui de la session existante (sinon `404`) ; un champ facultatif non renseigné est vidé.
 
 ```php
-$session = $client->getSession('ses_01KRXPMF97F8BRPH7N7972QRYY');
+$client->replaceSession(
+    new ExternalId('MonERP', 'S-41'),
+    new SessionInput(
+        new ExternalId('MonERP', 'S-41'),
+        'Formation PHP avancée',
+        new FixedSessionInput(
+            new \DateTimeImmutable('2026-03-02T09:00:00+01:00'),
+            new \DateTimeImmutable('2026-03-04T17:00:00+01:00'),
+            SessionType::SESSION_TYPE_INTER,
+            SessionMode::SESSION_MODE_BLENDED
+        )
+    )
+);
+```
+
+### `patchSession(ApiObjectIdentifier $identifier, AbstractSessionPatchInput $patch) : CreatedOutput`
+
+Modifie uniquement les champs renseignés. La route dépend de la classe du patch : `FixedSessionPatchInput` → `PATCH /sessions/fixed/{id}`, `OpenedSessionPatchInput` → `PATCH /sessions/opened/{id}`. La cohérence des dates est vérifiée avec les valeurs déjà enregistrées (`422` si la fin précède le début).
+
+```php
+use AgoraLearningPhp\DTO\Input\Session\FixedSessionPatchInput;
+use AgoraLearningPhp\DTO\Input\Session\OpenedSessionPatchInput;
+
+// Décaler les dates d'une session à dates fixes
+$client->patchSession(
+    new ExternalId('MonERP', 'S-41'),
+    (new FixedSessionPatchInput())
+        ->setAvailabilityStartDate(new \DateTimeImmutable('2026-03-02T09:00:00+01:00'))
+        ->setAvailabilityEndDate(new \DateTimeImmutable('2026-03-04T17:00:00+01:00'))
+);
+
+// Allonger la durée d'accès d'une session ouverte
+$client->patchSession(new AgoraId('ses_01KRXPMF9AE5HBH7JY2N8Q2PQB'), (new OpenedSessionPatchInput())->setAccessDurationDays(60));
+```
+
+**Setters communs :** `setExternalIdentifier(ExternalId)`, `setTitle(string)`, `setDescription(?string)`, `setDurationInSeconds(int)`, `setManualDuration(bool)`, `setPrice(float)`, `setMaxPlaces(?int)` (`null` = illimité), `setHasForum(bool)`, `setNotifyMailForum(bool)`, `setPedagogicalTrainer(?string)`, `setAdministrativePerson(?string)`, `setUrlPreTrainingSurvey(?string)`, `setUrlOnTheSpotSurvey(?string)`, `setUrlDelayedSurvey(?string)`, `setImage(?string)`.
+
+**`FixedSessionPatchInput` :** `setType(string)`, `setMode(string)`, `setAvailabilityStartDate(\DateTimeInterface)`, `setAvailabilityEndDate(\DateTimeInterface)`.
+
+**`OpenedSessionPatchInput` :** `setSubscribeStartDate(\DateTimeInterface)`, `setSubscribeEndDate(\DateTimeInterface)`, `setAccessDurationDays(int)`.
+
+### `getSession(ApiObjectIdentifier $identifier) : SessionOutput`
+
+Une session peut être lue par son identifiant Agora ou par l'identifiant qu'elle porte dans un système externe (voir [Identifiants](#identifiants)).
+
+```php
+use AgoraLearningPhp\Identifier\AgoraId;
+use AgoraLearningPhp\Identifier\ExternalId;
+
+// Identifiant Agora
+$session = $client->getSession(new AgoraId('ses_01KRXPMF97F8BRPH7N7972QRYY'));
+
+// Identifiant externe : appelle GET /sessions/MonERP%3AS-42
+$session = $client->getSession(new ExternalId('MonERP', 'S-42'));
 
 echo $session->title;
 echo $session->price;
@@ -730,28 +1092,116 @@ foreach ($sessions as $session) {
 
 **Retourne :** `SessionOutput[]`
 
+### `detachSession(ApiObjectIdentifier $identifier) : void`
+
+Détache la session de l'application source (`PATCH /sessions/{id}/detach`, réponse 204 sans contenu) : elle
+reste sur Agora mais n'est plus liée à l'application qui l'a créée. Agora conserve l'identifiant externe et
+passe la session à l'état détaché.
+
+```php
+$client->detachSession(new ExternalId('MonERP', 'S-42'));
+```
+
+**Lève :** `AgoraLearningClientException` de code 404 si la session n'existe pas, ou de code 500 si Agora
+refuse le détachement (session créée dans Agora ou supprimée).
+
+### `deleteSession(ApiObjectIdentifier $identifier) : void`
+
+Supprime la session (`DELETE /sessions/{id}`, réponse 204 sans contenu). Une seule méthode pour les deux types (fixe et ouverte).
+
+```php
+$client->deleteSession(new ExternalId('MonERP', 'S-42'));
+```
+
+**Lève :** `AgoraLearningClientException` de code 404 si la session n'existe pas.
+
+---
+
+## Program — Programme de formation d'une session
+
+Le programme est rattaché au parcours de la session : `getProgram()` et `replaceProgram()` lèvent une
+`AgoraLearningClientException` de code 422 si la session n'a pas de parcours.
+
+| Format | Classe | Types |
+|--------|--------|-------|
+| texte | `ProgramText(string $programText)` | `accessDelay`, `pedagogicalMethods` (moyens d'encadrement), `pedagogicalMeans` (méthodes mobilisées), `technicalMeans`, `level`, `accessModality`, `assessmentAchievements`, `accessTerms`, `successRate`, `opportunities`, `metricsDropoutRate`, `metricsInterruptRate`, `metricsCertificationRate`, `metricsGateways`, `metricsHandicapReferent` |
+| liste | `ProgramSimpleList(array $programSimpleList)` | `metricsValidableSkills`, `metricsEquivalences`, `metricsCareerSuites` |
+| liste avec description | `ProgramComplexList(?string $description, ?ProgramSimpleList $programSimpleList)` | `preRequisite`, `aptitude`, `skills`, `targetAudience` |
+| liste à deux niveaux | `ProgramBiLevelComplexList(?string $description, array $programComplexList)` | `pedagogicalObjective`, `pedagogicalContent` |
+
+Dans une liste à deux niveaux, chaque élément principal est une `ProgramComplexList` : sa `description` est
+l'élément principal, sa `programSimpleList` ses sous-éléments.
+
+### `getProgram(ApiObjectIdentifier $sessionIdentifier) : ProgramOutput`
+
+Lit le programme (`GET /sessions/{id}/programs`). `ProgramOutput::$program` est un `ProgramInput`, qui peut être
+modifié puis renvoyé à `replaceProgram()`. Un type absent du programme vaut `null`.
+
+### `replaceProgram(ApiObjectIdentifier $sessionIdentifier, ProgramInput $input) : CreatedOutput`
+
+Remplace **tout** le programme (`PUT /sessions/{id}/programs`) : un type non renseigné (`null`) est vidé sur
+Agora. Pour ne changer que certains types, partir du programme lu :
+
+```php
+use AgoraLearningPhp\DTO\Input\Program\ProgramBiLevelComplexList;
+use AgoraLearningPhp\DTO\Input\Program\ProgramComplexList;
+use AgoraLearningPhp\DTO\Input\Program\ProgramSimpleList;
+use AgoraLearningPhp\DTO\Input\Program\ProgramText;
+
+$session = new ExternalId('MonERP', 'S-42');
+
+$program = $client->getProgram($session)->program;
+$program->preRequisite = new ProgramComplexList(null, new ProgramSimpleList(['Connaître Windows']));
+$program->pedagogicalContent = new ProgramBiLevelComplexList(null, [
+    new ProgramComplexList('Module 1 : les bases', new ProgramSimpleList(['Saisie', 'Formules'])),
+    new ProgramComplexList('Module 2 : graphiques'),
+]);
+$program->assessmentAchievements = new ProgramText("QCM\nMise en situation");
+
+$client->replaceProgram($session, $program);
+```
+
+**Lève :** `AgoraLearningClientException` de code 404 si la session n'existe pas, 422 si elle n'a pas de
+parcours ou si Agora refuse le programme (motif dans le message).
+
+### `deleteProgram(ApiObjectIdentifier $sessionIdentifier) : void`
+
+Vide le contenu du programme de la session (`DELETE /sessions/{id}/programs`, réponse 204 sans contenu) : la
+session est conservée.
+
+```php
+$client->deleteProgram(new ExternalId('MonERP', 'S-42'));
+```
+
+**Lève :** `AgoraLearningClientException` de code 404 si la session n'existe pas.
+
 ---
 
 ## Enrollment — Gestion des inscriptions
 
 Une **Enrollment** représente l'inscription d'un apprenant à une session. Elle lie un `Learner` à une `Session`.
 
-### `createEnrollment(EnrollmentInput $input) : EnrollmentOutput`
+### `createEnrollment(EnrollmentInput $input) : CreatedOutput`
 
-Inscrit un apprenant à une session.
+Inscrit un apprenant à une session, retourne en cas de succès un objet CreatedOutput contenant les identifiants de l'inscription créée (`agoraId` et `externalId`). Utilisez `getEnrollment()` pour récupérer l'inscription complète.
 
 ```php
 use AgoraLearningPhp\DTO\Input\Enrollment\EnrollmentInput;
+use AgoraLearningPhp\Identifier\ExternalId;
 
 $input = new EnrollmentInput(
+    new ExternalId('MonERP', 'E-41'),  // externalIdentifier (obligatoire)
     'ses_01KRXPMF97F8BRPH7N7972QRYY', // sessionUuid (obligatoire)
     'per_01KRXPMF8GENX8HCB8QKECBGZC', // learnerUuid (obligatoire)
     true                              // sendingInvite — envoie un e-mail d'invitation (dans le cadre d'une session open, l'invitation déclenche le début de la session)
 );
 
-$enrollment = $client->createEnrollment($input);
+$created = $client->createEnrollment($input);
 
-echo $enrollment->uuid;
+echo $created->agoraId->getId();    // "enr_01KRXPMF9AF2Y5ZT0B3R1N6QXW"
+echo $created->externalId->getId(); // "MonERP:E-41"
+
+$enrollment = $client->getEnrollment($created->agoraId);
 echo $enrollment->session->title;
 echo $enrollment->learner->familyName;
 ```
@@ -760,6 +1210,7 @@ echo $enrollment->learner->familyName;
 
 | Champ           | Type   | Obligatoire | Description                   |
 | --------------- | ------ | ----------- | ----------------------------- |
+| `externalIdentifier` | ExternalId | Oui    | Identifiant dans le système externe |
 | `sessionUuid`   | string | Oui         | UUID de la session            |
 | `learnerUuid`   | string | Oui         | UUID de l'apprenant           |
 | `sendingInvite` | bool   | Oui         | Envoie un e-mail d'invitation |
@@ -769,41 +1220,42 @@ echo $enrollment->learner->familyName;
 | Champ                   | Type                | Description                                     |
 | ----------------------- | ------------------- | ----------------------------------------------- |
 | `uuid`                  | string              | Identifiant unique de l'inscription             |
+| `externalIdentifier`    | ?ExternalId         | Identifiant dans le système externe             |
 | `learner`               | PersonOutput        | Apprenant inscrit                               |
 | `session`               | SessionOutput       | Session concernée                               |
 | `availabilityStartDate` | ?\DateTimeImmutable | Date de début de disponibilité pour l'apprenant |
 | `availabilityEndDate`   | ?\DateTimeImmutable | Date de fin de disponibilité pour l'apprenant   |
 
-### `getEnrollment(string $uuid) : EnrollmentOutput`
+### `getEnrollment(ApiObjectIdentifier $identifier) : EnrollmentOutput`
 
-Récupère une inscription par son UUID.
+Récupère une inscription par son identifiant.
 
 ```php
-$enrollment = $client->getEnrollment('enr_01KRXPMF9DEXHVPG9B6WAGFX4K');
+$enrollment = $client->getEnrollment(new AgoraId('enr_01KRXPMF9DEXHVPG9B6WAGFX4K'));
 
 echo $enrollment->session->title;
 echo $enrollment->learner->familyName;
 ```
 
-### `getEnrollmentFromSessionAndLearner(string $sessionUuid, string $learnerUuid) : EnrollmentOutput`
+### `getEnrollmentFromSessionAndLearner(ApiObjectIdentifier $sessionIdentifier, ApiObjectIdentifier $learnerIdentifier) : EnrollmentOutput`
 
 Récupère l'inscription d'un apprenant dans une session donnée.
 
 ```php
 $enrollment = $client->getEnrollmentFromSessionAndLearner(
-    'ses_01KRXPMF97F8BRPH7N7972QRYY', // sessionUuid
-    'per_01KRXPMF8GENX8HCB8QKECBGZC'  // learnerUuid
+    new AgoraId('ses_01KRXPMF97F8BRPH7N7972QRYY'), // session
+    new ExternalId('MonERP', 'L-42')               // apprenant
 );
 
 echo $enrollment->uuid;
 ```
 
-### `getCollectionEnrollmentFromSession(string $sessionUuid) : array`
+### `getCollectionEnrollmentFromSession(ApiObjectIdentifier $sessionIdentifier) : array`
 
 Récupère toutes les inscriptions d'une session.
 
 ```php
-$enrollments = $client->getCollectionEnrollmentFromSession('ses_01KRXPMF97F8BRPH7N7972QRYY');
+$enrollments = $client->getCollectionEnrollmentFromSession(new AgoraId('ses_01KRXPMF97F8BRPH7N7972QRYY'));
 
 foreach ($enrollments as $enrollment) {
     // chaque élément est un EnrollmentOutput
@@ -813,12 +1265,12 @@ foreach ($enrollments as $enrollment) {
 
 **Retourne :** `EnrollmentOutput[]`
 
-### `getCollectionEnrollmentFromLearner(string $learnerUuid) : array`
+### `getCollectionEnrollmentFromLearner(ApiObjectIdentifier $learnerIdentifier) : array`
 
 Récupère toutes les inscriptions d'un apprenant.
 
 ```php
-$enrollments = $client->getCollectionEnrollmentFromLearner('per_01KRXPMF8GENX8HCB8QKECBGZC');
+$enrollments = $client->getCollectionEnrollmentFromLearner(new AgoraId('per_01KRXPMF8GENX8HCB8QKECBGZC'));
 
 foreach ($enrollments as $enrollment) {
     // chaque élément est un EnrollmentOutput
@@ -827,6 +1279,50 @@ foreach ($enrollments as $enrollment) {
 ```
 
 **Retourne :** `EnrollmentOutput[]`
+
+### `deleteEnrollment(ApiObjectIdentifier $identifier) : void`
+
+Désinscrit l'apprenant de la session (`DELETE /enrollments/{id}`, réponse 204 sans contenu). Agora applique
+les mêmes traitements qu'une désinscription depuis son back-office.
+
+```php
+$client->deleteEnrollment(new ExternalId('MonERP', 'E-42'));
+```
+
+**Lève :** `AgoraLearningClientException` de code 404 si l'inscription n'existe pas (déjà supprimée par exemple).
+
+### `deleteEnrollmentFromSessionAndLearner(ApiObjectIdentifier $sessionIdentifier, ApiObjectIdentifier $learnerIdentifier) : void`
+
+Désinscrit l'apprenant de la session à partir de leurs identifiants (`DELETE /sessions/{s}/learners/{l}/enrollments`, réponse 204).
+
+```php
+$client->deleteEnrollmentFromSessionAndLearner(
+    new ExternalId('MonERP', 'S-42'),
+    new ExternalId('MonERP', 'L-42')
+);
+```
+
+**Lève :** `AgoraLearningClientException` de code 404 si l'inscription n'existe pas.
+
+### `deleteCollectionEnrollmentFromSession(ApiObjectIdentifier $sessionIdentifier) : void`
+
+Supprime toutes les inscriptions de la session (`DELETE /sessions/{s}/enrollments`, réponse 204).
+
+```php
+$client->deleteCollectionEnrollmentFromSession(new ExternalId('MonERP', 'S-42'));
+```
+
+**Lève :** `AgoraLearningClientException` de code 404 si la session n'existe pas.
+
+### `deleteCollectionEnrollmentFromLearner(ApiObjectIdentifier $learnerIdentifier) : void`
+
+Supprime toutes les inscriptions de l'apprenant (`DELETE /learners/{l}/enrollments`, réponse 204).
+
+```php
+$client->deleteCollectionEnrollmentFromLearner(new ExternalId('MonERP', 'L-42'));
+```
+
+**Lève :** `AgoraLearningClientException` de code 404 si l'apprenant n'existe pas.
 
 ---
 
@@ -853,21 +1349,20 @@ try {
 
 ### Erreur HTTP sur un appel métier
 
-Les méthodes retournent un objet hydraté. Si l'API retourne une erreur (4xx, 5xx), le client Symfony HTTP lève une exception lors de l'appel à `getContent()` en interne. Il est recommandé d'encapsuler les appels dans un bloc `try/catch` :
+Si l'API retourne un statut hors 2xx, le client lève une `AgoraLearningClientException`. Son message reprend le champ `detail` de la réponse, et `getCode()` renvoie le statut HTTP :
 
 ```php
-use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
-use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
+use AgoraLearningPhp\Exception\AgoraLearningClientException;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 
 try {
-    $person = $client->getPerson('uuid-inexistant');
-} catch (ClientExceptionInterface $e) {
-    // Erreur 4xx (ex : 404 Not Found, 422 Validation)
-    echo 'Ressource non trouvée ou données invalides : ' . $e->getMessage();
-} catch (ServerExceptionInterface $e) {
-    // Erreur 5xx
-    echo 'Erreur serveur : ' . $e->getMessage();
+    $person = $client->getPerson(new AgoraId('uuid-inexistant'));
+} catch (AgoraLearningClientException $e) {
+    if ($e->getCode() === 404) {
+        echo 'Ressource non trouvée : ' . $e->getMessage();
+    } else {
+        echo 'Erreur API (HTTP ' . $e->getCode() . ') : ' . $e->getMessage();
+    }
 } catch (TransportExceptionInterface $e) {
     // Erreur réseau (timeout, DNS, etc.)
     echo 'Erreur réseau : ' . $e->getMessage();

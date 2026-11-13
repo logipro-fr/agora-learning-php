@@ -8,10 +8,12 @@ $config = require __DIR__ . '/../config.php';
 use AgoraLearningPhp\AgoraLearningClient;
 use AgoraLearningPhp\DTO\Input\Person\PersonInput;
 use AgoraLearningPhp\Enum\Gender;
+use AgoraLearningPhp\Identifier\ExternalId;
 
 $client = new AgoraLearningClient($config['url'], $config['api_key']);
 
 $personInput = new PersonInput(
+    new ExternalId('MonERP', uniqid('P-')),
     'Dupont',
     'Jean',
     'jean.dupont@example.com',
@@ -27,8 +29,9 @@ $personInput = new PersonInput(
 );
 
 try {
-    $person = $client->createPerson($personInput);
-    var_dump($person);
+    $created = $client->createPerson($personInput);
+    var_dump($created);
+    var_dump($client->getPerson($created->agoraId));
 } catch (\Exception $e) {
     echo 'Erreur : ' . $e->getMessage() . PHP_EOL;
     exit(1);

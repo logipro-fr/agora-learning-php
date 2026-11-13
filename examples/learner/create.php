@@ -8,15 +8,17 @@ $config = require __DIR__ . '/../config.php';
 use AgoraLearningPhp\AgoraLearningClient;
 use AgoraLearningPhp\DTO\Input\Learner\LearnerInput;
 use AgoraLearningPhp\Enum\Gender;
+use AgoraLearningPhp\Identifier\ExternalId;
 
 $client = new AgoraLearningClient($config['url'], $config['api_key']);
 
 $learnerInput = new LearnerInput(
+    new ExternalId('MonERP', uniqid('L-')),
     'Leblanc',
     'Alice',
     'alice.leblanc.recovery@example.com',
-    Gender::GENDER_FEMALE,
     'alice.leblanc@example.com',
+    Gender::GENDER_FEMALE,
     '0123456789',
     '8 rue des Apprenants',
     '13001',
@@ -28,8 +30,9 @@ $learnerInput = new LearnerInput(
 );
 
 try {
-    $learner = $client->createLearner($learnerInput);
-    var_dump($learner);
+    $created = $client->createLearner($learnerInput);
+    var_dump($created);
+    var_dump($client->getLearner($created->agoraId));
 } catch (\Exception $e) {
     echo 'Erreur : ' . $e->getMessage() . PHP_EOL;
     exit(1);

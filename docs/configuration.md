@@ -87,9 +87,9 @@ Exemples :
 | Sessions fixes                            | `/api/external/v1/sessions/fixed`                              |
 | Sessions ouvertes                         | `/api/external/v1/sessions/opened`                             |
 | Inscriptions                              | `/api/external/v1/enrollments`                                 |
-| Inscriptions d'une session                | `/api/external/v1/sessions/{uuid}/enrollments`                 |
-| Inscriptions d'un apprenant               | `/api/external/v1/learners/{uuid}/enrollments`                 |
-| Inscription d'un couple session+apprenant | `/api/external/v1/sessions/{uuid}/learners/{uuid}/enrollments` |
+| Inscriptions d'une session                | `/api/external/v1/sessions/{id}/enrollments`                   |
+| Inscriptions d'un apprenant               | `/api/external/v1/learners/{id}/enrollments`                   |
+| Inscription d'un couple session+apprenant | `/api/external/v1/sessions/{id}/learners/{id}/enrollments`     |
 
 ## Exemple complet d'initialisation
 

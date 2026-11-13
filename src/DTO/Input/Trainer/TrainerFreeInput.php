@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace AgoraLearningPhp\DTO\Input\Trainer;
 
 use AgoraLearningPhp\Enum\Gender;
+use AgoraLearningPhp\Identifier\ExternalId;
 
 final class TrainerFreeInput
 {
+    public ExternalId $externalIdentifier;
     public string $familyName;
     public string $givenName;
     public string $email;
@@ -40,6 +42,7 @@ final class TrainerFreeInput
     public ?string $billingAddressCountry;
 
     public function __construct(
+        ExternalId $externalIdentifier,
         string $familyName,
         string $givenName,
         string $email,
@@ -71,6 +74,7 @@ final class TrainerFreeInput
         ?string $billingAddressLocality = null,
         ?string $billingAddressCountry = null
     ) {
+        $this->externalIdentifier = $externalIdentifier;
         $this->familyName = $familyName;
         $this->givenName = $givenName;
         $this->email = $email;

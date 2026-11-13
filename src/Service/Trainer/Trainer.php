@@ -5,12 +5,18 @@ declare(strict_types=1);
 namespace AgoraLearningPhp\Service\Trainer;
 
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerEmployeeInput;
+use AgoraLearningPhp\DTO\Input\Trainer\TrainerEmployeePatchInput;
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerFreeInput;
+use AgoraLearningPhp\DTO\Input\Trainer\TrainerFreePatchInput;
+use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Trainer\TrainerEmployeeOutput;
 use AgoraLearningPhp\DTO\Output\Trainer\TrainerFreeOutput;
 use AgoraLearningPhp\DTO\Output\Trainer\TrainerOutput;
 use AgoraLearningPhp\Enum\RequestMethod;
 use AgoraLearningPhp\Enum\TrainerStatut;
+use AgoraLearningPhp\Exception\AgoraLearningClientException;
+use AgoraLearningPhp\Identifier\ApiObjectIdentifier;
+use AgoraLearningPhp\Identifier\ExternalId;
 use AgoraLearningPhp\Service\ClientCore\ApiService;
 use AgoraLearningPhp\Service\ClientCore\ApiUrls;
 use AgoraLearningPhp\Service\Society\Society;
@@ -31,85 +37,166 @@ class Trainer extends ApiService
         return $this->convertResponseToDTOarray($response);
     }
 
-    public function getTrainer(string $uuid): TrainerOutput
+    public function getTrainer(ApiObjectIdentifier $identifier): TrainerOutput
     {
         $body = '';
-        $response = $this->httpClient->request(RequestMethod::GET, ApiUrls::getGetTrainer($uuid), $body);
+        $response = $this->httpClient->request(RequestMethod::GET, ApiUrls::getGetTrainer($identifier->getId()), $body);
         return $this->convertResponseToDTO($response);
     }
 
-    public function postTrainerEmployee(TrainerEmployeeInput $trainerEmployeeInput): TrainerOutput
+    public function postTrainerEmployee(TrainerEmployeeInput $trainerEmployeeInput): CreatedOutput
     {
-        $body = JsonHandler::jsonEncode(
-            [
-                "familyName" => $trainerEmployeeInput->familyName,
-                "givenName" => $trainerEmployeeInput->givenName,
-                "email" => $trainerEmployeeInput->email,
-                "visibleInformation" => $trainerEmployeeInput->visibleInformation,
-                "notifyUser" => $trainerEmployeeInput->notifyUser,
-                "gender" => $trainerEmployeeInput->gender,
-                "telephone" => $trainerEmployeeInput->telephone,
-                "mobileNumber" => $trainerEmployeeInput->mobileNumber,
-                "addressStreet" => $trainerEmployeeInput->addressStreet,
-                "addressPostcode" => $trainerEmployeeInput->addressPostcode,
-                "addressLocality" => $trainerEmployeeInput->addressLocality,
-                "addressCountry" => $trainerEmployeeInput->addressCountry,
-                "image" => $trainerEmployeeInput->image,
-                "birthDate" => $trainerEmployeeInput->birthDate
-                    ? $trainerEmployeeInput->birthDate->format(self::DATETIME_FORMAT)
-                    : null,
-                "jobTitle" => $trainerEmployeeInput->jobTitle,
-                "societyId" => $trainerEmployeeInput->societyId,
-                "cv" => $trainerEmployeeInput->cv,
-                "degree" => $trainerEmployeeInput->degree,
-                "contract" => $trainerEmployeeInput->contract,
-                "jobDescription" => $trainerEmployeeInput->jobDescription
-            ]
-        );
+        $body = JsonHandler::jsonEncode($this->buildEmployeeBody($trainerEmployeeInput));
         $response = $this->httpClient->request(RequestMethod::POST, ApiUrls::getCreateTrainerEmployee(), $body);
-        return $this->convertResponseToDTO($response);
+        return $this->convertResponsePostToDTO($response);
     }
 
-    public function postTrainerFree(TrainerFreeInput $trainerFreeInput): TrainerOutput
+    /**
+     * Remplace le formateur employé (PUT) : un champ facultatif non renseigné est vidé.
+     * notifyUser est ignoré par l'API (pris en compte uniquement à la création).
+     */
+    public function putTrainerEmployee(ApiObjectIdentifier $identifier, TrainerEmployeeInput $trainerEmployeeInput): CreatedOutput
     {
-        $body = JsonHandler::jsonEncode(
-            [
-                "familyName" => $trainerFreeInput->familyName,
-                "givenName" => $trainerFreeInput->givenName,
-                "email" => $trainerFreeInput->email,
-                "visibleInformation" => $trainerFreeInput->visibleInformation,
-                "notifyUser" => $trainerFreeInput->notifyUser,
-                "gender" => $trainerFreeInput->gender,
-                "telephone" => $trainerFreeInput->telephone,
-                "mobileNumber" => $trainerFreeInput->mobileNumber,
-                "addressStreet" => $trainerFreeInput->addressStreet,
-                "addressPostcode" => $trainerFreeInput->addressPostcode,
-                "addressLocality" => $trainerFreeInput->addressLocality,
-                "addressCountry" => $trainerFreeInput->addressCountry,
-                "image" => $trainerFreeInput->image,
-                "birthDate" => $trainerFreeInput->birthDate
-                    ? $trainerFreeInput->birthDate->format(self::DATETIME_FORMAT)
-                    : null,
-                "jobTitle" => $trainerFreeInput->jobTitle,
-                "societyId" => $trainerFreeInput->societyId,
-                "cv" => $trainerFreeInput->cv,
-                "degree" => $trainerFreeInput->degree,
-                "contract" => $trainerFreeInput->contract,
-                "jobDescription" => $trainerFreeInput->jobDescription,
-                "hourlyCost" => $trainerFreeInput->hourlyCost,
-                "daylyCost" => $trainerFreeInput->daylyCost,
-                "siret" => $trainerFreeInput->siret,
-                "tvaNumber" => $trainerFreeInput->tvaNumber,
-                "urssafNumber" => $trainerFreeInput->urssafNumber,
-                "urssafCertificate" => $trainerFreeInput->urssafCertificate,
-                "billingAddressStreet" => $trainerFreeInput->billingAddressStreet,
-                "billingAddressPostcode" => $trainerFreeInput->billingAddressPostcode,
-                "billingAddressLocality" => $trainerFreeInput->billingAddressLocality,
-                "billingAddressCountry" => $trainerFreeInput->billingAddressCountry
-            ]
+        $body = JsonHandler::jsonEncode($this->buildEmployeeBody($trainerEmployeeInput));
+        $response = $this->httpClient->request(
+            RequestMethod::PUT,
+            ApiUrls::getUpdateTrainerEmployee($identifier->getId()),
+            $body
         );
+        return $this->convertResponsePostToDTO($response);
+    }
+
+    /**
+     * Modifie partiellement le formateur employé (PATCH) : seuls les champs renseignés sont modifiés.
+     */
+    public function patchTrainerEmployee(ApiObjectIdentifier $identifier, TrainerEmployeePatchInput $patchInput): CreatedOutput
+    {
+        return $this->sendPatch(ApiUrls::getUpdateTrainerEmployee($identifier->getId()), $patchInput);
+    }
+
+    public function postTrainerFree(TrainerFreeInput $trainerFreeInput): CreatedOutput
+    {
+        $body = JsonHandler::jsonEncode($this->buildFreeBody($trainerFreeInput));
         $response = $this->httpClient->request(RequestMethod::POST, ApiUrls::getCreateTrainerFree(), $body);
-        return $this->convertResponseToDTO($response);
+        return $this->convertResponsePostToDTO($response);
+    }
+
+    /**
+     * Remplace le formateur indépendant (PUT) : un champ facultatif non renseigné est vidé.
+     * notifyUser est ignoré par l'API (pris en compte uniquement à la création).
+     */
+    public function putTrainerFree(ApiObjectIdentifier $identifier, TrainerFreeInput $trainerFreeInput): CreatedOutput
+    {
+        $body = JsonHandler::jsonEncode($this->buildFreeBody($trainerFreeInput));
+        $response = $this->httpClient->request(RequestMethod::PUT, ApiUrls::getUpdateTrainerFree($identifier->getId()), $body);
+        return $this->convertResponsePostToDTO($response);
+    }
+
+    /**
+     * Modifie partiellement le formateur indépendant (PATCH) : seuls les champs renseignés sont modifiés.
+     */
+    public function patchTrainerFree(ApiObjectIdentifier $identifier, TrainerFreePatchInput $patchInput): CreatedOutput
+    {
+        return $this->sendPatch(ApiUrls::getUpdateTrainerFree($identifier->getId()), $patchInput);
+    }
+
+    /**
+     * Détache le formateur, employé ou indépendant, de l'application source (PATCH /trainers/{id}/detach,
+     * réponse 204 sans contenu) : il reste sur Agora mais n'est plus lié à l'application qui l'a créé.
+     *
+     * @throws AgoraLearningClientException si le formateur n'existe pas (404) ou si Agora refuse le détachement
+     */
+    public function detachTrainer(ApiObjectIdentifier $identifier): void
+    {
+        $this->sendDetach(ApiUrls::getDetachTrainer($identifier->getId()));
+    }
+
+    /**
+     * Supprime le formateur, employé ou indépendant (DELETE, réponse 204 sans contenu).
+     *
+     * @throws AgoraLearningClientException si le formateur n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deleteTrainer(ApiObjectIdentifier $identifier): void
+    {
+        $this->sendDelete(ApiUrls::getDeleteTrainer($identifier->getId()));
+    }
+
+    /**
+     * Corps commun à la création (POST) et au remplacement (PUT) d'un formateur employé.
+     *
+     * @return array<string, mixed>
+     */
+    private function buildEmployeeBody(TrainerEmployeeInput $input): array
+    {
+        return [
+            "externalIdentifier" => $input->externalIdentifier->toArray(),
+            "familyName" => $input->familyName,
+            "givenName" => $input->givenName,
+            "email" => $input->email,
+            "visibleInformation" => $input->visibleInformation,
+            "notifyUser" => $input->notifyUser,
+            "gender" => $input->gender,
+            "telephone" => $input->telephone,
+            "mobileNumber" => $input->mobileNumber,
+            "addressStreet" => $input->addressStreet,
+            "addressPostcode" => $input->addressPostcode,
+            "addressLocality" => $input->addressLocality,
+            "addressCountry" => $input->addressCountry,
+            "image" => $input->image,
+            "birthDate" => $input->birthDate
+                ? $input->birthDate->format(self::DATETIME_FORMAT)
+                : null,
+            "jobTitle" => $input->jobTitle,
+            "societyId" => $input->societyId,
+            "cv" => $input->cv,
+            "degree" => $input->degree,
+            "contract" => $input->contract,
+            "jobDescription" => $input->jobDescription
+        ];
+    }
+
+    /**
+     * Corps commun à la création (POST) et au remplacement (PUT) d'un formateur indépendant.
+     *
+     * @return array<string, mixed>
+     */
+    private function buildFreeBody(TrainerFreeInput $input): array
+    {
+        return [
+            "externalIdentifier" => $input->externalIdentifier->toArray(),
+            "familyName" => $input->familyName,
+            "givenName" => $input->givenName,
+            "email" => $input->email,
+            "visibleInformation" => $input->visibleInformation,
+            "notifyUser" => $input->notifyUser,
+            "gender" => $input->gender,
+            "telephone" => $input->telephone,
+            "mobileNumber" => $input->mobileNumber,
+            "addressStreet" => $input->addressStreet,
+            "addressPostcode" => $input->addressPostcode,
+            "addressLocality" => $input->addressLocality,
+            "addressCountry" => $input->addressCountry,
+            "image" => $input->image,
+            "birthDate" => $input->birthDate
+                ? $input->birthDate->format(self::DATETIME_FORMAT)
+                : null,
+            "jobTitle" => $input->jobTitle,
+            "societyId" => $input->societyId,
+            "cv" => $input->cv,
+            "degree" => $input->degree,
+            "contract" => $input->contract,
+            "jobDescription" => $input->jobDescription,
+            "hourlyCost" => $input->hourlyCost,
+            "daylyCost" => $input->daylyCost,
+            "siret" => $input->siret,
+            "tvaNumber" => $input->tvaNumber,
+            "urssafNumber" => $input->urssafNumber,
+            "urssafCertificate" => $input->urssafCertificate,
+            "billingAddressStreet" => $input->billingAddressStreet,
+            "billingAddressPostcode" => $input->billingAddressPostcode,
+            "billingAddressLocality" => $input->billingAddressLocality,
+            "billingAddressCountry" => $input->billingAddressCountry
+        ];
     }
 
     /**
@@ -118,7 +205,8 @@ class Trainer extends ApiService
     public static function convertDataToDTO(array $data): TrainerOutput
     {
         /** @var array{
-         *     id: string,
+         *     agoraId: string,
+         *     externalIdentifier?: array<string, mixed>|null,
          *     familyName: string,
          *     givenName: string,
          *     email: string,
@@ -132,7 +220,7 @@ class Trainer extends ApiService
          *     addressLocality?: string|null,
          *     addressCountry?: string|null,
          *     birthDate?: string|null,
-         *     jobTitle?: string|null,         
+         *     jobTitle?: string|null,
          *     statut?: string|null,
          *     society?: array<string, mixed>,
          *     hourlyCost?: float|null,
@@ -153,6 +241,7 @@ class Trainer extends ApiService
         $addressCountry = $data['addressCountry'] ?? null;
         $birthDate = !empty($data['birthDate']) ? new \DateTimeImmutable($data['birthDate']) : null;
         $jobTitle = $data['jobTitle'] ?? null;
+        $externalIdentifier = !empty($data['externalIdentifier']) ? ExternalId::fromArray($data['externalIdentifier']) : null;
         $societyData = array_key_exists('society', $data) ? Society::convertDataToDTO($data['society']) : null;
 
         switch ($data['statut'] ?? null) {
@@ -167,7 +256,7 @@ class Trainer extends ApiService
                 $billingAddressLocality = $data['billingAddressLocality'] ?? null;
                 $billingAddressCountry = $data['billingAddressCountry'] ?? null;
                 return new TrainerFreeOutput(
-                    $data['id'],
+                    $data['agoraId'],
                     $data['familyName'],
                     $data['givenName'],
                     $data['email'],
@@ -191,12 +280,13 @@ class Trainer extends ApiService
                     $billingAddressStreet,
                     $billingAddressPostcode,
                     $billingAddressLocality,
-                    $billingAddressCountry
+                    $billingAddressCountry,
+                    $externalIdentifier,
                 );
             case TrainerStatut::STATUT_EMPLOYE:
             default:
                 return new TrainerEmployeeOutput(
-                    $data['id'],
+                    $data['agoraId'],
                     $data['familyName'],
                     $data['givenName'],
                     $data['email'],
@@ -211,7 +301,8 @@ class Trainer extends ApiService
                     $addressCountry,
                     $birthDate,
                     $jobTitle,
-                    $societyData
+                    $societyData,
+                    $externalIdentifier,
                 );
         }
     }

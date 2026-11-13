@@ -5,9 +5,14 @@ declare(strict_types=1);
 namespace AgoraLearningPhp\Service\Person;
 
 use AgoraLearningPhp\DTO\Input\Person\PersonInput;
+use AgoraLearningPhp\DTO\Input\Person\PersonPatchInput;
+use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Person\PersonOutput;
 use AgoraLearningPhp\Enum\Gender;
 use AgoraLearningPhp\Enum\RequestMethod;
+use AgoraLearningPhp\Exception\AgoraLearningClientException;
+use AgoraLearningPhp\Identifier\ApiObjectIdentifier;
+use AgoraLearningPhp\Identifier\ExternalId;
 use AgoraLearningPhp\Service\ClientCore\ApiService;
 use AgoraLearningPhp\Service\ClientCore\ApiUrls;
 use AgoraLearningPhp\Service\Tools\JsonHandler;
@@ -27,33 +32,83 @@ class Person extends ApiService
         return $this->convertResponseToDTOarray($response);
     }
 
-    public function getPerson(string $uuid): PersonOutput
+    public function getPerson(ApiObjectIdentifier $identifier): PersonOutput
     {
         $body = '';
-        $response = $this->httpClient->request(RequestMethod::GET, ApiUrls::getGetPerson($uuid), $body);
+        $response = $this->httpClient->request(RequestMethod::GET, ApiUrls::getGetPerson($identifier->getId()), $body);
         return $this->convertResponseToDTO($response);
     }
 
-    public function postPerson(PersonInput $personInput): PersonOutput
+    public function postPerson(PersonInput $personInput): CreatedOutput
     {
-        $body = JsonHandler::jsonEncode(
-            [
-                "familyName" => $personInput->familyName,
-                "givenName" => $personInput->givenName,
-                "email" => $personInput->email,
-                "gender" => $personInput->gender,
-                "birthDate" => $personInput->birthDate ? $personInput->birthDate->format(self::DATETIME_FORMAT) : null,
-                "jobTitle" => $personInput->jobTitle,
-                "addressStreet" => $personInput->addressStreet,
-                "addressPostcode" => $personInput->addressPostcode,
-                "addressLocality" => $personInput->addressLocality,
-                "addressCountry" => $personInput->addressCountry,
-                "telephone" => $personInput->telephone,
-                "image" => $personInput->image
-            ]
-        );
+        $body = JsonHandler::jsonEncode($this->buildBody($personInput));
         $response = $this->httpClient->request(RequestMethod::POST, ApiUrls::getCreatePerson(), $body);
-        return $this->convertResponseToDTO($response);
+        return $this->convertResponsePostToDTO($response);
+    }
+
+    /**
+     * Remplace le contact (PUT) : un champ facultatif non renseigné est vidé.
+     */
+    public function putPerson(ApiObjectIdentifier $identifier, PersonInput $personInput): CreatedOutput
+    {
+        $body = JsonHandler::jsonEncode($this->buildBody($personInput));
+        $response = $this->httpClient->request(RequestMethod::PUT, ApiUrls::getUpdatePerson($identifier->getId()), $body);
+        return $this->convertResponsePostToDTO($response);
+    }
+
+    /**
+     * Modifie partiellement le contact (PATCH) : seuls les champs renseignés sont modifiés.
+     */
+    public function patchPerson(ApiObjectIdentifier $identifier, PersonPatchInput $personPatchInput): CreatedOutput
+    {
+        return $this->sendPatch(ApiUrls::getUpdatePerson($identifier->getId()), $personPatchInput);
+    }
+
+    /**
+     * Détache la personne de l'application source (PATCH /persons/{id}/detach, réponse 204 sans contenu) :
+     * elle reste sur Agora mais n'est plus liée à l'application qui l'a créée.
+     *
+     * @throws AgoraLearningClientException si la personne n'existe pas (404) ou si Agora refuse le détachement
+     */
+    public function detachPerson(ApiObjectIdentifier $identifier): void
+    {
+        $this->sendDetach(ApiUrls::getDetachPerson($identifier->getId()));
+    }
+
+    /**
+     * Supprime le contact (DELETE, réponse 204 sans contenu).
+     *
+     * @throws AgoraLearningClientException si le contact n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deletePerson(ApiObjectIdentifier $identifier): void
+    {
+        $this->sendDelete(ApiUrls::getDeletePerson($identifier->getId()));
+    }
+
+    /**
+     * Corps commun à la création (POST) et au remplacement (PUT).
+     *
+     * @return array<string, mixed>
+     */
+    private function buildBody(PersonInput $personInput): array
+    {
+        return [
+            "externalIdentifier" => $personInput->externalIdentifier->toArray(),
+            "familyName" => $personInput->familyName,
+            "givenName" => $personInput->givenName,
+            "email" => $personInput->email,
+            "gender" => $personInput->gender,
+            "birthDate" => $personInput->birthDate ? $personInput->birthDate->format(self::DATETIME_FORMAT) : null,
+            "jobTitle" => $personInput->jobTitle,
+            "addressStreet" => $personInput->addressStreet,
+            "addressPostcode" => $personInput->addressPostcode,
+            "addressLocality" => $personInput->addressLocality,
+            "addressCountry" => $personInput->addressCountry,
+            "telephone" => $personInput->telephone,
+            "mobileNumber" => $personInput->mobileNumber,
+            "image" => $personInput->image,
+            "societyId" => $personInput->societyId
+        ];
     }
 
     /**
@@ -62,7 +117,8 @@ class Person extends ApiService
     public static function convertDataToDTO(array $data): PersonOutput
     {
         /** @var array{
-         *     id: string,
+         *     agoraId: string,
+         *     externalIdentifier?: array<string, mixed>|null,
          *     familyName: string,
          *     givenName: string,
          *     email: string,
@@ -73,7 +129,8 @@ class Person extends ApiService
          *     addressCountry?: string|null,
          *     gender?: string,
          *     birthDate?: string|null,
-         *     jobTitle?: string|null
+         *     jobTitle?: string|null,
+         *     societyId?: string|null
          * } $data */
         $telephone = $data['telephone'] ?? null;
         $addressStreet = $data['addressStreet'] ?? null;
@@ -83,9 +140,11 @@ class Person extends ApiService
         $gender = $data['gender'] ?? Gender::GENDER_NA;
         $birthDate = !empty($data['birthDate']) ? new \DateTimeImmutable($data['birthDate']) : null;
         $jobTitle = $data['jobTitle'] ?? null;
+        $externalIdentifier = !empty($data['externalIdentifier']) ? ExternalId::fromArray($data['externalIdentifier']) : null;
+        $societyId = $data['societyId'] ?? null;
 
         return new PersonOutput(
-            $data['id'],
+            $data['agoraId'],
             $data['familyName'],
             $data['givenName'],
             $data['email'],
@@ -97,6 +156,8 @@ class Person extends ApiService
             $gender,
             $birthDate,
             $jobTitle,
+            $externalIdentifier,
+            $societyId,
         );
     }
 }

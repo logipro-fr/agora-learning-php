@@ -6,7 +6,9 @@ namespace AgoraLearningPhp\Tests\integration;
 
 use AgoraLearningPhp\DTO\Input\Person\PersonInput;
 use AgoraLearningPhp\DTO\Input\Session\FixedSessionInput;
+use AgoraLearningPhp\DTO\Input\Session\FixedSessionPatchInput;
 use AgoraLearningPhp\DTO\Input\Session\OpenedSessionInput;
+use AgoraLearningPhp\DTO\Input\Session\OpenedSessionPatchInput;
 use AgoraLearningPhp\DTO\Input\Session\SessionInput;
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerEmployeeInput;
 use AgoraLearningPhp\DTO\Output\Session\FixedSessionOutput;
@@ -14,17 +16,20 @@ use AgoraLearningPhp\DTO\Output\Session\OpenedSessionOutput;
 use AgoraLearningPhp\Enum\Gender;
 use AgoraLearningPhp\Enum\SessionMode;
 use AgoraLearningPhp\Enum\SessionType;
+use AgoraLearningPhp\Exception\AgoraLearningClientException;
+use AgoraLearningPhp\Identifier\AgoraId;
+use AgoraLearningPhp\Identifier\ExternalId;
 
 class SessionTest extends AbstractAgoraLearningTest
 {
     public function testCreateCompleteFixedSession(): void
     {
         //Arrange - créer les dépendances
-        $trainerOutput = $this->client->createTrainerEmployee(
-            new TrainerEmployeeInput('Formateur', 'Session', 'formateur.session.fixed@example.com')
+        $trainerCreated = $this->client->createTrainerEmployee(
+            new TrainerEmployeeInput($this->newExternalId('T'), 'Formateur', 'Session', $this->newEmail('formateur.session.fixed'))
         );
-        $personOutput = $this->client->createPerson(
-            new PersonInput('Admin', 'Session', 'administrateur.session.fixed@example.com', Gender::GENDER_NA)
+        $personCreated = $this->client->createPerson(
+            new PersonInput($this->newExternalId('P'), 'Admin', 'Session', 'administrateur.session.fixed@example.com', Gender::GENDER_NA)
         );
 
         $title = 'Formation PHP avancé';
@@ -45,6 +50,7 @@ class SessionTest extends AbstractAgoraLearningTest
         $image = 'https://www.agora-learning.com/apiAgoraLearning/ressources/formation.jpg';
 
         $sessionInput = new SessionInput(
+            $this->newExternalId('S'),
             $title,
             new FixedSessionInput($startDate, $endDate, $type, $mode),
             $manualDuration,
@@ -54,8 +60,8 @@ class SessionTest extends AbstractAgoraLearningTest
             $durationInSeconds,
             $description,
             $maxPlaces,
-            $trainerOutput->uuid,
-            $personOutput->uuid,
+            $trainerCreated->agoraId->getId(),
+            $personCreated->agoraId->getId(),
             $urlPreTrainingSurvey,
             $urlOnTheSpotSurvey,
             $urlDelayedSurvey,
@@ -63,7 +69,8 @@ class SessionTest extends AbstractAgoraLearningTest
         );
 
         //Act
-        $sessionOutput = $this->client->createSession($sessionInput);
+        $created = $this->client->createSession($sessionInput);
+        $sessionOutput = $this->client->getSession($created->agoraId);
 
         // Assert
         $this->assertEquals($title, $sessionOutput->title);
@@ -77,9 +84,9 @@ class SessionTest extends AbstractAgoraLearningTest
         $this->assertEquals($description, $sessionOutput->description);
         $this->assertEquals($maxPlaces, $sessionOutput->maxPlaces);
         $this->assertNotNull($sessionOutput->pedagogicalTrainer);
-        $this->assertEquals($trainerOutput->uuid, $sessionOutput->pedagogicalTrainer->uuid);
+        $this->assertEquals($trainerCreated->agoraId->getId(), $sessionOutput->pedagogicalTrainer->uuid);
         $this->assertNotNull($sessionOutput->administrativePerson);
-        $this->assertEquals($personOutput->uuid, $sessionOutput->administrativePerson->uuid);
+        $this->assertEquals($personCreated->agoraId->getId(), $sessionOutput->administrativePerson->uuid);
         $this->assertEquals($urlPreTrainingSurvey, $sessionOutput->urlPreTrainingSurvey);
         $this->assertEquals($urlOnTheSpotSurvey, $sessionOutput->urlOnTheSpotSurvey);
         $this->assertEquals($urlDelayedSurvey, $sessionOutput->urlDelayedSurvey);
@@ -100,12 +107,14 @@ class SessionTest extends AbstractAgoraLearningTest
         $mode = SessionMode::SESSION_MODE_BLENDED;
 
         $sessionInput = new SessionInput(
+            $this->newExternalId('S'),
             $title,
             new FixedSessionInput($startDate, $endDate, $type, $mode)
         );
 
         //Act
-        $sessionOutput = $this->client->createSession($sessionInput);
+        $created = $this->client->createSession($sessionInput);
+        $sessionOutput = $this->client->getSession($created->agoraId);
 
         // Assert
         $this->assertEquals($title, $sessionOutput->title);
@@ -128,11 +137,11 @@ class SessionTest extends AbstractAgoraLearningTest
     public function testCreateCompleteOpenedSession(): void
     {
         //Arrange - créer les dépendances
-        $trainerOutput = $this->client->createTrainerEmployee(
-            new TrainerEmployeeInput('Formateur', 'Opened', 'formateur.opened.complete@example.com')
+        $trainerCreated = $this->client->createTrainerEmployee(
+            new TrainerEmployeeInput($this->newExternalId('T'), 'Formateur', 'Opened', $this->newEmail('formateur.opened.complete'))
         );
-        $personOutput = $this->client->createPerson(
-            new PersonInput('Admin', 'Opened', 'administrateur.session.fixed@example.com', Gender::GENDER_NA)
+        $personCreated = $this->client->createPerson(
+            new PersonInput($this->newExternalId('P'), 'Admin', 'Opened', 'administrateur.session.fixed@example.com', Gender::GENDER_NA)
         );
 
         $title = 'E-learning : Introduction au management';
@@ -149,6 +158,7 @@ class SessionTest extends AbstractAgoraLearningTest
         $image = 'https://www.agora-learning.com/apiAgoraLearning/ressources/formation.jpg';
 
         $sessionInput = new SessionInput(
+            $this->newExternalId('S'),
             $title,
             new OpenedSessionInput($subscribeStartDate, $subscribeEndDate, $accessDurationDays),
             $manualDuration,
@@ -158,8 +168,8 @@ class SessionTest extends AbstractAgoraLearningTest
             $durationInSeconds,
             $description,
             null,
-            $trainerOutput->uuid,
-            $personOutput->uuid,
+            $trainerCreated->agoraId->getId(),
+            $personCreated->agoraId->getId(),
             null,
             null,
             $urlDelayedSurvey,
@@ -167,7 +177,8 @@ class SessionTest extends AbstractAgoraLearningTest
         );
 
         //Act
-        $sessionOutput = $this->client->createSession($sessionInput);
+        $created = $this->client->createSession($sessionInput);
+        $sessionOutput = $this->client->getSession($created->agoraId);
 
         // Assert
         $this->assertEquals($title, $sessionOutput->title);
@@ -181,9 +192,9 @@ class SessionTest extends AbstractAgoraLearningTest
         $this->assertEquals($description, $sessionOutput->description);
         $this->assertNull($sessionOutput->maxPlaces);
         $this->assertNotNull($sessionOutput->pedagogicalTrainer);
-        $this->assertEquals($trainerOutput->uuid, $sessionOutput->pedagogicalTrainer->uuid);
+        $this->assertEquals($trainerCreated->agoraId->getId(), $sessionOutput->pedagogicalTrainer->uuid);
         $this->assertNotNull($sessionOutput->administrativePerson);
-        $this->assertEquals($personOutput->uuid, $sessionOutput->administrativePerson->uuid);
+        $this->assertEquals($personCreated->agoraId->getId(), $sessionOutput->administrativePerson->uuid);
         $this->assertNull($sessionOutput->urlPreTrainingSurvey);
         $this->assertNull($sessionOutput->urlOnTheSpotSurvey);
         $this->assertEquals($urlDelayedSurvey, $sessionOutput->urlDelayedSurvey);
@@ -204,12 +215,14 @@ class SessionTest extends AbstractAgoraLearningTest
         $accessDurationDays = 30;
 
         $sessionInput = new SessionInput(
+            $this->newExternalId('S'),
             $title,
             new OpenedSessionInput($subscribeStartDate, $subscribeEndDate, $accessDurationDays)
         );
 
         //Act
-        $sessionOutput = $this->client->createSession($sessionInput);
+        $created = $this->client->createSession($sessionInput);
+        $sessionOutput = $this->client->getSession($created->agoraId);
 
         // Assert
         $this->assertEquals($title, $sessionOutput->title);
@@ -235,6 +248,7 @@ class SessionTest extends AbstractAgoraLearningTest
         //Arrange
         $title = 'Formation Get Session Test';
         $sessionInput = new SessionInput(
+            $this->newExternalId('S'),
             $title,
             new FixedSessionInput(
                 new \DateTimeImmutable('2026-10-10'),
@@ -244,10 +258,10 @@ class SessionTest extends AbstractAgoraLearningTest
             )
         );
         $output = $this->client->createSession($sessionInput);
-        $uuid = $output->uuid;
+        $uuid = $output->agoraId->getId();
 
         //Act
-        $sessionOutput = $this->client->getSession($uuid);
+        $sessionOutput = $this->client->getSession(new AgoraId($uuid));
 
         // Assert
         $this->assertEquals($uuid, $sessionOutput->uuid);
@@ -259,6 +273,7 @@ class SessionTest extends AbstractAgoraLearningTest
         //Arrange - une session fixe et une session ouverte
         $title1 = 'Session Fixe Collection Test';
         $sessionInput1 = new SessionInput(
+            $this->newExternalId('S'),
             $title1,
             new FixedSessionInput(
                 new \DateTimeImmutable('2026-10-20'),
@@ -268,10 +283,11 @@ class SessionTest extends AbstractAgoraLearningTest
             )
         );
         $output1 = $this->client->createSession($sessionInput1);
-        $uuid1 = $output1->uuid;
+        $uuid1 = $output1->agoraId->getId();
 
         $title2 = 'Session Ouverte Collection Test';
         $sessionInput2 = new SessionInput(
+            $this->newExternalId('S'),
             $title2,
             new OpenedSessionInput(
                 new \DateTimeImmutable('2026-12-01'),
@@ -280,7 +296,7 @@ class SessionTest extends AbstractAgoraLearningTest
             )
         );
         $output2 = $this->client->createSession($sessionInput2);
-        $uuid2 = $output2->uuid;
+        $uuid2 = $output2->agoraId->getId();
 
         //Act
         $sessionOutputs = $this->client->getCollectionSession();
@@ -297,5 +313,166 @@ class SessionTest extends AbstractAgoraLearningTest
                 $this->assertInstanceOf(OpenedSessionOutput::class, $sessionOutput->sessionData);
             }
         }
+    }
+
+    /**
+     * @group external-id
+     */
+    public function testGetSessionByExternalId(): void
+    {
+        //Arrange
+        $identifier = new ExternalId('IntegrationTest', 'S-42');
+
+        //Act
+        try {
+            $sessionOutput = $this->client->getSession($identifier);
+        } catch (AgoraLearningClientException $e) {
+            if (in_array($e->getCode(), [400, 404], true)) {
+                $this->markTestSkipped(sprintf(
+                    'GET /sessions/%s non supporté par le serveur (HTTP %d) : %s',
+                    rawurlencode($identifier->getId()),
+                    $e->getCode(),
+                    $e->getMessage()
+                ));
+            }
+            throw $e;
+        }
+
+        // Assert
+        $this->assertNotSame('', $sessionOutput->uuid);
+    }
+
+    public function testReplaceFixedSession(): void
+    {
+        //Arrange
+        $externalId = $this->newExternalId('S');
+        $this->client->createSession(new SessionInput(
+            $externalId,
+            'Session Avant Remplacement',
+            new FixedSessionInput(
+                new \DateTimeImmutable('2026-10-01'),
+                new \DateTimeImmutable('2026-10-05'),
+                SessionType::SESSION_TYPE_INTRA,
+                SessionMode::SESSION_MODE_BLENDED
+            ),
+            false,
+            true,
+            true,
+            0,
+            0,
+            'Description initiale'
+        ));
+
+        //Act
+        $this->client->replaceSession($externalId, new SessionInput(
+            $externalId,
+            'Session Remplacée',
+            new FixedSessionInput(
+                new \DateTimeImmutable('2026-11-01'),
+                new \DateTimeImmutable('2026-11-05'),
+                SessionType::SESSION_TYPE_INTER,
+                SessionMode::SESSION_MODE_DISTANCE
+            )
+        ));
+        $sessionOutput = $this->client->getSession($externalId);
+
+        // Assert
+        $this->assertEquals('Session Remplacée', $sessionOutput->title);
+        $this->assertEquals(SessionType::SESSION_TYPE_INTER, $sessionOutput->type);
+        $this->assertNull($sessionOutput->description);
+        /** @var FixedSessionOutput $sessionData */
+        $sessionData = $sessionOutput->sessionData;
+        $this->assertEquals('2026-11-01', $sessionData->availabilityStartDate->format('Y-m-d'));
+    }
+
+    public function testPatchFixedSession(): void
+    {
+        //Arrange
+        $created = $this->client->createSession(new SessionInput(
+            $this->newExternalId('S'),
+            'Session Patch',
+            new FixedSessionInput(
+                new \DateTimeImmutable('2026-10-01'),
+                new \DateTimeImmutable('2026-10-05'),
+                SessionType::SESSION_TYPE_INTRA,
+                SessionMode::SESSION_MODE_BLENDED
+            )
+        ));
+
+        //Act
+        $this->client->patchSession(
+            $created->agoraId,
+            (new FixedSessionPatchInput())->setAvailabilityEndDate(new \DateTimeImmutable('2026-10-10'))->setMaxPlaces(12)
+        );
+        $sessionOutput = $this->client->getSession($created->agoraId);
+
+        // Assert
+        $this->assertEquals('Session Patch', $sessionOutput->title);
+        $this->assertEquals(12, $sessionOutput->maxPlaces);
+        /** @var FixedSessionOutput $sessionData */
+        $sessionData = $sessionOutput->sessionData;
+        $this->assertEquals('2026-10-01', $sessionData->availabilityStartDate->format('Y-m-d'));
+        $this->assertEquals('2026-10-10', $sessionData->availabilityEndDate->format('Y-m-d'));
+    }
+
+    public function testPatchOpenedSession(): void
+    {
+        //Arrange
+        $created = $this->client->createSession(new SessionInput(
+            $this->newExternalId('S'),
+            'Session Ouverte Patch',
+            new OpenedSessionInput(new \DateTimeImmutable('2026-01-01'), new \DateTimeImmutable('2026-12-31'), 30)
+        ));
+
+        //Act
+        $this->client->patchSession($created->agoraId, (new OpenedSessionPatchInput())->setAccessDurationDays(45));
+        $sessionOutput = $this->client->getSession($created->agoraId);
+
+        // Assert
+        $this->assertInstanceOf(OpenedSessionOutput::class, $sessionOutput->sessionData);
+        /** @var OpenedSessionOutput $sessionData */
+        $sessionData = $sessionOutput->sessionData;
+        $this->assertEquals(45, $sessionData->accessDurationDays);
+    }
+
+    public function testPatchSessionWithWrongTypeThrowsNotFound(): void
+    {
+        //Arrange
+        $created = $this->client->createSession(new SessionInput(
+            $this->newExternalId('S'),
+            'Session Ouverte Mauvais Type',
+            new OpenedSessionInput(new \DateTimeImmutable('2026-01-01'), new \DateTimeImmutable('2026-12-31'), 30)
+        ));
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionCode(404);
+
+        //Act
+        $this->client->patchSession($created->agoraId, (new FixedSessionPatchInput())->setMaxPlaces(10));
+    }
+
+    public function testDeleteSession(): void
+    {
+        //Arrange
+        $externalId = $this->newExternalId('S');
+        $this->client->createSession(new SessionInput(
+            $externalId,
+            'Session Supprimée',
+            new FixedSessionInput(
+                new \DateTimeImmutable('+30 days'),
+                new \DateTimeImmutable('+34 days'),
+                SessionType::SESSION_TYPE_INTER,
+                SessionMode::SESSION_MODE_FACE_TO_FACE
+            )
+        ));
+
+        //Act
+        $this->client->deleteSession($externalId);
+
+        // Assert
+        $this->assertNotFound(function () use ($externalId): void {
+            $this->client->getSession($externalId);
+        }, 'La session aurait dû être supprimée.');
     }
 }

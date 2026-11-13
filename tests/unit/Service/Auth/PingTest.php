@@ -25,7 +25,7 @@ class PingTest extends ServiceTestCase
             ->with('GET', $this->stringContains('/ping'), $this->anything())
             ->willReturn($mockResponse);
         $httpClient = new HttpClient($mockInner, new TokenHandler($mockInner));
-        $ping = new class($httpClient) extends Ping {
+        $ping = new class ($httpClient) extends Ping {
             public function __construct(HttpClient $client)
             {
                 $this->httpClient = $client;

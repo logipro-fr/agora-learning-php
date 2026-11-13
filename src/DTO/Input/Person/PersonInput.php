@@ -5,13 +5,16 @@ declare(strict_types=1);
 namespace AgoraLearningPhp\DTO\Input\Person;
 
 use AgoraLearningPhp\Enum\Gender;
+use AgoraLearningPhp\Identifier\ExternalId;
 
 final class PersonInput
 {
+    public ExternalId $externalIdentifier;
     public string $familyName;
     public string $givenName;
     public string $email;
     public ?string $telephone;
+    public ?string $mobileNumber;
     public ?string $addressStreet;
     public ?string $addressPostcode;
     public ?string $addressLocality;
@@ -20,8 +23,11 @@ final class PersonInput
     public string $gender;
     public ?\DateTimeImmutable $birthDate;
     public ?string $jobTitle;
+    /** Identifiant de la société du contact (Agora ou "source:id"), null si aucune */
+    public ?string $societyId;
 
     public function __construct(
+        ExternalId $externalIdentifier,
         string $familyName,
         string $givenName,
         string $email,
@@ -33,8 +39,11 @@ final class PersonInput
         ?string $addressCountry = null,
         ?string $image = null,
         ?\DateTimeImmutable $birthDate = null,
-        ?string $jobTitle = null
+        ?string $jobTitle = null,
+        ?string $mobileNumber = null,
+        ?string $societyId = null
     ) {
+        $this->externalIdentifier = $externalIdentifier;
         $this->familyName = $familyName;
         $this->givenName = $givenName;
         $this->email = $email;
@@ -47,5 +56,7 @@ final class PersonInput
         $this->gender = $gender;
         $this->birthDate = $birthDate;
         $this->jobTitle = $jobTitle;
+        $this->mobileNumber = $mobileNumber;
+        $this->societyId = $societyId;
     }
 }

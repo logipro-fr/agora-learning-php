@@ -4,15 +4,22 @@ declare(strict_types=1);
 
 namespace AgoraLearningPhp\Service\Session;
 
+use AgoraLearningPhp\DTO\Input\Session\AbstractSessionPatchInput;
 use AgoraLearningPhp\DTO\Input\Session\FixedSessionInput;
+use AgoraLearningPhp\DTO\Input\Session\FixedSessionPatchInput;
 use AgoraLearningPhp\DTO\Input\Session\OpenedSessionInput;
+use AgoraLearningPhp\DTO\Input\Session\OpenedSessionPatchInput;
 use AgoraLearningPhp\DTO\Input\Session\SessionInput;
+use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Session\FixedSessionOutput;
 use AgoraLearningPhp\DTO\Output\Session\OpenedSessionOutput;
 use AgoraLearningPhp\DTO\Output\Session\SessionOutput;
 use AgoraLearningPhp\Enum\RequestMethod;
 use AgoraLearningPhp\Enum\SessionMode;
 use AgoraLearningPhp\Enum\SessionType;
+use AgoraLearningPhp\Exception\AgoraLearningClientException;
+use AgoraLearningPhp\Identifier\ApiObjectIdentifier;
+use AgoraLearningPhp\Identifier\ExternalId;
 use AgoraLearningPhp\Service\ClientCore\ApiService;
 use AgoraLearningPhp\Service\ClientCore\ApiUrls;
 use AgoraLearningPhp\Service\Person\Person;
@@ -34,16 +41,85 @@ class Session extends ApiService
         return $this->convertResponseToDTOarray($response);
     }
 
-    public function getSession(string $uuid): SessionOutput
+    public function getSession(ApiObjectIdentifier $identifier): SessionOutput
     {
         $body = '';
-        $response = $this->httpClient->request(RequestMethod::GET, ApiUrls::getGetSession($uuid), $body);
+        $response = $this->httpClient->request(RequestMethod::GET, ApiUrls::getGetSession($identifier->getId()), $body);
         return $this->convertResponseToDTO($response);
     }
 
-    public function postSession(SessionInput $sessionInput): SessionOutput
+    public function postSession(SessionInput $sessionInput): CreatedOutput
+    {
+        $url = $sessionInput->sessionData instanceof OpenedSessionInput
+            ? ApiUrls::getCreateOpenedSession()
+            : ApiUrls::getCreateFixedSession();
+        $body = JsonHandler::jsonEncode($this->buildBody($sessionInput));
+        $response = $this->httpClient->request(RequestMethod::POST, $url, $body);
+        return $this->convertResponsePostToDTO($response);
+    }
+
+    /**
+     * Remplace la session (PUT) : un champ facultatif non renseigné est vidé.
+     * La route dépend du type de $sessionInput->sessionData, qui doit correspondre au type
+     * de la session existante (sinon HTTP 404) : le type d'une session ne peut pas être changé.
+     */
+    public function putSession(ApiObjectIdentifier $identifier, SessionInput $sessionInput): CreatedOutput
+    {
+        $url = $sessionInput->sessionData instanceof OpenedSessionInput
+            ? ApiUrls::getUpdateOpenedSession($identifier->getId())
+            : ApiUrls::getUpdateFixedSession($identifier->getId());
+        $body = JsonHandler::jsonEncode($this->buildBody($sessionInput));
+        $response = $this->httpClient->request(RequestMethod::PUT, $url, $body);
+        return $this->convertResponsePostToDTO($response);
+    }
+
+    /**
+     * Modifie partiellement la session (PATCH) : seuls les champs renseignés sont modifiés.
+     * La route dépend du type de $sessionPatchInput (FixedSessionPatchInput ou OpenedSessionPatchInput).
+     */
+    public function patchSession(ApiObjectIdentifier $identifier, AbstractSessionPatchInput $sessionPatchInput): CreatedOutput
+    {
+        if ($sessionPatchInput instanceof FixedSessionPatchInput) {
+            $url = ApiUrls::getUpdateFixedSession($identifier->getId());
+        } elseif ($sessionPatchInput instanceof OpenedSessionPatchInput) {
+            $url = ApiUrls::getUpdateOpenedSession($identifier->getId());
+        } else {
+            throw new \InvalidArgumentException('Unsupported session patch type: ' . get_class($sessionPatchInput));
+        }
+
+        return $this->sendPatch($url, $sessionPatchInput);
+    }
+
+    /**
+     * Détache la session de l'application source (PATCH /sessions/{id}/detach, réponse 204 sans contenu) :
+     * elle reste sur Agora mais n'est plus liée à l'application qui l'a créée.
+     *
+     * @throws AgoraLearningClientException si la session n'existe pas (404) ou si Agora refuse le détachement
+     */
+    public function detachSession(ApiObjectIdentifier $identifier): void
+    {
+        $this->sendDetach(ApiUrls::getDetachSession($identifier->getId()));
+    }
+
+    /**
+     * Supprime la session, fixe ou ouverte (DELETE, réponse 204 sans contenu).
+     *
+     * @throws AgoraLearningClientException si la session n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deleteSession(ApiObjectIdentifier $identifier): void
+    {
+        $this->sendDelete(ApiUrls::getDeleteSession($identifier->getId()));
+    }
+
+    /**
+     * Corps commun à la création (POST) et au remplacement (PUT).
+     *
+     * @return array<string, mixed>
+     */
+    private function buildBody(SessionInput $sessionInput): array
     {
         $data = [
+            'externalIdentifier' => $sessionInput->externalIdentifier->toArray(),
             'title' => $sessionInput->title,
             'description' => $sessionInput->description,
             'price' => $sessionInput->price,
@@ -61,7 +137,6 @@ class Session extends ApiService
         ];
 
         if ($sessionInput->sessionData instanceof FixedSessionInput) {
-            $url = ApiUrls::getCreateFixedSession();
             $specificData = [
                 'availabilityStartDate' => $sessionInput->sessionData->availabilityStartDate->format(self::DATETIME_FORMAT),
                 'availabilityEndDate' => $sessionInput->sessionData->availabilityEndDate->format(self::DATETIME_FORMAT),
@@ -69,7 +144,6 @@ class Session extends ApiService
                 'mode' => $sessionInput->sessionData->mode,
             ];
         } elseif ($sessionInput->sessionData instanceof OpenedSessionInput) {
-            $url = ApiUrls::getCreateOpenedSession();
             $specificData = [
                 'subscribeStartDate' => $sessionInput->sessionData->subscribeStartDate->format(self::DATETIME_FORMAT),
                 'subscribeEndDate' => $sessionInput->sessionData->subscribeEndDate->format(self::DATETIME_FORMAT),
@@ -78,13 +152,10 @@ class Session extends ApiService
                 'mode' => SessionMode::SESSION_MODE_E_LEARNING,
             ];
         } else {
-            throw new \ErrorException();
+            throw new \ErrorException('Unsupported session data type: ' . get_class($sessionInput->sessionData));
         }
 
-        $data = array_merge($data, $specificData);
-        $body = JsonHandler::jsonEncode($data);
-        $response = $this->httpClient->request(RequestMethod::POST, $url, $body);
-        return $this->convertResponseToDTO($response);
+        return array_merge($data, $specificData);
     }
 
     /**
@@ -93,7 +164,8 @@ class Session extends ApiService
     public static function convertDataToDTO(array $data): SessionOutput
     {
         /** @var array{
-         *     id: string,
+         *     agoraId: string,
+         *     externalIdentifier?: array<string, mixed>|null,
          *     title: string,
          *     type: string,
          *     mode: string,
@@ -119,11 +191,12 @@ class Session extends ApiService
         $urlPreTrainingSurvey = $data['urlPreTrainingSurvey'] ?? null;
         $urlOnTheSpotSurvey = $data['urlOnTheSpotSurvey'] ?? null;
         $urlDelayedSurvey = $data['urlDelayedSurvey'] ?? null;
+        $externalIdentifier = !empty($data['externalIdentifier']) ? ExternalId::fromArray($data['externalIdentifier']) : null;
 
-        $pedagogicalTrainer = array_key_exists('pedagogicalTrainer', $data)
+        $pedagogicalTrainer = isset($data['pedagogicalTrainer'])
             ? Trainer::convertDataToDTO($data['pedagogicalTrainer'])
             : null;
-        $administrativePerson = array_key_exists('administrativePerson', $data)
+        $administrativePerson = isset($data['administrativePerson'])
             ? Person::convertDataToDTO($data['administrativePerson'])
             : null;
 
@@ -141,11 +214,11 @@ class Session extends ApiService
                 $openedData['accessDurationDays'],
             );
         } else {
-            throw new \Exception();
+            throw new \UnexpectedValueException('Session data must contain dataSessionFixed or dataSessionOpened');
         }
 
         return new SessionOutput(
-            $data['id'],
+            $data['agoraId'],
             $data['title'],
             $data['type'],
             $data['mode'],
@@ -161,7 +234,8 @@ class Session extends ApiService
             $administrativePerson,
             $urlPreTrainingSurvey,
             $urlOnTheSpotSurvey,
-            $urlDelayedSurvey
+            $urlDelayedSurvey,
+            $externalIdentifier,
         );
     }
 }

@@ -6,7 +6,9 @@ namespace AgoraLearningPhp\Tests\integration;
 
 use AgoraLearningPhp\DTO\Input\Person\PersonInput;
 use AgoraLearningPhp\DTO\Input\Society\SocietyInput;
+use AgoraLearningPhp\DTO\Input\Society\SocietyPatchInput;
 use AgoraLearningPhp\Enum\Gender;
+use AgoraLearningPhp\Identifier\AgoraId;
 
 class SocietyTest extends AbstractAgoraLearningTest
 {
@@ -30,23 +32,27 @@ class SocietyTest extends AbstractAgoraLearningTest
 
         $legalPersonFamilyName = 'Durand';
         $legalPersonGivenName = 'Paul';
-        $legalPerson = new PersonInput(
+        $legalPersonId = $this->client->createPerson(new PersonInput(
+            $this->newExternalId('P'),
             $legalPersonFamilyName,
             $legalPersonGivenName,
             'paul.durand@example.com',
             Gender::GENDER_MALE
-        );
+        ))->agoraId->getId();
 
         $adminPersonFamilyName = 'Girard';
         $adminPersonGivenName = 'Marie';
-        $adminPerson = new PersonInput(
+        $adminPersonExternalId = $this->newExternalId('P');
+        $this->client->createPerson(new PersonInput(
+            $adminPersonExternalId,
             $adminPersonFamilyName,
             $adminPersonGivenName,
             'marie.girard@example.com',
             Gender::GENDER_FEMALE
-        );
+        ));
 
         $societyInput = new SocietyInput(
+            $this->newExternalId('SOC'),
             $name,
             $siret,
             $legalStatus,
@@ -60,14 +66,15 @@ class SocietyTest extends AbstractAgoraLearningTest
             $addressPostcodeInvoicing,
             $addressLocalityInvoicing,
             $addressCountryInvoicing,
-            $legalPerson,
-            $adminPerson,
+            $legalPersonId,
+            $adminPersonExternalId->getId(),
             null,
             $image
         );
 
         //Act
-        $societyOutput = $this->client->createSociety($societyInput);
+        $created = $this->client->createSociety($societyInput);
+        $societyOutput = $this->client->getSociety($created->agoraId);
 
         // Assert
         $this->assertEquals($name, $societyOutput->name);
@@ -96,10 +103,11 @@ class SocietyTest extends AbstractAgoraLearningTest
     {
         //Arrange
         $name = 'Société Minimum Test';
-        $societyInput = new SocietyInput($name);
+        $societyInput = new SocietyInput($this->newExternalId('SOC'), $name);
 
         //Act
-        $societyOutput = $this->client->createSociety($societyInput);
+        $created = $this->client->createSociety($societyInput);
+        $societyOutput = $this->client->getSociety($created->agoraId);
 
         // Assert
         $this->assertEquals($name, $societyOutput->name);
@@ -124,12 +132,11 @@ class SocietyTest extends AbstractAgoraLearningTest
     {
         //Arrange
         $name = 'Société Get Test';
-        $societyInput = new SocietyInput($name);
-        $output = $this->client->createSociety($societyInput);
-        $uuid = $output->uuid;
+        $societyInput = new SocietyInput($this->newExternalId('SOC'), $name);
+        $uuid = $this->client->createSociety($societyInput)->agoraId->getId();
 
         //Act
-        $societyOutput = $this->client->getSociety($uuid);
+        $societyOutput = $this->client->getSociety(new AgoraId($uuid));
 
         // Assert
         $this->assertEquals($uuid, $societyOutput->uuid);
@@ -140,14 +147,12 @@ class SocietyTest extends AbstractAgoraLearningTest
     {
         //Arrange
         $name1 = 'Société Collection Un Test';
-        $societyInput1 = new SocietyInput($name1);
-        $output1 = $this->client->createSociety($societyInput1);
-        $uuid1 = $output1->uuid;
+        $societyInput1 = new SocietyInput($this->newExternalId('SOC'), $name1);
+        $uuid1 = $this->client->createSociety($societyInput1)->agoraId->getId();
 
         $name2 = 'Société Collection Deux Test';
-        $societyInput2 = new SocietyInput($name2);
-        $output2 = $this->client->createSociety($societyInput2);
-        $uuid2 = $output2->uuid;
+        $societyInput2 = new SocietyInput($this->newExternalId('SOC'), $name2);
+        $uuid2 = $this->client->createSociety($societyInput2)->agoraId->getId();
 
         //Act
         $societyOutputs = $this->client->getCollectionSociety();
@@ -162,5 +167,67 @@ class SocietyTest extends AbstractAgoraLearningTest
                 $this->assertEquals($name2, $societyOutput->name);
             }
         }
+    }
+
+    public function testReplaceSociety(): void
+    {
+        //Arrange
+        $externalId = $this->newExternalId('SOC');
+        $this->client->createSociety(new SocietyInput($externalId, 'Société Avant Remplacement', '12345678901234'));
+
+        //Act
+        $updated = $this->client->replaceSociety($externalId, new SocietyInput($externalId, 'Société Remplacée'));
+        $societyOutput = $this->client->getSociety($externalId);
+
+        // Assert
+        $this->assertEquals($updated->agoraId->getId(), $societyOutput->uuid);
+        $this->assertEquals('Société Remplacée', $societyOutput->name);
+        $this->assertEmpty($societyOutput->siret);
+    }
+
+    public function testPatchSociety(): void
+    {
+        //Arrange
+        $rhPersonId = $this->client->createPerson(new PersonInput(
+            $this->newExternalId('P'),
+            'Bernard',
+            'Lucie',
+            'lucie.bernard@example.com',
+            Gender::GENDER_FEMALE
+        ))->agoraId->getId();
+        $created = $this->client->createSociety(new SocietyInput(
+            $this->newExternalId('SOC'),
+            'Société Patch',
+            '12345678901234'
+        ));
+
+        //Act
+        $this->client->patchSociety(
+            $created->agoraId,
+            (new SocietyPatchInput())->setTelephone('0102030405')->setRhPersonId($rhPersonId)
+        );
+        $societyOutput = $this->client->getSociety($created->agoraId);
+
+        // Assert
+        $this->assertEquals('Société Patch', $societyOutput->name);
+        $this->assertEquals('12345678901234', $societyOutput->siret);
+        $this->assertEquals('0102030405', $societyOutput->telephone);
+        $this->assertNotNull($societyOutput->rhPerson);
+        $this->assertEquals($rhPersonId, $societyOutput->rhPerson->uuid);
+    }
+
+    public function testDeleteSociety(): void
+    {
+        //Arrange
+        $externalId = $this->newExternalId('SOC');
+        $this->client->createSociety(new SocietyInput($externalId, 'Société Supprimée'));
+
+        //Act
+        $this->client->deleteSociety($externalId);
+
+        // Assert
+        $this->assertNotFound(function () use ($externalId): void {
+            $this->client->getSociety($externalId);
+        }, 'La société aurait dû être supprimée.');
     }
 }

@@ -5,11 +5,17 @@ declare(strict_types=1);
 namespace AgoraLearningPhp\Service\Learner;
 
 use AgoraLearningPhp\DTO\Input\Learner\LearnerInput;
+use AgoraLearningPhp\DTO\Input\Learner\LearnerPatchInput;
+use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Learner\LearnerOutput;
 use AgoraLearningPhp\Enum\Gender;
 use AgoraLearningPhp\Enum\RequestMethod;
+use AgoraLearningPhp\Exception\AgoraLearningClientException;
+use AgoraLearningPhp\Identifier\ApiObjectIdentifier;
+use AgoraLearningPhp\Identifier\ExternalId;
 use AgoraLearningPhp\Service\ClientCore\ApiService;
 use AgoraLearningPhp\Service\ClientCore\ApiUrls;
+use AgoraLearningPhp\Service\Society\Society;
 use AgoraLearningPhp\Service\Tools\JsonHandler;
 
 /**
@@ -27,34 +33,74 @@ class Learner extends ApiService
         return $this->convertResponseToDTOarray($response);
     }
 
-    public function getLearner(string $uuid): LearnerOutput
+    public function getLearner(ApiObjectIdentifier $identifier): LearnerOutput
     {
         $body = '';
-        $response = $this->httpClient->request(RequestMethod::GET, ApiUrls::getGetLearner($uuid), $body);
+        $response = $this->httpClient->request(RequestMethod::GET, ApiUrls::getGetLearner($identifier->getId()), $body);
         return $this->convertResponseToDTO($response);
     }
 
-    public function postLearner(LearnerInput $learnerInput): LearnerOutput
+    public function postLearner(LearnerInput $learnerInput): CreatedOutput
     {
-        $body = JsonHandler::jsonEncode(
-            [
-                "familyName" => $learnerInput->familyName,
-                "givenName" => $learnerInput->givenName,
-                "gender" => $learnerInput->gender,
-                "recoverEmail" => $learnerInput->recoverEmail,
-                "email" => $learnerInput->email,
-                "birthDate" => $learnerInput->birthDate ? $learnerInput->birthDate->format(self::DATETIME_FORMAT) : null,
-                "jobTitle" => $learnerInput->jobTitle,
-                "addressStreet" => $learnerInput->addressStreet,
-                "addressPostcode" => $learnerInput->addressPostcode,
-                "addressLocality" => $learnerInput->addressLocality,
-                "addressCountry" => $learnerInput->addressCountry,
-                "telephone" => $learnerInput->telephone,
-                "image" => $learnerInput->image
-            ]
-        );
+        $body = JsonHandler::jsonEncode($this->buildBody($learnerInput));
         $response = $this->httpClient->request(RequestMethod::POST, ApiUrls::getCreateLearner(), $body);
-        return $this->convertResponseToDTO($response);
+        return $this->convertResponsePostToDTO($response);
+    }
+
+    /**
+     * Remplace l'apprenant (PUT) : un champ facultatif non renseigné est vidé.
+     * L'identifiant de connexion et le statut du compte sont conservés.
+     */
+    public function putLearner(ApiObjectIdentifier $identifier, LearnerInput $learnerInput): CreatedOutput
+    {
+        $body = JsonHandler::jsonEncode($this->buildBody($learnerInput));
+        $response = $this->httpClient->request(RequestMethod::PUT, ApiUrls::getUpdateLearner($identifier->getId()), $body);
+        return $this->convertResponsePostToDTO($response);
+    }
+
+    /**
+     * Modifie partiellement l'apprenant (PATCH) : seuls les champs renseignés sont modifiés.
+     */
+    public function patchLearner(ApiObjectIdentifier $identifier, LearnerPatchInput $learnerPatchInput): CreatedOutput
+    {
+        return $this->sendPatch(ApiUrls::getUpdateLearner($identifier->getId()), $learnerPatchInput);
+    }
+
+    /**
+     * Supprime l'apprenant (DELETE, réponse 204 sans contenu).
+     *
+     * @throws AgoraLearningClientException si l'apprenant n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deleteLearner(ApiObjectIdentifier $identifier): void
+    {
+        $this->sendDelete(ApiUrls::getDeleteLearner($identifier->getId()));
+    }
+
+    /**
+     * Corps commun à la création (POST) et au remplacement (PUT).
+     *
+     * @return array<string, mixed>
+     */
+    private function buildBody(LearnerInput $learnerInput): array
+    {
+        return [
+            "externalIdentifier" => $learnerInput->externalIdentifier->toArray(),
+            "familyName" => $learnerInput->familyName,
+            "givenName" => $learnerInput->givenName,
+            "gender" => $learnerInput->gender,
+            "recoverEmail" => $learnerInput->recoverEmail,
+            "email" => $learnerInput->email,
+            "birthDate" => $learnerInput->birthDate ? $learnerInput->birthDate->format(self::DATETIME_FORMAT) : null,
+            "jobTitle" => $learnerInput->jobTitle,
+            "addressStreet" => $learnerInput->addressStreet,
+            "addressPostcode" => $learnerInput->addressPostcode,
+            "addressLocality" => $learnerInput->addressLocality,
+            "addressCountry" => $learnerInput->addressCountry,
+            "telephone" => $learnerInput->telephone,
+            "mobileNumber" => $learnerInput->mobileNumber,
+            "image" => $learnerInput->image,
+            "societyId" => $learnerInput->societyId
+        ];
     }
 
     /**
@@ -63,20 +109,22 @@ class Learner extends ApiService
     public static function convertDataToDTO(array $data): LearnerOutput
     {
         /** @var array{
-         *     id: string,
+         *     agoraId: string,
+         *     externalIdentifier?: array<string, mixed>|null,
          *     username: string,
          *     familyName: string,
          *     givenName: string,
          *     recoverEmail: string,
          *     email: string,
-         *     gender?: string,         
+         *     gender?: string,
          *     telephone?: string|null,
          *     addressStreet?: string|null,
          *     addressPostcode?: string|null,
          *     addressLocality?: string|null,
-         *     addressCountry?: string|null,         
+         *     addressCountry?: string|null,
          *     birthDate?: string|null,
-         *     jobTitle?: string|null
+         *     jobTitle?: string|null,
+         *     society?: array<string, mixed>|null
          * } $data */
         $telephone = $data['telephone'] ?? null;
         $addressStreet = $data['addressStreet'] ?? null;
@@ -86,9 +134,12 @@ class Learner extends ApiService
         $gender = $data['gender'] ?? Gender::GENDER_NA;
         $birthDate = !empty($data['birthDate']) ? new \DateTimeImmutable($data['birthDate']) : null;
         $jobTitle = $data['jobTitle'] ?? null;
+        $externalIdentifier = !empty($data['externalIdentifier']) ? ExternalId::fromArray($data['externalIdentifier']) : null;
+        // L'API renvoie "society": null pour un apprenant sans société
+        $society = !empty($data['society']) ? Society::convertDataToDTO($data['society']) : null;
 
         return new LearnerOutput(
-            $data['id'],
+            $data['agoraId'],
             $data['username'],
             $data['familyName'],
             $data['givenName'],
@@ -101,7 +152,9 @@ class Learner extends ApiService
             $addressLocality,
             $addressCountry,
             $birthDate,
-            $jobTitle
+            $jobTitle,
+            $externalIdentifier,
+            $society,
         );
     }
 }

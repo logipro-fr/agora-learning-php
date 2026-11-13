@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace AgoraLearningPhp\Tests\unit\Service\Session;
 
+use AgoraLearningPhp\DTO\Input\Session\AbstractSessionPatchInput;
 use AgoraLearningPhp\DTO\Input\Session\FixedSessionInput;
+use AgoraLearningPhp\DTO\Input\Session\FixedSessionPatchInput;
 use AgoraLearningPhp\DTO\Input\Session\OpenedSessionInput;
+use AgoraLearningPhp\DTO\Input\Session\OpenedSessionPatchInput;
 use AgoraLearningPhp\DTO\Input\Session\SessionInput;
+use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Session\FixedSessionOutput;
 use AgoraLearningPhp\DTO\Output\Session\OpenedSessionOutput;
 use AgoraLearningPhp\DTO\Output\Session\SessionOutput;
@@ -14,6 +18,9 @@ use AgoraLearningPhp\Enum\Gender;
 use AgoraLearningPhp\Enum\SessionMode;
 use AgoraLearningPhp\Enum\SessionType;
 use AgoraLearningPhp\Enum\TrainerStatut;
+use AgoraLearningPhp\Exception\AgoraLearningClientException;
+use AgoraLearningPhp\Identifier\AgoraId;
+use AgoraLearningPhp\Identifier\ExternalId;
 use AgoraLearningPhp\Service\ClientCore\HttpClient;
 use AgoraLearningPhp\Service\Session\Session;
 use AgoraLearningPhp\Tests\unit\Service\ServiceTestCase;
@@ -27,7 +34,8 @@ class SessionTest extends ServiceTestCase
     private function makeBaseSessionData(): array
     {
         return [
-            'id'              => 'sess-uuid-001',
+            'agoraId'         => 'sess-uuid-001',
+            'externalIdentifier' => ['sourceName' => 'Test', 'id' => 'S-1'],
             'title'           => 'Formation PHP',
             'type'            => SessionType::SESSION_TYPE_INTER,
             'mode'            => SessionMode::SESSION_MODE_E_LEARNING,
@@ -63,7 +71,7 @@ class SessionTest extends ServiceTestCase
 
     private function makeSession(HttpClient $httpClient): Session
     {
-        return new class($httpClient) extends Session {
+        return new class ($httpClient) extends Session {
             public function __construct(HttpClient $client)
             {
                 $this->httpClient = $client;
@@ -74,7 +82,7 @@ class SessionTest extends ServiceTestCase
     private function makePersonData(): array
     {
         return [
-            'id'         => 'person-uuid-001',
+            'agoraId'    => 'person-uuid-001',
             'familyName' => 'Doe',
             'givenName'  => 'John',
             'email' => 'john.doe@example.net'
@@ -84,7 +92,7 @@ class SessionTest extends ServiceTestCase
     private function makeTrainerData(): array
     {
         return [
-            'id'                        => 'trainer-emp-001',
+            'agoraId'                   => 'trainer-emp-001',
             'familyName'                => 'Dupont',
             'givenName'                 => 'Jean',
             'email'                     => 'jean@example.com',
@@ -119,6 +127,8 @@ class SessionTest extends ServiceTestCase
 
         // Assert
         $this->assertSame('sess-uuid-001', $dto->uuid);
+        $this->assertNotNull($dto->externalIdentifier);
+        $this->assertSame('Test:S-1', $dto->externalIdentifier->getId());
         $this->assertSame('Formation PHP', $dto->title);
         $this->assertSame(SessionType::SESSION_TYPE_INTER, $dto->type);
         $this->assertSame(SessionMode::SESSION_MODE_E_LEARNING, $dto->mode);
@@ -209,8 +219,8 @@ class SessionTest extends ServiceTestCase
     public function testGetCollectionSessionReturnsDTOArray(): void
     {
         // Arrange
-        $row1    = array_merge($this->makeBaseSessionData(), $this->makeFixedSessionData(), ['id' => 's1']);
-        $row2    = array_merge($this->makeBaseSessionData(), $this->makeOpenedSessionData(), ['id' => 's2']);
+        $row1    = array_merge($this->makeBaseSessionData(), $this->makeFixedSessionData(), ['agoraId' => 's1']);
+        $row2    = array_merge($this->makeBaseSessionData(), $this->makeOpenedSessionData(), ['agoraId' => 's2']);
         $session = $this->makeSession(
             $this->makeHttpClientWithResponse(200, json_encode([$row1, $row2]))
         );
@@ -234,19 +244,127 @@ class SessionTest extends ServiceTestCase
         );
 
         // Act
-        $result = $session->getSession('sess-uuid-001');
+        $result = $session->getSession(new AgoraId('sess-uuid-001'));
 
         // Assert
         $this->assertInstanceOf(SessionOutput::class, $result);
         $this->assertSame('sess-uuid-001', $result->uuid);
     }
 
+    public function testGetSessionWithAgoraIdCallsAgoraUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $session = $this->makeSession($this->makeHttpClientInspectingRequest(
+            200,
+            json_encode(array_merge($this->makeBaseSessionData(), $this->makeFixedSessionData())),
+            $method,
+            $url
+        ));
+
+        // Act
+        $result = $session->getSession(new AgoraId('sess-uuid-001'));
+
+        // Assert
+        $this->assertSame('GET', $method);
+        $this->assertStringEndsWith('/sessions/sess-uuid-001', $url);
+        $this->assertSame('sess-uuid-001', $result->uuid);
+    }
+
+    public function testGetSessionWithExternalIdCallsEncodedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $session = $this->makeSession($this->makeHttpClientInspectingRequest(
+            200,
+            json_encode(array_merge($this->makeBaseSessionData(), $this->makeFixedSessionData())),
+            $method,
+            $url
+        ));
+
+        // Act
+        $result = $session->getSession(new ExternalId('Src', 'S-42'));
+
+        // Assert
+        $this->assertSame('GET', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/sessions/Src%3AS-42', $url);
+        $this->assertSame('sess-uuid-001', $result->uuid);
+    }
+
+    /**
+     * @dataProvider invalidIdentifierProvider
+     *
+     * @param mixed $identifier
+     */
+    public function testGetSessionWithInvalidTypeIsRejected($identifier): void
+    {
+        // Arrange
+        $session = $this->makeSession($this->makeHttpClientWithResponse(200, '{}'));
+
+        // Assert
+        $this->expectException(\TypeError::class);
+
+        // Act
+        $session->getSession($identifier);
+    }
+
+    /**
+     * @return array<string, array{mixed}>
+     */
+    public function invalidIdentifierProvider(): array
+    {
+        return [
+            'string' => ['sess-uuid-001'],
+            'int'    => [42],
+            'null'   => [null],
+            'array'  => [['Src', 'S-42']],
+            'objet'  => [new \stdClass()],
+        ];
+    }
+
+    public function testGetSessionThrowsWithHttpStatusCodeOnError(): void
+    {
+        // Arrange
+        $session = $this->makeSession(
+            $this->makeHttpClientWithResponse(404, json_encode(['detail' => 'Session not found']))
+        );
+
+        // Act
+        try {
+            $session->getSession(new ExternalId('Src', 'S-42'));
+            $this->fail('AgoraLearningClientException expected');
+        } catch (AgoraLearningClientException $e) {
+            // Assert
+            $this->assertSame('Session not found', $e->getMessage());
+            $this->assertSame(404, $e->getCode());
+        }
+    }
+
+    public function testGetCollectionSessionThrowsWithHttpStatusCodeOnError(): void
+    {
+        // Arrange
+        $session = $this->makeSession(
+            $this->makeHttpClientWithResponse(400, json_encode(['detail' => 'Bad request']))
+        );
+
+        // Act
+        try {
+            $session->getCollectionSession();
+            $this->fail('AgoraLearningClientException expected');
+        } catch (AgoraLearningClientException $e) {
+            // Assert
+            $this->assertSame(400, $e->getCode());
+        }
+    }
+
     public function testPostSessionWithFixedSessionInput(): void
     {
         // Arrange
         $session = $this->makeSession(
-            $this->makeHttpClientWithResponse(200, json_encode(
-                array_merge($this->makeBaseSessionData(), $this->makeFixedSessionData())
+            $this->makeHttpClientWithResponse(201, json_encode(
+                ['agoraId' => 'ses_new_001', 'sourceName' => 'Test', 'externalId' => 'S-1']
             ))
         );
         $fixedData    = new FixedSessionInput(
@@ -255,21 +373,24 @@ class SessionTest extends ServiceTestCase
             SessionType::SESSION_TYPE_INTER,
             SessionMode::SESSION_MODE_FACE_TO_FACE
         );
-        $sessionInput = new SessionInput('Formation PHP', $fixedData);
+        $sessionInput = new SessionInput(new ExternalId('Test', 'S-1'), 'Formation PHP', $fixedData);
 
         // Act
         $result = $session->postSession($sessionInput);
 
         // Assert
-        $this->assertInstanceOf(SessionOutput::class, $result);
+        $this->assertInstanceOf(CreatedOutput::class, $result);
+        $this->assertSame('ses_new_001', $result->agoraId->getId());
+        $this->assertNotNull($result->externalId);
+        $this->assertSame('Test:S-1', $result->externalId->getId());
     }
 
     public function testPostSessionWithOpenedSessionInput(): void
     {
         // Arrange
         $session = $this->makeSession(
-            $this->makeHttpClientWithResponse(200, json_encode(
-                array_merge($this->makeBaseSessionData(), $this->makeOpenedSessionData())
+            $this->makeHttpClientWithResponse(201, json_encode(
+                ['agoraId' => 'ses_new_002', 'sourceName' => 'Test', 'externalId' => 'S-2']
             ))
         );
         $openedData   = new OpenedSessionInput(
@@ -277,13 +398,73 @@ class SessionTest extends ServiceTestCase
             new \DateTimeImmutable('2024-09-30'),
             90
         );
-        $sessionInput = new SessionInput('Formation Ouverte', $openedData);
+        $sessionInput = new SessionInput(new ExternalId('Test', 'S-2'), 'Formation Ouverte', $openedData);
 
         // Act
         $result = $session->postSession($sessionInput);
 
         // Assert
-        $this->assertInstanceOf(SessionOutput::class, $result);
+        $this->assertInstanceOf(CreatedOutput::class, $result);
+        $this->assertSame('ses_new_002', $result->agoraId->getId());
+    }
+
+    public function testPostSessionThrowsAgoraErrorMessageOnConflict(): void
+    {
+        // Arrange
+        $session = $this->makeSession($this->makeHttpClientWithResponse(
+            409,
+            json_encode(['error' => 'id "S-1" already exists.', 'externalId' => 'S-1'])
+        ));
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionMessage('id "S-1" already exists.');
+        $this->expectExceptionCode(409);
+
+        // Act
+        $session->postSession($this->makeFixedSessionInput());
+    }
+
+    public function testPostSessionThrowsClientExceptionWithHttpCodeWhenErrorBodyIsEmpty(): void
+    {
+        // Arrange
+        $session = $this->makeSession($this->makeHttpClientWithResponse(500, ''));
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionMessage('An unexpected error occured (HTTP 500)');
+        $this->expectExceptionCode(500);
+
+        // Act
+        $session->postSession($this->makeFixedSessionInput());
+    }
+
+    public function testGetSessionThrowsClientExceptionWhenErrorBodyIsNotJson(): void
+    {
+        // Arrange
+        $session = $this->makeSession($this->makeHttpClientWithResponse(502, '<html>Bad Gateway</html>'));
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionMessage('An unexpected error occured (HTTP 502)');
+        $this->expectExceptionCode(502);
+
+        // Act
+        $session->getSession(new AgoraId('ses_001'));
+    }
+
+    private function makeFixedSessionInput(): SessionInput
+    {
+        return new SessionInput(
+            new ExternalId('Test', 'S-1'),
+            'Formation PHP',
+            new FixedSessionInput(
+                new \DateTimeImmutable('2024-01-01'),
+                new \DateTimeImmutable('2024-12-31'),
+                SessionType::SESSION_TYPE_INTER,
+                SessionMode::SESSION_MODE_FACE_TO_FACE
+            )
+        );
     }
 
     public function testPostSessionThrowsOnInvalidSessionData(): void
@@ -291,7 +472,7 @@ class SessionTest extends ServiceTestCase
         // Arrange
         $session      = $this->makeSession($this->makeHttpClientWithResponse(200, '{}'));
         $mockSpecific = $this->createMock(\AgoraLearningPhp\DTO\Input\Session\SpecificSessionInputInterface::class);
-        $sessionInput = new SessionInput('Formation Invalide', $mockSpecific);
+        $sessionInput = new SessionInput(new ExternalId('Test', 'S-3'), 'Formation Invalide', $mockSpecific);
 
         // Assert
         $this->expectException(\ErrorException::class);
@@ -307,7 +488,7 @@ class SessionTest extends ServiceTestCase
         $session      = $this->makeSession(
             $this->makeHttpClientInspectingBody(
                 200,
-                json_encode(array_merge($this->makeBaseSessionData(), $this->makeFixedSessionData())),
+                json_encode(['agoraId' => 'ses_new_004']),
                 $capturedBody
             )
         );
@@ -318,6 +499,7 @@ class SessionTest extends ServiceTestCase
             SessionMode::SESSION_MODE_E_LEARNING
         );
         $sessionInput = new SessionInput(
+            new ExternalId('Test', 'S-4'),
             'Formation PHP',
             $fixedData,
             false,
@@ -363,7 +545,7 @@ class SessionTest extends ServiceTestCase
         $session      = $this->makeSession(
             $this->makeHttpClientInspectingBody(
                 200,
-                json_encode(array_merge($this->makeBaseSessionData(), $this->makeOpenedSessionData())),
+                json_encode(['agoraId' => 'ses_new_005']),
                 $capturedBody
             )
         );
@@ -372,7 +554,7 @@ class SessionTest extends ServiceTestCase
             new \DateTimeImmutable('2024-09-30'),
             90
         );
-        $sessionInput = new SessionInput('Formation Ouverte', $openedData);
+        $sessionInput = new SessionInput(new ExternalId('Test', 'S-5'), 'Formation Ouverte', $openedData);
 
         // Act
         $session->postSession($sessionInput);
@@ -385,5 +567,198 @@ class SessionTest extends ServiceTestCase
         $this->assertSame(90, $body['accessDurationDays']);
         $this->assertSame(SessionType::SESSION_TYPE_INTER, $body['type']);
         $this->assertSame(SessionMode::SESSION_MODE_E_LEARNING, $body['mode']);
+    }
+
+    // -------------------------------------------------------------------------
+    // PUT / PATCH
+    // -------------------------------------------------------------------------
+
+    public function testPutSessionWithFixedDataSendsPutRequestToFixedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $session = $this->makeSession($this->makeHttpClientInspectingRequest(200, json_encode(['agoraId' => 'ses_001', 'sourceName' => 'Src', 'externalId' => 'X-42']), $method, $url));
+        $fixedData = new FixedSessionInput(
+            new \DateTimeImmutable('2026-03-02T09:00:00+01:00'),
+            new \DateTimeImmutable('2026-03-04T17:00:00+01:00'),
+            SessionType::SESSION_TYPE_INTER,
+            SessionMode::SESSION_MODE_FACE_TO_FACE
+        );
+
+        // Act
+        $session->putSession(new ExternalId('Src', 'X-42'), new SessionInput(new ExternalId('Src', 'X-42'), 'Formation', $fixedData));
+
+        // Assert
+        $this->assertSame('PUT', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/sessions/fixed/Src%3AX-42', $url);
+    }
+
+    public function testPutSessionWithOpenedDataSendsOpenedBodyToOpenedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $capturedBody = '';
+        $session = $this->makeSession($this->makeHttpClientInspectingRequest(200, json_encode(['agoraId' => 'ses_001', 'sourceName' => 'Src', 'externalId' => 'X-42']), $method, $url));
+        $sessionBody = $this->makeSession($this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'ses_001', 'sourceName' => 'Src', 'externalId' => 'X-42']), $capturedBody));
+        $openedData = new OpenedSessionInput(
+            new \DateTimeImmutable('2026-01-01T00:00:00+00:00'),
+            new \DateTimeImmutable('2026-12-31T00:00:00+00:00'),
+            30
+        );
+        $input = new SessionInput(new ExternalId('Src', 'X-42'), 'Formation', $openedData);
+
+        // Act
+        $session->putSession(new AgoraId('ses_001'), $input);
+        $sessionBody->putSession(new AgoraId('ses_001'), $input);
+
+        // Assert
+        $this->assertSame('PUT', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/sessions/opened/ses_001', $url);
+        $body = json_decode($capturedBody, true);
+        $this->assertSame(30, $body['accessDurationDays']);
+        $this->assertSame(SessionType::SESSION_TYPE_INTER, $body['type']);
+        $this->assertSame(SessionMode::SESSION_MODE_E_LEARNING, $body['mode']);
+    }
+
+    public function testPatchSessionWithFixedPatchSendsOnlySetFieldsToFixedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $capturedBody = '';
+        $session = $this->makeSession($this->makeHttpClientInspectingRequest(200, json_encode(['agoraId' => 'ses_001', 'sourceName' => 'Src', 'externalId' => 'X-42']), $method, $url));
+        $sessionBody = $this->makeSession($this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'ses_001', 'sourceName' => 'Src', 'externalId' => 'X-42']), $capturedBody));
+        $patch = (new FixedSessionPatchInput())
+            ->setAvailabilityStartDate(new \DateTimeImmutable('2026-03-02T09:00:00+01:00'))
+            ->setMaxPlaces(null)
+            ->setPedagogicalTrainer(null);
+
+        // Act
+        $session->patchSession(new AgoraId('ses_001'), $patch);
+        $sessionBody->patchSession(new AgoraId('ses_001'), $patch);
+
+        // Assert
+        $this->assertSame('PATCH', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/sessions/fixed/ses_001', $url);
+        $this->assertSame(
+            ['availabilityStartDate' => '2026-03-02T09:00:00+01:00', 'maxPlaces' => null, 'pedagogicalTrainer' => null],
+            json_decode($capturedBody, true)
+        );
+    }
+
+    public function testPatchSessionWithOpenedPatchSendsToOpenedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $capturedBody = '';
+        $session = $this->makeSession($this->makeHttpClientInspectingRequest(200, json_encode(['agoraId' => 'ses_001', 'sourceName' => 'Src', 'externalId' => 'X-42']), $method, $url));
+        $sessionBody = $this->makeSession($this->makeHttpClientInspectingBody(200, json_encode(['agoraId' => 'ses_001', 'sourceName' => 'Src', 'externalId' => 'X-42']), $capturedBody));
+        $patch = (new OpenedSessionPatchInput())->setAccessDurationDays(45)->setDurationInSeconds(3600);
+
+        // Act
+        $session->patchSession(new ExternalId('Src', 'X-42'), $patch);
+        $sessionBody->patchSession(new ExternalId('Src', 'X-42'), $patch);
+
+        // Assert
+        $this->assertSame('PATCH', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/sessions/opened/Src%3AX-42', $url);
+        $this->assertSame(['accessDurationDays' => 45, 'duration' => 3600], json_decode($capturedBody, true));
+    }
+
+    public function testPatchSessionThrowsExceptionForUnsupportedPatchType(): void
+    {
+        // Arrange
+        $session = $this->makeSession($this->makeHttpClientWithResponse(200, json_encode(['agoraId' => 'ses_001', 'sourceName' => 'Src', 'externalId' => 'X-42'])));
+        $patch = new class () extends AbstractSessionPatchInput {
+        };
+
+        // Assert
+        $this->expectException(\InvalidArgumentException::class);
+
+        // Act
+        $session->patchSession(new AgoraId('ses_001'), $patch);
+    }
+
+    // -------------------------------------------------------------------------
+    // detachSession
+    // -------------------------------------------------------------------------
+
+    public function testDetachSessionSendsPatchToDetachUrl(): void
+    {
+        // Arrange
+        $requests = [];
+        $session = $this->makeSession($this->makeHttpClientWithSequence([[204, '']], $requests));
+
+        // Act
+        $session->detachSession(new ExternalId('Src', 'X-42'));
+
+        // Assert
+        $this->assertCount(1, $requests);
+        $this->assertSame('PATCH', $requests[0]['method']);
+        $this->assertSame('https://api.test.local/api/external/v1/sessions/Src%3AX-42/detach', $requests[0]['url']);
+        $this->assertSame('{}', $requests[0]['body']);
+    }
+
+    public function testDetachSessionThrowsExceptionWhenApiRefusesDetach(): void
+    {
+        // Arrange
+        $session = $this->makeSession($this->makeHttpClientWithResponse(500, ''));
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionCode(500);
+
+        // Act
+        $session->detachSession(new AgoraId('ses_001'));
+    }
+
+    public function testDetachSessionThrowsExceptionWithStatusCodeWhenApiReturns404(): void
+    {
+        // Arrange
+        $session = $this->makeSession($this->makeHttpClientWithResponse(404, json_encode(['detail' => 'Session not found'])));
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionMessage('Session not found');
+        $this->expectExceptionCode(404);
+
+        // Act
+        $session->detachSession(new AgoraId('ses_missing'));
+    }
+
+    // -------------------------------------------------------------------------
+    // deleteSession
+    // -------------------------------------------------------------------------
+
+    public function testDeleteSessionWithExternalIdSendsDeleteToEncodedUrl(): void
+    {
+        // Arrange
+        $method = '';
+        $url = '';
+        $session = $this->makeSession($this->makeHttpClientInspectingRequest(204, '', $method, $url));
+
+        // Act
+        $session->deleteSession(new ExternalId('Src', 'X-42'));
+
+        // Assert
+        $this->assertSame('DELETE', $method);
+        $this->assertSame('https://api.test.local/api/external/v1/sessions/Src%3AX-42', $url);
+    }
+
+    public function testDeleteSessionThrowsExceptionWithStatusCodeWhenApiReturns404(): void
+    {
+        // Arrange
+        $session = $this->makeSession($this->makeHttpClientWithResponse(404, json_encode(['detail' => 'Session not found'])));
+
+        // Assert
+        $this->expectException(AgoraLearningClientException::class);
+        $this->expectExceptionMessage('Session not found');
+        $this->expectExceptionCode(404);
+
+        // Act
+        $session->deleteSession(new AgoraId('ses_missing'));
     }
 }

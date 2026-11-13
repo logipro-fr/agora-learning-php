@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace AgoraLearningPhp\Tests\integration;
 
 use AgoraLearningPhp\DTO\Input\Learner\LearnerInput;
+use AgoraLearningPhp\DTO\Input\Learner\LearnerPatchInput;
+use AgoraLearningPhp\DTO\Input\Society\SocietyInput;
 use AgoraLearningPhp\Enum\Gender;
+use AgoraLearningPhp\Identifier\AgoraId;
 
 class LearnerTest extends AbstractAgoraLearningTest
 {
@@ -27,6 +30,7 @@ class LearnerTest extends AbstractAgoraLearningTest
         $jobTitle = 'Chargée de projet';
 
         $learnerInput = new LearnerInput(
+            $this->newExternalId('L'),
             $familyName,
             $givenName,
             $recoverEmail,
@@ -43,7 +47,8 @@ class LearnerTest extends AbstractAgoraLearningTest
         );
 
         //Act
-        $learnerOutput = $this->client->createLearner($learnerInput);
+        $created = $this->client->createLearner($learnerInput);
+        $learnerOutput = $this->client->getLearner($created->agoraId);
 
         // Assert
         $this->assertEquals($familyName, $learnerOutput->familyName);
@@ -68,6 +73,7 @@ class LearnerTest extends AbstractAgoraLearningTest
         $recoverEmail = 'matt.palin.recovery2@example.com';
 
         $learnerInput = new LearnerInput(
+            $this->newExternalId('L'),
             $familyName,
             $givenName,
             $recoverEmail,
@@ -75,7 +81,8 @@ class LearnerTest extends AbstractAgoraLearningTest
         );
 
         //Act
-        $learnerOutput = $this->client->createLearner($learnerInput);
+        $created = $this->client->createLearner($learnerInput);
+        $learnerOutput = $this->client->getLearner($created->agoraId);
 
         // Assert
         $this->assertEquals($familyName, $learnerOutput->familyName);
@@ -98,16 +105,16 @@ class LearnerTest extends AbstractAgoraLearningTest
         $givenName = 'Ana';
         $recoverEmail = 'ana.garcia.get@example.com';
         $learnerInput = new LearnerInput(
+            $this->newExternalId('L'),
             $familyName,
             $givenName,
             $recoverEmail,
             $recoverEmail
         );
-        $output = $this->client->createLearner($learnerInput);
-        $uuid = $output->uuid;
+        $uuid = $this->client->createLearner($learnerInput)->agoraId->getId();
 
         //Act
-        $learnerOutput = $this->client->getLearner($uuid);
+        $learnerOutput = $this->client->getLearner(new AgoraId($uuid));
 
         // Assert
         $this->assertEquals($uuid, $learnerOutput->uuid);
@@ -122,16 +129,14 @@ class LearnerTest extends AbstractAgoraLearningTest
         $familyName1 = 'LearnerUn';
         $givenName1 = 'Jean';
         $recoverEmail1 = 'learner.un.coll@example.com';
-        $learnerInput1 = new LearnerInput($familyName1, $givenName1, $recoverEmail1, $recoverEmail1);
-        $output1 = $this->client->createLearner($learnerInput1);
-        $uuid1 = $output1->uuid;
+        $learnerInput1 = new LearnerInput($this->newExternalId('L'), $familyName1, $givenName1, $recoverEmail1, $recoverEmail1);
+        $uuid1 = $this->client->createLearner($learnerInput1)->agoraId->getId();
 
         $familyName2 = 'LearnerDeux';
         $givenName2 = 'Jean';
         $recoverEmail2 = 'learner.deux.coll@example.com';
-        $learnerInput2 = new LearnerInput($familyName2, $givenName2, $recoverEmail2, $recoverEmail2);
-        $output2 = $this->client->createLearner($learnerInput2);
-        $uuid2 = $output2->uuid;
+        $learnerInput2 = new LearnerInput($this->newExternalId('L'), $familyName2, $givenName2, $recoverEmail2, $recoverEmail2);
+        $uuid2 = $this->client->createLearner($learnerInput2)->agoraId->getId();
 
         //Act
         $learnerOutputs = $this->client->getCollectionLearner();
@@ -152,5 +157,131 @@ class LearnerTest extends AbstractAgoraLearningTest
                 $this->assertEquals($recoverEmail2, $learnerOutput->email);
             }
         }
+    }
+
+    public function testReplaceLearner(): void
+    {
+        //Arrange
+        $externalId = $this->newExternalId('L');
+        $this->client->createLearner(new LearnerInput(
+            $externalId,
+            'Avant',
+            'Matt',
+            'matt.avant@example.com',
+            'matt.avant@example.com'
+        ));
+
+        //Act
+        $this->client->replaceLearner(
+            $externalId,
+            new LearnerInput($externalId, 'Apres', 'Matt', 'matt.apres@example.com', 'matt.apres@example.com')
+        );
+        $learnerOutput = $this->client->getLearner($externalId);
+
+        // Assert
+        $this->assertEquals('Apres', $learnerOutput->familyName);
+        $this->assertEquals('matt.apres@example.com', $learnerOutput->recoverEmail);
+    }
+
+    public function testPatchLearner(): void
+    {
+        //Arrange
+        $created = $this->client->createLearner(new LearnerInput(
+            $this->newExternalId('L'),
+            'Patch',
+            'Matt',
+            'matt.patch@example.com',
+            'matt.patch@example.com'
+        ));
+
+        //Act
+        $this->client->patchLearner($created->agoraId, (new LearnerPatchInput())->setAddressLocality('Lyon'));
+        $learnerOutput = $this->client->getLearner($created->agoraId);
+
+        // Assert
+        $this->assertEquals('Patch', $learnerOutput->familyName);
+        $this->assertEquals('Lyon', $learnerOutput->addressLocality);
+    }
+
+    public function testDeleteLearner(): void
+    {
+        //Arrange
+        $externalId = $this->newExternalId('L');
+        $email = $this->newEmail('marie.supprime');
+        $this->client->createLearner(new LearnerInput($externalId, 'Supprime', 'Marie', $email, $email));
+
+        //Act
+        $this->client->deleteLearner($externalId);
+
+        // Assert
+        $this->assertNotFound(function () use ($externalId): void {
+            $this->client->getLearner($externalId);
+        }, 'L\'apprenant aurait dû être supprimé.');
+    }
+
+    public function testCreateLearnerAttachedToSociety(): void
+    {
+        //Arrange
+        $societyExternalId = $this->newExternalId('SOC');
+        $this->client->createSociety(new SocietyInput($societyExternalId, 'Société de l\'apprenant'));
+        $email = $this->newEmail('lea.societe');
+
+        //Act
+        $created = $this->client->createLearner(new LearnerInput(
+            $this->newExternalId('L'),
+            'Societe',
+            'Lea',
+            $email,
+            $email,
+            Gender::GENDER_NA,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            $societyExternalId->getId()
+        ));
+        $learnerOutput = $this->client->getLearner($created->agoraId);
+
+        // Assert
+        $this->assertNotNull($learnerOutput->society);
+        $this->assertEquals($societyExternalId, $learnerOutput->society->externalIdentifier);
+    }
+
+    public function testPatchLearnerDetachesSociety(): void
+    {
+        //Arrange
+        $societyExternalId = $this->newExternalId('SOC');
+        $this->client->createSociety(new SocietyInput($societyExternalId, 'Société à retirer'));
+        $email = $this->newEmail('lea.retrait');
+        $created = $this->client->createLearner(new LearnerInput(
+            $this->newExternalId('L'),
+            'Retrait',
+            'Lea',
+            $email,
+            $email,
+            Gender::GENDER_NA,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            $societyExternalId->getId()
+        ));
+
+        //Act
+        $this->client->patchLearner($created->agoraId, (new LearnerPatchInput())->setSocietyId(null));
+        $learnerOutput = $this->client->getLearner($created->agoraId);
+
+        // Assert
+        $this->assertNull($learnerOutput->society);
     }
 }

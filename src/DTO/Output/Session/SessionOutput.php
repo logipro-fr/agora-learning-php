@@ -7,6 +7,7 @@ namespace AgoraLearningPhp\DTO\Output\Session;
 use AgoraLearningPhp\DTO\Output\ApiOutput;
 use AgoraLearningPhp\DTO\Output\Person\PersonOutput;
 use AgoraLearningPhp\DTO\Output\Trainer\TrainerOutput;
+use AgoraLearningPhp\Identifier\ExternalId;
 
 class SessionOutput extends ApiOutput
 {
@@ -27,6 +28,7 @@ class SessionOutput extends ApiOutput
     public ?string $urlPreTrainingSurvey;
     public ?string $urlOnTheSpotSurvey;
     public ?string $urlDelayedSurvey;
+    public ?ExternalId $externalIdentifier;
 
     public function __construct(
         string $uuid,
@@ -45,7 +47,8 @@ class SessionOutput extends ApiOutput
         ?PersonOutput $administrativePerson = null,
         ?string $urlPreTrainingSurvey = null,
         ?string $urlOnTheSpotSurvey = null,
-        ?string $urlDelayedSurvey = null
+        ?string $urlDelayedSurvey = null,
+        ?ExternalId $externalIdentifier = null
     ) {
         $this->uuid = $uuid;
         $this->title = $title;
@@ -64,5 +67,6 @@ class SessionOutput extends ApiOutput
         $this->urlPreTrainingSurvey = $urlPreTrainingSurvey;
         $this->urlOnTheSpotSurvey = $urlOnTheSpotSurvey;
         $this->urlDelayedSurvey = $urlDelayedSurvey;
+        $this->externalIdentifier = $externalIdentifier;
     }
 }

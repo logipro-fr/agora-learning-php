@@ -6,23 +6,35 @@ namespace AgoraLearningPhp;
 
 use AgoraLearningPhp\DTO\Input\Enrollment\EnrollmentInput;
 use AgoraLearningPhp\DTO\Input\Learner\LearnerInput;
+use AgoraLearningPhp\DTO\Input\Learner\LearnerPatchInput;
 use AgoraLearningPhp\DTO\Input\Person\PersonInput;
+use AgoraLearningPhp\DTO\Input\Person\PersonPatchInput;
+use AgoraLearningPhp\DTO\Input\Program\ProgramInput;
+use AgoraLearningPhp\DTO\Input\Session\AbstractSessionPatchInput;
 use AgoraLearningPhp\DTO\Input\Session\SessionInput;
 use AgoraLearningPhp\DTO\Input\Society\SocietyInput;
+use AgoraLearningPhp\DTO\Input\Society\SocietyPatchInput;
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerEmployeeInput;
+use AgoraLearningPhp\DTO\Input\Trainer\TrainerEmployeePatchInput;
 use AgoraLearningPhp\DTO\Input\Trainer\TrainerFreeInput;
+use AgoraLearningPhp\DTO\Input\Trainer\TrainerFreePatchInput;
+use AgoraLearningPhp\DTO\Output\CreatedOutput;
 use AgoraLearningPhp\DTO\Output\Enrollment\EnrollmentOutput;
 use AgoraLearningPhp\DTO\Output\Learner\LearnerOutput;
 use AgoraLearningPhp\DTO\Output\Person\PersonOutput;
+use AgoraLearningPhp\DTO\Output\Program\ProgramOutput;
 use AgoraLearningPhp\DTO\Output\Session\SessionOutput;
 use AgoraLearningPhp\DTO\Output\Society\SocietyOutput;
 use AgoraLearningPhp\DTO\Output\Trainer\TrainerOutput;
+use AgoraLearningPhp\Exception\AgoraLearningClientException;
+use AgoraLearningPhp\Identifier\ApiObjectIdentifier;
 use AgoraLearningPhp\Service\Auth\Ping;
 use AgoraLearningPhp\Service\ClientCore\ApiUrls;
 use AgoraLearningPhp\Service\ClientCore\TokenHandler;
 use AgoraLearningPhp\Service\Enrollment\Enrollment;
 use AgoraLearningPhp\Service\Learner\Learner;
 use AgoraLearningPhp\Service\Person\Person;
+use AgoraLearningPhp\Service\Program\Program;
 use AgoraLearningPhp\Service\Session\Session;
 use AgoraLearningPhp\Service\Society\Society;
 use AgoraLearningPhp\Service\Trainer\Trainer;
@@ -53,14 +65,50 @@ class AgoraLearningClient
         return $this->makePerson()->getCollectionPerson();
     }
 
-    public function getPerson(string $uuid): PersonOutput
+    public function getPerson(ApiObjectIdentifier $identifier): PersonOutput
     {
-        return $this->makePerson()->getPerson($uuid);
+        return $this->makePerson()->getPerson($identifier);
     }
 
-    public function createPerson(PersonInput $personInput): PersonOutput
+    public function createPerson(PersonInput $personInput): CreatedOutput
     {
         return $this->makePerson()->postPerson($personInput);
+    }
+
+    /**
+     * Remplace le contact (PUT) : un champ facultatif non renseigné est vidé.
+     */
+    public function replacePerson(ApiObjectIdentifier $identifier, PersonInput $personInput): CreatedOutput
+    {
+        return $this->makePerson()->putPerson($identifier, $personInput);
+    }
+
+    /**
+     * Modifie partiellement le contact (PATCH) : seuls les champs renseignés sont modifiés.
+     */
+    public function patchPerson(ApiObjectIdentifier $identifier, PersonPatchInput $personPatchInput): CreatedOutput
+    {
+        return $this->makePerson()->patchPerson($identifier, $personPatchInput);
+    }
+
+    /**
+     * Détache la personne de l'application source : elle reste sur Agora mais n'y est plus liée.
+     *
+     * @throws AgoraLearningClientException si la personne n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function detachPerson(ApiObjectIdentifier $identifier): void
+    {
+        $this->makePerson()->detachPerson($identifier);
+    }
+
+    /**
+     * Supprime le contact.
+     *
+     * @throws AgoraLearningClientException si le contact n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deletePerson(ApiObjectIdentifier $identifier): void
+    {
+        $this->makePerson()->deletePerson($identifier);
     }
 
     // Trainer
@@ -72,19 +120,71 @@ class AgoraLearningClient
         return $this->makeTrainer()->getCollectionTrainer();
     }
 
-    public function getTrainer(string $uuid): TrainerOutput
+    public function getTrainer(ApiObjectIdentifier $identifier): TrainerOutput
     {
-        return $this->makeTrainer()->getTrainer($uuid);
+        return $this->makeTrainer()->getTrainer($identifier);
     }
 
-    public function createTrainerEmployee(TrainerEmployeeInput $trainerEmployeeInput): TrainerOutput
+    public function createTrainerEmployee(TrainerEmployeeInput $trainerEmployeeInput): CreatedOutput
     {
         return $this->makeTrainer()->postTrainerEmployee($trainerEmployeeInput);
     }
 
-    public function createTrainerFree(TrainerFreeInput $trainerFreeInput): TrainerOutput
+    /**
+     * Remplace le formateur employé (PUT) : un champ facultatif non renseigné est vidé.
+     */
+    public function replaceTrainerEmployee(ApiObjectIdentifier $identifier, TrainerEmployeeInput $trainerEmployeeInput): CreatedOutput
+    {
+        return $this->makeTrainer()->putTrainerEmployee($identifier, $trainerEmployeeInput);
+    }
+
+    /**
+     * Modifie partiellement le formateur employé (PATCH) : seuls les champs renseignés sont modifiés.
+     */
+    public function patchTrainerEmployee(ApiObjectIdentifier $identifier, TrainerEmployeePatchInput $trainerEmployeePatchInput): CreatedOutput
+    {
+        return $this->makeTrainer()->patchTrainerEmployee($identifier, $trainerEmployeePatchInput);
+    }
+
+    public function createTrainerFree(TrainerFreeInput $trainerFreeInput): CreatedOutput
     {
         return $this->makeTrainer()->postTrainerFree($trainerFreeInput);
+    }
+
+    /**
+     * Remplace le formateur indépendant (PUT) : un champ facultatif non renseigné est vidé.
+     */
+    public function replaceTrainerFree(ApiObjectIdentifier $identifier, TrainerFreeInput $trainerFreeInput): CreatedOutput
+    {
+        return $this->makeTrainer()->putTrainerFree($identifier, $trainerFreeInput);
+    }
+
+    /**
+     * Modifie partiellement le formateur indépendant (PATCH) : seuls les champs renseignés sont modifiés.
+     */
+    public function patchTrainerFree(ApiObjectIdentifier $identifier, TrainerFreePatchInput $trainerFreePatchInput): CreatedOutput
+    {
+        return $this->makeTrainer()->patchTrainerFree($identifier, $trainerFreePatchInput);
+    }
+
+    /**
+     * Détache le formateur de l'application source : il reste sur Agora mais n'y est plus lié.
+     *
+     * @throws AgoraLearningClientException si le formateur n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function detachTrainer(ApiObjectIdentifier $identifier): void
+    {
+        $this->makeTrainer()->detachTrainer($identifier);
+    }
+
+    /**
+     * Supprime le formateur, employé ou indépendant.
+     *
+     * @throws AgoraLearningClientException si le formateur n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deleteTrainer(ApiObjectIdentifier $identifier): void
+    {
+        $this->makeTrainer()->deleteTrainer($identifier);
     }
 
     // Learner
@@ -96,14 +196,40 @@ class AgoraLearningClient
         return $this->makeLearner()->getCollectionLearner();
     }
 
-    public function getLearner(string $uuid): LearnerOutput
+    public function getLearner(ApiObjectIdentifier $identifier): LearnerOutput
     {
-        return $this->makeLearner()->getLearner($uuid);
+        return $this->makeLearner()->getLearner($identifier);
     }
 
-    public function createLearner(LearnerInput $learnerInput): LearnerOutput
+    public function createLearner(LearnerInput $learnerInput): CreatedOutput
     {
         return $this->makeLearner()->postLearner($learnerInput);
+    }
+
+    /**
+     * Remplace l'apprenant (PUT) : un champ facultatif non renseigné est vidé.
+     */
+    public function replaceLearner(ApiObjectIdentifier $identifier, LearnerInput $learnerInput): CreatedOutput
+    {
+        return $this->makeLearner()->putLearner($identifier, $learnerInput);
+    }
+
+    /**
+     * Modifie partiellement l'apprenant (PATCH) : seuls les champs renseignés sont modifiés.
+     */
+    public function patchLearner(ApiObjectIdentifier $identifier, LearnerPatchInput $learnerPatchInput): CreatedOutput
+    {
+        return $this->makeLearner()->patchLearner($identifier, $learnerPatchInput);
+    }
+
+    /**
+     * Supprime l'apprenant.
+     *
+     * @throws AgoraLearningClientException si l'apprenant n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deleteLearner(ApiObjectIdentifier $identifier): void
+    {
+        $this->makeLearner()->deleteLearner($identifier);
     }
 
     // Society
@@ -115,14 +241,50 @@ class AgoraLearningClient
         return $this->makeSociety()->getCollectionSociety();
     }
 
-    public function getSociety(string $uuid): SocietyOutput
+    public function getSociety(ApiObjectIdentifier $identifier): SocietyOutput
     {
-        return $this->makeSociety()->getSociety($uuid);
+        return $this->makeSociety()->getSociety($identifier);
     }
 
-    public function createSociety(SocietyInput $societyInput): SocietyOutput
+    public function createSociety(SocietyInput $societyInput): CreatedOutput
     {
         return $this->makeSociety()->postSociety($societyInput);
+    }
+
+    /**
+     * Remplace la société (PUT) : un champ facultatif non renseigné est vidé.
+     */
+    public function replaceSociety(ApiObjectIdentifier $identifier, SocietyInput $societyInput): CreatedOutput
+    {
+        return $this->makeSociety()->putSociety($identifier, $societyInput);
+    }
+
+    /**
+     * Modifie partiellement la société (PATCH) : seuls les champs renseignés sont modifiés.
+     */
+    public function patchSociety(ApiObjectIdentifier $identifier, SocietyPatchInput $societyPatchInput): CreatedOutput
+    {
+        return $this->makeSociety()->patchSociety($identifier, $societyPatchInput);
+    }
+
+    /**
+     * Détache la société de l'application source : elle reste sur Agora mais n'y est plus liée.
+     *
+     * @throws AgoraLearningClientException si la société n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function detachSociety(ApiObjectIdentifier $identifier): void
+    {
+        $this->makeSociety()->detachSociety($identifier);
+    }
+
+    /**
+     * Supprime la société.
+     *
+     * @throws AgoraLearningClientException si la société n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deleteSociety(ApiObjectIdentifier $identifier): void
+    {
+        $this->makeSociety()->deleteSociety($identifier);
     }
 
     // Session
@@ -134,46 +296,161 @@ class AgoraLearningClient
         return $this->makeSession()->getCollectionSession();
     }
 
-    public function getSession(string $uuid): SessionOutput
+    public function getSession(ApiObjectIdentifier $identifier): SessionOutput
     {
-        return $this->makeSession()->getSession($uuid);
+        return $this->makeSession()->getSession($identifier);
     }
 
-    public function createSession(SessionInput $sessionInput): SessionOutput
+    public function createSession(SessionInput $sessionInput): CreatedOutput
     {
         return $this->makeSession()->postSession($sessionInput);
+    }
+
+    /**
+     * Remplace la session (PUT) : un champ facultatif non renseigné est vidé.
+     * Le type de $sessionInput->sessionData doit être celui de la session existante.
+     */
+    public function replaceSession(ApiObjectIdentifier $identifier, SessionInput $sessionInput): CreatedOutput
+    {
+        return $this->makeSession()->putSession($identifier, $sessionInput);
+    }
+
+    /**
+     * Modifie partiellement la session (PATCH) : seuls les champs renseignés sont modifiés.
+     *
+     * @param AbstractSessionPatchInput $sessionPatchInput FixedSessionPatchInput ou OpenedSessionPatchInput
+     */
+    public function patchSession(ApiObjectIdentifier $identifier, AbstractSessionPatchInput $sessionPatchInput): CreatedOutput
+    {
+        return $this->makeSession()->patchSession($identifier, $sessionPatchInput);
+    }
+
+    /**
+     * Détache la session de l'application source : elle reste sur Agora mais n'y est plus liée.
+     *
+     * @throws AgoraLearningClientException si la session n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function detachSession(ApiObjectIdentifier $identifier): void
+    {
+        $this->makeSession()->detachSession($identifier);
+    }
+
+    /**
+     * Supprime la session, fixe ou ouverte.
+     *
+     * @throws AgoraLearningClientException si la session n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deleteSession(ApiObjectIdentifier $identifier): void
+    {
+        $this->makeSession()->deleteSession($identifier);
+    }
+
+    // Program
+    /**
+     * Programme de formation de la session.
+     *
+     * @throws AgoraLearningClientException si la session n'existe pas (404) ou n'a pas de parcours (422)
+     */
+    public function getProgram(ApiObjectIdentifier $sessionIdentifier): ProgramOutput
+    {
+        return $this->makeProgram()->getProgram($sessionIdentifier);
+    }
+
+    /**
+     * Remplace tout le programme de formation de la session (PUT) : un type non renseigné est vidé.
+     *
+     * @throws AgoraLearningClientException si la session n'existe pas (404), n'a pas de parcours (422) ou
+     *                                      si Agora refuse le programme
+     */
+    public function replaceProgram(ApiObjectIdentifier $sessionIdentifier, ProgramInput $programInput): CreatedOutput
+    {
+        return $this->makeProgram()->putProgram($sessionIdentifier, $programInput);
+    }
+
+    /**
+     * Vide le contenu du programme de formation de la session.
+     *
+     * @throws AgoraLearningClientException si la session n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deleteProgram(ApiObjectIdentifier $sessionIdentifier): void
+    {
+        $this->makeProgram()->deleteProgram($sessionIdentifier);
     }
 
     // Enrollment
     /**
      * @return array<int, EnrollmentOutput>
      */
-    public function getCollectionEnrollmentFromSession(string $sessionUuid): array
+    public function getCollectionEnrollmentFromSession(ApiObjectIdentifier $sessionIdentifier): array
     {
-        return $this->makeEnrollment()->getCollectionEnrollmentFromSession($sessionUuid);
+        return $this->makeEnrollment()->getCollectionEnrollmentFromSession($sessionIdentifier);
     }
 
     /**
      * @return array<int, EnrollmentOutput>
      */
-    public function getCollectionEnrollmentFromLearner(string $learnerUuid): array
+    public function getCollectionEnrollmentFromLearner(ApiObjectIdentifier $learnerIdentifier): array
     {
-        return $this->makeEnrollment()->getCollectionEnrollmentFromLearner($learnerUuid);
+        return $this->makeEnrollment()->getCollectionEnrollmentFromLearner($learnerIdentifier);
     }
 
-    public function getEnrollment(string $uuid): EnrollmentOutput
+    public function getEnrollment(ApiObjectIdentifier $identifier): EnrollmentOutput
     {
-        return $this->makeEnrollment()->getEnrollment($uuid);
+        return $this->makeEnrollment()->getEnrollment($identifier);
     }
 
-    public function getEnrollmentFromSessionAndLearner(string $sessionUuid, string $learnerUuid): EnrollmentOutput
-    {
-        return $this->makeEnrollment()->getEnrollmentFromSessionAndLearner($sessionUuid, $learnerUuid);
+    public function getEnrollmentFromSessionAndLearner(
+        ApiObjectIdentifier $sessionIdentifier,
+        ApiObjectIdentifier $learnerIdentifier
+    ): EnrollmentOutput {
+        return $this->makeEnrollment()->getEnrollmentFromSessionAndLearner($sessionIdentifier, $learnerIdentifier);
     }
 
-    public function createEnrollment(EnrollmentInput $enrollmentInput): EnrollmentOutput
+    public function createEnrollment(EnrollmentInput $enrollmentInput): CreatedOutput
     {
         return $this->makeEnrollment()->postEnrollment($enrollmentInput);
+    }
+
+    /**
+     * Désinscrit l'apprenant de la session.
+     *
+     * @throws AgoraLearningClientException si l'inscription n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deleteEnrollment(ApiObjectIdentifier $identifier): void
+    {
+        $this->makeEnrollment()->deleteEnrollment($identifier);
+    }
+
+    /**
+     * Désinscrit l'apprenant de la session.
+     *
+     * @throws AgoraLearningClientException si l'inscription n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deleteEnrollmentFromSessionAndLearner(
+        ApiObjectIdentifier $sessionIdentifier,
+        ApiObjectIdentifier $learnerIdentifier
+    ): void {
+        $this->makeEnrollment()->deleteEnrollmentFromSessionAndLearner($sessionIdentifier, $learnerIdentifier);
+    }
+
+    /**
+     * Supprime toutes les inscriptions de la session.
+     *
+     * @throws AgoraLearningClientException si la session n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deleteCollectionEnrollmentFromSession(ApiObjectIdentifier $sessionIdentifier): void
+    {
+        $this->makeEnrollment()->deleteCollectionEnrollmentFromSession($sessionIdentifier);
+    }
+
+    /**
+     * Supprime toutes les inscriptions de l'apprenant.
+     *
+     * @throws AgoraLearningClientException si l'apprenant n'existe pas (404) ou en cas d'erreur de l'API
+     */
+    public function deleteCollectionEnrollmentFromLearner(ApiObjectIdentifier $learnerIdentifier): void
+    {
+        $this->makeEnrollment()->deleteCollectionEnrollmentFromLearner($learnerIdentifier);
     }
 
 
@@ -210,5 +487,10 @@ class AgoraLearningClient
     protected function makeEnrollment(): Enrollment
     {
         return new Enrollment();
+    }
+
+    protected function makeProgram(): Program
+    {
+        return new Program();
     }
 }

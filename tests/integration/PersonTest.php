@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace AgoraLearningPhp\Tests\integration;
 
 use AgoraLearningPhp\DTO\Input\Person\PersonInput;
+use AgoraLearningPhp\DTO\Input\Person\PersonPatchInput;
+use AgoraLearningPhp\DTO\Input\Society\SocietyInput;
 use AgoraLearningPhp\Enum\Gender;
+use AgoraLearningPhp\Identifier\AgoraId;
 
 class PersonTest extends AbstractAgoraLearningTest
 {
@@ -25,6 +28,7 @@ class PersonTest extends AbstractAgoraLearningTest
         $birthDate = new \DateTimeImmutable('1985-06-15');
         $jobTitle = 'Développeur';
         $personInput = new PersonInput(
+            $this->newExternalId('P'),
             $familyName,
             $givenName,
             $email,
@@ -40,7 +44,8 @@ class PersonTest extends AbstractAgoraLearningTest
         );
 
         //Act
-        $personOutput = $this->client->createPerson($personInput);
+        $created = $this->client->createPerson($personInput);
+        $personOutput = $this->client->getPerson($created->agoraId);
 
         // Assert
         $this->assertEquals($familyName, $personOutput->familyName);
@@ -64,6 +69,7 @@ class PersonTest extends AbstractAgoraLearningTest
         $email = 'jean.grand@example.com';
         $gender = Gender::GENDER_MALE;
         $personInput = new PersonInput(
+            $this->newExternalId('P'),
             $familyName,
             $givenName,
             $email,
@@ -71,7 +77,8 @@ class PersonTest extends AbstractAgoraLearningTest
         );
 
         //Act
-        $personOutput = $this->client->createPerson($personInput);
+        $created = $this->client->createPerson($personInput);
+        $personOutput = $this->client->getPerson($created->agoraId);
 
         // Assert
         $this->assertEquals($familyName, $personOutput->familyName);
@@ -95,16 +102,16 @@ class PersonTest extends AbstractAgoraLearningTest
         $email = 'jean.pris@example.com';
         $gender = Gender::GENDER_MALE;
         $personInput = new PersonInput(
+            $this->newExternalId('P'),
             $familyName,
             $givenName,
             $email,
             $gender
         );
-        $output = $this->client->createPerson($personInput);
-        $uuid = $output->uuid;
+        $uuid = $this->client->createPerson($personInput)->agoraId->getId();
 
         //Act
-        $personOutput = $this->client->getPerson($uuid);
+        $personOutput = $this->client->getPerson(new AgoraId($uuid));
 
         // Assert
         $this->assertEquals($uuid, $personOutput->uuid);
@@ -129,26 +136,26 @@ class PersonTest extends AbstractAgoraLearningTest
         $email1 = 'jean.un@example.com';
         $gender1 = Gender::GENDER_MALE;
         $personInput1 = new PersonInput(
+            $this->newExternalId('P'),
             $familyName1,
             $givenName1,
             $email1,
             $gender1
         );
-        $output1 = $this->client->createPerson($personInput1);
-        $uuid1 = $output1->uuid;
+        $uuid1 = $this->client->createPerson($personInput1)->agoraId->getId();
 
         $familyName2 = 'Deux';
         $givenName2 = 'Jean';
         $email2 = 'jean.deux@example.com';
         $gender2 = Gender::GENDER_MALE;
         $personInput2 = new PersonInput(
+            $this->newExternalId('P'),
             $familyName2,
             $givenName2,
             $email2,
             $gender2
         );
-        $output2 = $this->client->createPerson($personInput2);
-        $uuid2 = $output2->uuid;
+        $uuid2 = $this->client->createPerson($personInput2)->agoraId->getId();
 
         //Act
         $personOutputs = $this->client->getCollectionPerson();
@@ -183,5 +190,112 @@ class PersonTest extends AbstractAgoraLearningTest
                 $this->assertNull($personOutput->jobTitle);
             }
         }
+    }
+
+    public function testReplacePerson(): void
+    {
+        //Arrange
+        $externalId = $this->newExternalId('P');
+        $this->client->createPerson(new PersonInput(
+            $externalId,
+            'Avant',
+            'Jean',
+            'jean.avant@example.com',
+            Gender::GENDER_MALE,
+            '0123456789'
+        ));
+
+        //Act
+        $this->client->replacePerson(
+            $externalId,
+            new PersonInput($externalId, 'Apres', 'Jeanne', 'jeanne.apres@example.com', Gender::GENDER_FEMALE)
+        );
+        $personOutput = $this->client->getPerson($externalId);
+
+        // Assert
+        $this->assertEquals('Apres', $personOutput->familyName);
+        $this->assertEquals('Jeanne', $personOutput->givenName);
+        $this->assertEquals(Gender::GENDER_FEMALE, $personOutput->gender);
+        $this->assertEmpty($personOutput->telephone);
+    }
+
+    public function testPatchPerson(): void
+    {
+        //Arrange
+        $created = $this->client->createPerson(new PersonInput(
+            $this->newExternalId('P'),
+            'Patch',
+            'Jean',
+            'jean.patch@example.com',
+            Gender::GENDER_MALE,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            'Développeur'
+        ));
+
+        //Act
+        $this->client->patchPerson(
+            $created->agoraId,
+            (new PersonPatchInput())->setTelephone('0102030405')->setJobTitle(null)
+        );
+        $personOutput = $this->client->getPerson($created->agoraId);
+
+        // Assert
+        $this->assertEquals('Patch', $personOutput->familyName);
+        $this->assertEquals('0102030405', $personOutput->telephone);
+        $this->assertEmpty($personOutput->jobTitle);
+    }
+
+    public function testDeletePerson(): void
+    {
+        //Arrange
+        $externalId = $this->newExternalId('P');
+        $this->client->createPerson(new PersonInput($externalId, 'Supprime', 'Jean', 'jean.supprime@example.com'));
+
+        //Act
+        $this->client->deletePerson($externalId);
+
+        // Assert
+        $this->assertNotFound(function () use ($externalId): void {
+            $this->client->getPerson($externalId);
+        }, 'Le contact aurait dû être supprimé.');
+    }
+
+    public function testCreatePersonAttachedToSocietyThenDetach(): void
+    {
+        //Arrange
+        $societyExternalId = $this->newExternalId('SOC');
+        $society = $this->client->createSociety(new SocietyInput($societyExternalId, 'Société du contact'));
+        $created = $this->client->createPerson(new PersonInput(
+            $this->newExternalId('P'),
+            'Societe',
+            'Paul',
+            $this->newEmail('paul.societe'),
+            Gender::GENDER_NA,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            $societyExternalId->getId()
+        ));
+
+        //Act
+        $attached = $this->client->getPerson($created->agoraId);
+        $this->client->patchPerson($created->agoraId, (new PersonPatchInput())->setSocietyId(null));
+        $detached = $this->client->getPerson($created->agoraId);
+
+        // Assert
+        $this->assertSame($society->agoraId->getId(), $attached->societyId);
+        $this->assertNull($detached->societyId);
     }
 }
